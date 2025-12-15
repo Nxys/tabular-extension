@@ -4,15 +4,17 @@
   <meta charset="utf-8">
   <style>
     body {
-      width: 200px;
+      width: 260px;
       padding: 16px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       margin: 0;
+      color: #222;
     }
     .title {
       font-weight: bold;
-      margin-bottom: 8px;
-      color: #333;
+      margin-bottom: 4px;
+      color: #111;
+      font-size: 16px;
     }
     .desc {
       font-size: 12px;
@@ -20,23 +22,120 @@
       line-height: 1.4;
       margin-bottom: 12px;
     }
-    .usage {
-      font-size: 11px;
+    .section {
+      margin-bottom: 14px;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fafafa;
+    }
+    .field {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+    .field label {
+      font-size: 13px;
+      color: #333;
+      flex: 1;
+    }
+    .field select {
+      flex: 1;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      font-size: 13px;
+    }
+    .switch {
+      position: relative;
+      width: 38px;
+      height: 20px;
+    }
+    .switch input {
+      display: none;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: 0.2s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: 0.2s;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    input:checked + .slider {
+      background-color: #007acc;
+    }
+    input:checked + .slider:before {
+      transform: translateX(18px);
+    }
+    .hint {
+      font-size: 12px;
       color: #888;
-      border-top: 1px solid #eee;
-      padding-top: 8px;
+      line-height: 1.5;
+    }
+    .shortcut {
+      display: inline-block;
+      padding: 4px 8px;
+      background: #eef6ff;
+      color: #0a66c2;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .section-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #222;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
   <div class="title">框选复制</div>
-  <div class="desc">在任意网页上拖拽鼠标创建选择框，智能提取并复制文本内容</div>
-  <div class="usage">
-    <strong>使用方法：</strong><br>
-    1. 按住鼠标左键拖拽<br>
-    2. 释放鼠标完成选择<br>
-    3. 点击复制按钮
+  <div class="desc">按快捷键或使用开关启用，拖拽选择并复制文本。</div>
+
+  <div class="section">
+    <div class="section-title">开关</div>
+    <div class="field">
+      <label for="enableToggle">启用框选复制</label>
+      <label class="switch">
+        <input type="checkbox" id="enableToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="hint">快捷键 <span class="shortcut">Ctrl + Alt + Shift + C</span> 开/关</div>
   </div>
+
+  <div class="section">
+    <div class="section-title">结果面板</div>
+    <div class="field">
+      <label for="positionSelect">弹出位置</label>
+      <select id="positionSelect">
+        <option value="center">页面居中</option>
+        <option value="mouse">跟随鼠标</option>
+        <option value="none">不弹出（直接复制）</option>
+      </select>
+    </div>
+    <div class="hint">可在页面中拖动面板，内容可编辑，右上角可关闭。</div>
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>

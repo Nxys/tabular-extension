@@ -14,3 +14,12 @@ export interface TextElement {
   lineIndex: number;
   columnIndex: number;
 }
+
+// 面板位置配置
+export type PanelPosition = 'center' | 'mouse' | 'none';
+
+// 插件配置
+export interface PluginSettings {
+  enabled: boolean;
+  panelPosition: PanelPosition;
+}

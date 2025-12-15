@@ -32,28 +32,28 @@ function loadIconTemplate() {
  * @returns {string} SVG内容字符串
  */
 function createSVGIcon(template, size) {
-  // 替换模板中的占位符
-  let svg = template
-    .replace(/\{\{size\}\}/g, size)
-    .replace(/\{\{size\/8\}\}/g, size / 8)
-    .replace(/\{\{size\/16\}\}/g, size / 16)
-    .replace(/\{\{size\/32\}\}/g, size / 32)
-    .replace(/\{\{size\/64\}\}/g, size / 64)
-    .replace(/\{\{size\/128\}\}/g, size / 128)
-    .replace(/\{\{size\*0\.2\}\}/g, size * 0.2)
-    .replace(/\{\{size\*0\.25\}\}/g, size * 0.25)
-    .replace(/\{\{size\*0\.3\}\}/g, size * 0.3)
-    .replace(/\{\{size\*0\.35\}\}/g, size * 0.35)
-    .replace(/\{\{size\*0\.4\}\}/g, size * 0.4)
-    .replace(/\{\{size\*0\.45\}\}/g, size * 0.45)
-    .replace(/\{\{size\*0\.5\}\}/g, size * 0.5)
-    .replace(/\{\{size\*0\.55\}\}/g, size * 0.55)
-    .replace(/\{\{size\*0\.6\}\}/g, size * 0.6)
-    .replace(/\{\{size\*0\.7\}\}/g, size * 0.7)
-    .replace(/\{\{size\*0\.15\}\}/g, size * 0.15)
-    .replace(/\{\{size\*0\.03\}\}/g, size * 0.03)
-    .replace(/\{\{size\*0\.09\}\}/g, size * 0.09)
-    .replace(/\{\{Math\.max\(1, size\/32\)\}\}/g, Math.max(1, size / 32));
+  // 通用占位符替换：支持任意 {{表达式}}，由 size 和 Math 计算
+  const exprPattern = /\{\{([^}]+)\}\}/g;
+  const evaluate = (expr) => {
+    try {
+      // 仅暴露 size 和 Math，减少模板与代码耦合
+      // eslint-disable-next-line no-new-func
+      const fn = new Function('size', 'Math', `return (${expr});`);
+      return fn(size, Math);
+    } catch {
+      return undefined;
+    }
+  };
+
+  let svg = template.replace(exprPattern, (match, expr) => {
+    const value = evaluate(expr.trim());
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      // 控制精度，避免长尾小数
+      return Number.isInteger(value) ? String(value) : Number(value.toFixed(4)).toString();
+    }
+    // 未能安全求值则保留原占位符，方便日志检查
+    return match;
+  });
   
   return svg;
 }

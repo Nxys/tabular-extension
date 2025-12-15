@@ -139,7 +139,15 @@ class Extractor {
         console.log('使用备用提取方法');
         const centerX = rect.left + (rect.right - rect.left) / 2;
         const centerY = rect.top + (rect.bottom - rect.top) / 2;
-        const elementsAtPoint = document.elementsFromPoint(centerX, centerY);
+        // jsdom 环境可能不存在 elementsFromPoint，这里做兼容处理
+        const elementsFromPoint = typeof document.elementsFromPoint === 'function'
+            ? document.elementsFromPoint.bind(document)
+            : null;
+        if (!elementsFromPoint) {
+            console.warn('elementsFromPoint 不可用，返回空结果');
+            return '';
+        }
+        const elementsAtPoint = elementsFromPoint(centerX, centerY);
         console.log('中心点元素:', elementsAtPoint);
         let fallbackText = '';
         for (const element of elementsAtPoint) {
@@ -150,7 +158,7 @@ class Extractor {
             }
         }
         console.log('备用方法提取结果:', fallbackText);
-        return fallbackText.trim() || '选择区域内未找到文本';
+        return fallbackText.trim();
     }
     /**
      * 获取文本元素
@@ -321,14 +329,18 @@ class Panel {
     element = null;
     currentText = '';
     CSS_CLASS_PREFIX = 'browser-selection-copy';
+    dragState = null;
     /**
      * 显示结果
      */
-    show(text) {
+    show(text, options = {
+        position: { left: 50, top: 50 },
+        editable: true
+    }) {
         console.log('面板显示被调用，文本长度:', text.length);
         console.log('文本内容:', text);
         this.currentText = text;
-        this.createElement();
+        this.createElement(options.position, options.editable ?? true);
         console.log('面板元素已创建');
     }
     /**
@@ -339,6 +351,9 @@ class Panel {
             this.element.remove();
             this.element = null;
         }
+        document.removeEventListener('mousemove', this.handleDrag);
+        document.removeEventListener('mouseup', this.endDrag);
+        this.dragState = null;
     }
     /**
      * 检查点击是否在面板内
@@ -349,17 +364,17 @@ class Panel {
     /**
      * 创建面板
      */
-    createElement() {
+    createElement(position, editable) {
         console.log('开始创建面板元素');
         this.hide(); // 确保只有一个面板
         this.element = document.createElement('div');
         this.element.className = `${this.CSS_CLASS_PREFIX}-panel`;
         Object.assign(this.element.style, {
             position: 'fixed',
-            top: '50px',
-            right: '50px',
-            width: '300px',
-            maxHeight: '400px',
+            top: `${position.top}px`,
+            left: `${position.left}px`,
+            width: '320px',
+            maxHeight: '440px',
             background: 'white',
             border: '1px solid #ccc',
             borderRadius: '8px',
@@ -367,46 +382,97 @@ class Panel {
             zIndex: '2147483647',
             fontFamily: 'system-ui, sans-serif',
             fontSize: '14px',
-            padding: '16px',
+            padding: '0',
             display: 'block',
             visibility: 'visible',
             opacity: '1',
-            pointerEvents: 'auto'
+            pointerEvents: 'auto',
+            overflow: 'hidden'
         });
         console.log('面板样式已设置');
-        // 文本预览
-        const preview = document.createElement('div');
-        preview.style.cssText = `
-      max-height: 200px;
-      overflow-y: auto;
-      margin-bottom: 12px;
-      padding: 8px;
-      background: #f5f5f5;
-      border-radius: 4px;
-      white-space: pre-wrap;
-      word-break: break-word;
+        const header = document.createElement('div');
+        header.className = `${this.CSS_CLASS_PREFIX}-panel-header`;
+        header.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      cursor: move;
+      user-select: none;
+      background: #f7f7f7;
+      border-bottom: 1px solid #eee;
+      font-weight: 600;
     `;
-        preview.textContent = this.currentText;
+        header.textContent = '文本预览';
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.textContent = '×';
+        closeBtn.dataset.role = 'close';
+        closeBtn.style.cssText = `
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      color: #666;
+      padding: 0;
+    `;
+        closeBtn.onclick = () => this.hide();
+        header.appendChild(closeBtn);
+        // 文本预览
+        const preview = document.createElement('textarea');
+        preview.style.cssText = `
+      width: 100%;
+      height: 220px;
+      resize: none;
+      border: none;
+      outline: none;
+      padding: 12px;
+      background: #fdfdfd;
+      border-bottom: 1px solid #eee;
+      white-space: pre-wrap;
+      box-sizing: border-box;
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #222;
+    `;
+        preview.readOnly = !editable;
+        preview.value = this.currentText;
+        preview.oninput = (e) => {
+            const target = e.target;
+            this.currentText = target.value;
+        };
         // 复制按钮
         const copyBtn = document.createElement('button');
         copyBtn.textContent = '复制到剪贴板';
+        copyBtn.dataset.role = 'copy';
         copyBtn.style.cssText = `
-      width: 100%;
-      padding: 8px;
+      width: calc(100% - 24px);
+      margin: 12px;
+      padding: 10px;
       background: #007acc;
       color: white;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
       font-size: 14px;
     `;
         copyBtn.onclick = () => this.copyToClipboard();
+        this.element.appendChild(header);
         this.element.appendChild(preview);
         this.element.appendChild(copyBtn);
         console.log('将面板添加到页面');
         document.body.appendChild(this.element);
         console.log('面板已添加到DOM，元素:', this.element);
         console.log('面板位置:', this.element.getBoundingClientRect());
+        // 绑定拖动
+        header.addEventListener('mousedown', (event) => this.startDrag(event));
+        document.addEventListener('mousemove', this.handleDrag);
+        document.addEventListener('mouseup', this.endDrag);
     }
     /**
      * 复制到剪贴板
@@ -425,7 +491,7 @@ class Panel {
      * 显示复制成功
      */
     showCopySuccess() {
-        const btn = this.element?.querySelector('button');
+        const btn = this.element?.querySelector('button[data-role="copy"]');
         if (btn) {
             const originalText = btn.textContent;
             btn.textContent = '✓ 已复制';
@@ -442,7 +508,7 @@ class Panel {
      * 显示复制错误
      */
     showCopyError() {
-        const btn = this.element?.querySelector('button');
+        const btn = this.element?.querySelector('button[data-role="copy"]');
         if (btn) {
             const originalText = btn.textContent;
             btn.textContent = '复制失败';
@@ -455,6 +521,42 @@ class Panel {
             }, 1500);
         }
     }
+    /**
+     * 开始拖动
+     */
+    startDrag(event) {
+        if (!this.element)
+            return;
+        const rect = this.element.getBoundingClientRect();
+        this.dragState = {
+            startX: event.clientX,
+            startY: event.clientY,
+            originLeft: rect.left,
+            originTop: rect.top
+        };
+        event.preventDefault();
+    }
+    /**
+     * 处理拖动
+     */
+    handleDrag = (event) => {
+        if (!this.dragState || !this.element)
+            return;
+        const deltaX = event.clientX - this.dragState.startX;
+        const deltaY = event.clientY - this.dragState.startY;
+        const nextLeft = this.dragState.originLeft + deltaX;
+        const nextTop = this.dragState.originTop + deltaY;
+        const maxLeft = window.innerWidth - this.element.offsetWidth;
+        const maxTop = window.innerHeight - this.element.offsetHeight;
+        this.element.style.left = `${Math.min(Math.max(0, nextLeft), Math.max(0, maxLeft))}px`;
+        this.element.style.top = `${Math.min(Math.max(0, nextTop), Math.max(0, maxTop))}px`;
+    };
+    /**
+     * 结束拖动
+     */
+    endDrag = () => {
+        this.dragState = null;
+    };
 }
 
 
@@ -470,26 +572,54 @@ class BrowserSelectionCopy {
     selection;
     extractor;
     panel;
+    // 仅忽略紧随选择动作产生的首个 click
+    ignoreNextOutsideClick = false;
+    lastSelectionRect = null;
+    settings = {
+        enabled: false,
+        panelPosition: 'center'
+    };
+    lastMouseUpPoint = null;
+    handleMouseDownBound = this.handleMouseDown.bind(this);
+    handleMouseMoveBound = this.handleMouseMove.bind(this);
+    handleMouseUpBound = this.handleMouseUp.bind(this);
+    handleOutsideClickBound = this.handleOutsideClick.bind(this);
+    handleKeydownBound = this.handleKeydown.bind(this);
+    messageListener = null;
+    settingsReady;
     constructor() {
         this.selection = new Selection();
         this.extractor = new Extractor();
         this.panel = new Panel();
+        this.settingsReady = this.initializeSettings();
         this.bindEvents();
     }
     /**
      * 绑定鼠标事件
      */
     bindEvents() {
-        // 使用捕获阶段确保事件优先处理
-        document.addEventListener('mousedown', this.handleMouseDown.bind(this), true);
-        document.addEventListener('mousemove', this.handleMouseMove.bind(this), true);
-        document.addEventListener('mouseup', this.handleMouseUp.bind(this), true);
-        document.addEventListener('click', this.handleOutsideClick.bind(this));
+        document.addEventListener('mousedown', this.handleMouseDownBound);
+        document.addEventListener('mousemove', this.handleMouseMoveBound);
+        document.addEventListener('mouseup', this.handleMouseUpBound);
+        document.addEventListener('click', this.handleOutsideClickBound);
+        document.addEventListener('keydown', this.handleKeydownBound);
+        if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+            this.messageListener = (message, _sender, sendResponse) => {
+                const payload = message;
+                if (payload?.type === 'updateSettings' && payload.payload) {
+                    this.applySettings(payload.payload);
+                    sendResponse?.({ ok: true });
+                }
+            };
+            chrome.runtime.onMessage.addListener(this.messageListener);
+        }
     }
     /**
      * 鼠标按下事件
      */
     handleMouseDown(event) {
+        if (!this.settings.enabled)
+            return;
         console.log('鼠标按下事件触发', event.button, event.clientX, event.clientY);
         // 忽略右键和中键
         if (event.button !== 0) {
@@ -516,6 +646,8 @@ class BrowserSelectionCopy {
      * 鼠标移动事件
      */
     handleMouseMove(event) {
+        if (!this.settings.enabled)
+            return;
         if (!this.selection.getIsSelecting())
             return;
         console.log('鼠标移动中', event.clientX, event.clientY);
@@ -527,6 +659,8 @@ class BrowserSelectionCopy {
      * 鼠标释放事件
      */
     handleMouseUp(event) {
+        if (!this.settings.enabled)
+            return;
         console.log('鼠标释放事件触发');
         if (!this.selection.getIsSelecting()) {
             console.log('当前未在选择状态');
@@ -535,17 +669,20 @@ class BrowserSelectionCopy {
         console.log('完成选择，获取选择区域');
         const rect = this.selection.finish();
         console.log('选择区域:', rect);
+        this.lastMouseUpPoint = { x: event.clientX, y: event.clientY };
         if (rect && this.selection.isValid(rect)) {
             console.log('选择区域有效，开始提取文本');
             const text = this.extractor.extract(rect);
             console.log('提取的文本:', text);
             if (text.trim()) {
-                console.log('显示结果面板');
-                this.panel.show(text);
+                console.log('显示结果面板或直接复制');
+                this.lastSelectionRect = rect;
+                this.handleShowResult(text);
             }
             else {
-                console.log('提取的文本为空，显示默认消息');
-                this.panel.show('未找到文本内容');
+                console.log('提取的文本为空，不显示面板');
+                this.panel.hide();
+                this.lastSelectionRect = null;
             }
         }
         else {
@@ -558,9 +695,133 @@ class BrowserSelectionCopy {
      * 外部点击事件
      */
     handleOutsideClick(event) {
+        if (this.ignoreNextOutsideClick && this.lastSelectionRect) {
+            const docX = event.clientX + window.scrollX;
+            const docY = event.clientY + window.scrollY;
+            const { left, right, top, bottom } = this.lastSelectionRect;
+            const insideSelection = docX >= left && docX <= right && docY >= top && docY <= bottom;
+            if (insideSelection) {
+                // 忽略释放鼠标后紧随而来的点击
+                this.ignoreNextOutsideClick = false;
+                return;
+            }
+        }
+        // 重置忽略标记，确保后续点击正常处理
+        this.ignoreNextOutsideClick = false;
         if (!this.panel.contains(event.target)) {
             this.panel.hide();
         }
+    }
+    /**
+     * 快捷键切换启用状态
+     */
+    handleKeydown(event) {
+        // Ctrl + Alt + Shift + C
+        if (event.ctrlKey && event.shiftKey && event.altKey && event.code === 'KeyC') {
+            if ((event.target instanceof HTMLInputElement) ||
+                (event.target instanceof HTMLTextAreaElement) ||
+                (event.target instanceof HTMLSelectElement) ||
+                (event.target instanceof HTMLButtonElement) ||
+                (event.target && event.target.isContentEditable)) {
+                return;
+            }
+            event.preventDefault();
+            this.toggleEnabled();
+        }
+    }
+    /**
+     * 切换启用状态
+     */
+    async toggleEnabled() {
+        const next = !this.settings.enabled;
+        await this.applySettings({ enabled: next }, true);
+        if (!next) {
+            this.selection.clear();
+            this.panel.hide();
+        }
+    }
+    /**
+     * 初始化设置
+     */
+    async initializeSettings() {
+        const defaults = { enabled: false, panelPosition: 'center' };
+        if (typeof chrome === 'undefined' || !chrome.storage?.local) {
+            this.settings = defaults;
+            return;
+        }
+        try {
+            const result = await chrome.storage.local.get(['enabled', 'panelPosition']);
+            this.settings = {
+                enabled: typeof result.enabled === 'boolean' ? result.enabled : defaults.enabled,
+                panelPosition: ['center', 'mouse', 'none'].includes(result.panelPosition)
+                    ? result.panelPosition
+                    : defaults.panelPosition
+            };
+        }
+        catch (error) {
+            console.warn('读取存储失败，使用默认设置', error);
+            this.settings = defaults;
+        }
+    }
+    /**
+     * 应用并可选持久化设置
+     */
+    async applySettings(partial, persist = false) {
+        await this.settingsReady;
+        const prevEnabled = this.settings.enabled;
+        this.settings = { ...this.settings, ...partial };
+        // 当被关闭时立刻清理 UI
+        if (prevEnabled && !this.settings.enabled) {
+            this.selection.clear();
+            this.panel.hide();
+        }
+        if (persist && typeof chrome !== 'undefined' && chrome.storage?.local) {
+            try {
+                await chrome.storage.local.set({
+                    enabled: this.settings.enabled,
+                    panelPosition: this.settings.panelPosition
+                });
+            }
+            catch (error) {
+                console.warn('保存设置失败', error);
+            }
+        }
+    }
+    /**
+     * 根据配置展示结果或直接复制
+     */
+    handleShowResult(text) {
+        const mode = this.settings.panelPosition;
+        if (mode === 'none') {
+            navigator.clipboard?.writeText(text).catch((error) => {
+                console.error('直接复制失败:', error);
+            });
+            return;
+        }
+        const position = this.calcPanelPosition(mode);
+        this.panel.show(text, { position, editable: true });
+        // 只忽略紧随本次选择动作的首个 click
+        this.ignoreNextOutsideClick = true;
+    }
+    /**
+     * 计算面板位置
+     */
+    calcPanelPosition(mode) {
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const panelWidth = 320;
+        const panelHeight = 320;
+        if (mode === 'center') {
+            return {
+                left: Math.max(10, (viewportWidth - panelWidth) / 2),
+                top: Math.max(10, (viewportHeight - panelHeight) / 2)
+            };
+        }
+        const anchor = this.lastMouseUpPoint || { x: viewportWidth / 2, y: viewportHeight / 2 };
+        return {
+            left: Math.min(Math.max(10, anchor.x + 16), viewportWidth - panelWidth - 10),
+            top: Math.min(Math.max(10, anchor.y + 16), viewportHeight - panelHeight - 10)
+        };
     }
     /**
      * 初始化插件
@@ -574,6 +835,15 @@ class BrowserSelectionCopy {
     cleanup() {
         this.selection.clear();
         this.panel.hide();
+        document.removeEventListener('mousedown', this.handleMouseDownBound);
+        document.removeEventListener('mousemove', this.handleMouseMoveBound);
+        document.removeEventListener('mouseup', this.handleMouseUpBound);
+        document.removeEventListener('click', this.handleOutsideClickBound);
+        document.removeEventListener('keydown', this.handleKeydownBound);
+        if (this.messageListener && typeof chrome !== 'undefined' && chrome.runtime?.onMessage?.removeListener) {
+            chrome.runtime.onMessage.removeListener(this.messageListener);
+        }
+        this.messageListener = null;
     }
 }
 // 防止重复初始化

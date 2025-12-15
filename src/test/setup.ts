@@ -14,6 +14,12 @@ const mockChrome = {
     },
     sendMessage: jest.fn()
   },
+  storage: {
+    local: {
+      get: jest.fn().mockResolvedValue({}),
+      set: jest.fn().mockResolvedValue(undefined)
+    }
+  },
   action: {
     onClicked: {
       addListener: jest.fn()

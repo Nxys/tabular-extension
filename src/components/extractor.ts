@@ -32,7 +32,17 @@ export class Extractor {
     const centerX = rect.left + (rect.right - rect.left) / 2;
     const centerY = rect.top + (rect.bottom - rect.top) / 2;
     
-    const elementsAtPoint = document.elementsFromPoint(centerX, centerY);
+    // jsdom 环境可能不存在 elementsFromPoint，这里做兼容处理
+    const elementsFromPoint = typeof document.elementsFromPoint === 'function'
+      ? document.elementsFromPoint.bind(document)
+      : null;
+
+    if (!elementsFromPoint) {
+      console.warn('elementsFromPoint 不可用，返回空结果');
+      return '';
+    }
+
+    const elementsAtPoint = elementsFromPoint(centerX, centerY);
     console.log('中心点元素:', elementsAtPoint);
     
     let fallbackText = '';
@@ -45,7 +55,7 @@ export class Extractor {
     }
     
     console.log('备用方法提取结果:', fallbackText);
-    return fallbackText.trim() || '选择区域内未找到文本';
+    return fallbackText.trim();
   }
 
   /**
