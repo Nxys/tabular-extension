@@ -2,7 +2,7 @@
 
 ## 概述
 
-浏览器框选复制插件采用 Chrome 扩展 Manifest v3 架构，通过 Content Script 实现页面交互，Service Worker 处理扩展生命周期。核心设计围绕三个主要组件：选择框管理器、视觉文本提取器和结果面板。插件使用事件驱动架构，确保用户交互的响应性和文本提取的准确性。
+浏览器框选复制插件采用 Chrome 扩展 Manifest v3 架构，通过 Content Script 实现页面交互，Service Worker 处理扩展生命周期。核心设计围绕三个主要组件：Selection（选择框组件）、Extractor（文本提取器）和 Panel（结果面板）。插件使用事件驱动架构和组合模式，通过 BrowserSelectionCopy 主控制器协调各组件交互，确保用户交互的响应性和文本提取的准确性。
 
 ## 架构
 
@@ -24,63 +24,77 @@
 
 ## 组件和接口
 
-### 1. SelectionBox 组件
+### 1. Selection 组件
 **职责**: 处理鼠标交互，创建和管理选择框UI
 
 **接口**:
 ```typescript
-interface SelectionBox {
+class Selection {
   // 开始选择
-  startSelection(startX: number, startY: number): void;
+  start(x: number, y: number): void;
   // 更新选择框
-  updateSelection(currentX: number, currentY: number): void;
-  // 完成选择
-  finishSelection(): SelectionRect;
+  update(x: number, y: number): void;
+  // 完成选择，返回选择区域
+  finish(): SelectionRect | null;
+  // 验证选择是否有效
+  isValid(rect: SelectionRect): boolean;
+  // 获取选择状态
+  getIsSelecting(): boolean;
   // 清除选择框
-  clearSelection(): void;
-}
-
-interface SelectionRect {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
+  clear(): void;
 }
 ```
 
-### 2. VisualTextExtractor 组件
-**职责**: 提取选择区域内的文本并按视觉顺序排列
+### 2. Extractor 组件
+**职责**: 从选择区域提取文本并按视觉顺序排列
 
 **接口**:
 ```typescript
-interface VisualTextExtractor {
-  // 提取文本
-  extractText(selectionRect: SelectionRect): string;
-  // 获取文本元素
-  getTextElements(rect: SelectionRect): TextElement[];
-  // 按视觉顺序排序
-  sortByVisualOrder(elements: TextElement[]): TextElement[];
-}
-
-interface TextElement {
-  text: string;
-  rect: DOMRect;
-  element: Element;
+class Extractor {
+  // 提取选择区域内的文本
+  extract(rect: SelectionRect): string;
+  // 私有方法：获取文本元素
+  private getTextElements(rect: SelectionRect): TextElement[];
+  // 私有方法：按视觉顺序排序
+  private sortByVisualOrder(elements: TextElement[]): TextElement[];
+  // 私有方法：合并文本
+  private combineText(elements: TextElement[]): string;
 }
 ```
 
-### 3. ResultPanel 组件
-**职责**: 显示提取结果和提供复制功能
+### 3. Panel 组件
+**职责**: 显示提取结果和提供复制功能的浮动面板
 
 **接口**:
 ```typescript
-interface ResultPanel {
+class Panel {
   // 显示结果
-  showResult(text: string): void;
+  show(text: string): void;
   // 隐藏面板
   hide(): void;
-  // 复制到剪贴板
-  copyToClipboard(text: string): Promise<boolean>;
+  // 检查点击是否在面板内
+  contains(target: Node | null): boolean;
+  // 私有方法：复制到剪贴板
+  private copyToClipboard(): Promise<void>;
+}
+```
+
+### 4. BrowserSelectionCopy 主控制器
+**职责**: 协调各组件交互，处理完整的用户操作流程
+
+**接口**:
+```typescript
+class BrowserSelectionCopy {
+  // 初始化插件
+  initialize(): void;
+  // 清理资源
+  cleanup(): void;
+  // 私有方法：事件处理
+  private bindEvents(): void;
+  private handleMouseDown(event: MouseEvent): void;
+  private handleMouseMove(event: MouseEvent): void;
+  private handleMouseUp(event: MouseEvent): void;
+  private handleOutsideClick(event: Event): void;
 }
 ```
 
@@ -121,27 +135,27 @@ interface VisualLine {
 
 *属性是应该在系统的所有有效执行中保持为真的特征或行为——本质上是关于系统应该做什么的正式声明。属性作为人类可读规范和机器可验证正确性保证之间的桥梁。*
 
-基于预工作分析，以下是经过反思和去重后的核心正确性属性：
+基于预工作分析和属性反思，以下是经过去重和优化的核心正确性属性：
 
-### 属性 1: 选择框生命周期完整性
-*对于任何* 鼠标拖拽操作序列，选择框应该正确响应开始、更新、完成和清除的完整生命周期
+### 属性 1: 选择框交互完整性
+*对于任何* 有效的鼠标拖拽操作（起始坐标、结束坐标），选择框应该正确创建、更新尺寸位置、完成选择并在外部点击时清除
 **验证需求: 1.1, 1.2, 1.3, 1.4, 1.5**
 
-### 属性 2: 文本元素过滤准确性  
-*对于任何* 选择区域和页面文本元素集合，只有可见且与选择区域相交的文本元素应该被包含在提取结果中
+### 属性 2: 文本元素检测准确性  
+*对于任何* 选择区域和DOM结构，文本提取器应该只包含可见且与选择区域相交的文本元素，排除隐藏和不相交的元素
 **验证需求: 2.1, 2.2, 2.3, 2.4, 2.5**
 
-### 属性 3: 视觉顺序排列正确性
-*对于任何* 文本元素集合，排序后的文本应该按照从上到下、从左到右的视觉阅读顺序，同行文本用空格分隔，不同行用换行符分隔
+### 属性 3: 视觉排序一致性
+*对于任何* 文本元素集合，视觉排序算法应该产生从上到下、从左到右的阅读顺序，正确分组行并用适当的分隔符连接
 **验证需求: 3.1, 3.2, 3.3, 3.4, 3.5**
 
-### 属性 4: 结果面板交互完整性
-*对于任何* 提取的文本内容，结果面板应该正确显示内容、处理复制操作、提供用户反馈并响应隐藏操作
+### 属性 4: 面板操作完整性
+*对于任何* 非空文本内容，结果面板应该正确显示、响应复制操作、提供用户反馈并在外部点击时隐藏
 **验证需求: 4.2, 4.3, 4.4, 4.5**
 
-### 属性 5: 非侵入性操作保证
-*对于任何* 页面内容，插件操作不应该修改原始页面结构、发送网络请求或影响页面正常功能
-**验证需求: 5.3, 5.5**
+### 属性 5: 系统非侵入性
+*对于任何* 页面状态，插件的所有操作都不应该修改原始页面DOM结构、样式或发起网络请求
+**验证需求: 5.3, 5.5, 6.5**
 
 ## 错误处理
 

@@ -100,24 +100,38 @@ npm run package   # 创建扩展包
 
 ### 发布包内容
 ```
-extension-package/
+build/package/
 ├── manifest.json          # 扩展清单文件
-├── content-script.js      # 合并后的内容脚本
-├── content-script.css     # 样式文件
-└── service-worker.js      # 后台服务脚本
+├── content.js             # 合并后的内容脚本（单个文件，MVP设计）
+├── content.css            # 样式文件
+├── background.js          # 后台服务脚本
+├── popup.html             # 弹出窗口HTML
+├── popup.js               # 弹出窗口脚本
+└── assets/                # 图标资源
+   ├── icon16.png
+   ├── icon32.png
+   ├── icon48.png
+   └── icon128.png
 ```
 
 ### 源代码结构
 ```
 src/
-├── components/            # 核心组件
-│   ├── SelectionBox.ts   # 选择框组件
-│   ├── VisualTextExtractor.ts  # 文本提取器
-│   └── ResultPanel.ts    # 结果面板
-├── types/                # 类型定义
-├── test/                 # 测试文件
-└── MainController.ts     # 主控制器
+├── content.ts            # 内容脚本入口（组合组件）
+├── types.ts              # 类型定义
+├── components/           # 核心组件
+│   ├── selection.ts     # 选择框组件
+│   ├── extractor.ts     # 文本提取器
+│   └── panel.ts         # 结果面板
+├── background.ts         # 后台脚本
+├── popup.ts              # 弹出窗口脚本
+├── popup.html            # 弹出窗口HTML
+├── content.css           # 样式文件
+├── manifest.json         # 扩展配置
+└── test/                 # 测试文件
 ```
+
+详细结构说明请参考 [STRUCTURE.md](./STRUCTURE.md)
 
 ## 质量保证
 

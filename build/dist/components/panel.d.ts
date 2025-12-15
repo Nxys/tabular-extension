@@ -1,63 +1,38 @@
-import { IResultPanel } from '../types.js';
 /**
- * 结果面板组件 - 显示提取结果和提供复制功能
+ * 结果面板
+ * 显示提取结果和提供复制功能的浮动面板
  */
-export declare class ResultPanel implements IResultPanel {
-    private panelElement;
+export declare class Panel {
+    private element;
     private currentText;
-    private outsideClickHandler;
-    private keydownHandler;
+    private readonly CSS_CLASS_PREFIX;
     /**
-     * 显示提取结果
+     * 显示结果
      */
-    showResult(text: string): void;
+    show(text: string): void;
     /**
      * 隐藏面板
      */
     hide(): void;
     /**
-     * 复制文本到剪贴板
+     * 检查点击是否在面板内
      */
-    copyToClipboard(text: string): Promise<boolean>;
+    contains(target: Node | null): boolean;
     /**
-     * 创建结果面板DOM元素
+     * 创建面板
      */
-    private createPanel;
+    private createElement;
     /**
-     * 更新面板内容
+     * 复制到剪贴板
      */
-    private updateContent;
+    private copyToClipboard;
     /**
-     * 显示复制反馈
+     * 显示复制成功
      */
-    private showCopyFeedback;
+    private showCopySuccess;
     /**
-     * 降级复制方案 - 选择文本让用户手动复制
+     * 显示复制错误
      */
-    private fallbackCopy;
-    /**
-     * 添加外部点击事件监听器
-     */
-    private addOutsideClickListener;
-    /**
-     * 移除外部点击事件监听器
-     */
-    private removeOutsideClickListener;
-    /**
-     * 添加键盘事件监听器
-     */
-    private addKeydownListener;
-    /**
-     * 移除键盘事件监听器
-     */
-    private removeKeydownListener;
-    /**
-     * 处理点击外部区域隐藏面板
-     */
-    private handleOutsideClick;
-    /**
-     * 处理键盘事件（ESC 键隐藏面板）
-     */
-    private handleKeydown;
+    private showCopyError;
 }
 //# sourceMappingURL=panel.d.ts.map

@@ -14,41 +14,42 @@
 
 ```
 browser-selection-copy/
-├── manifest.json              # Chrome 扩展配置文件
-├── content-script.js          # 内容脚本入口
-├── content-script.css         # 样式文件
-├── service-worker.js          # 后台服务工作者
 ├── src/                       # TypeScript 源代码
-│   ├── types/                 # 类型定义
-│   │   └── index.ts
-│   ├── components/            # 核心组件
-│   │   ├── SelectionBox.ts    # 选择框组件
-│   │   ├── VisualTextExtractor.ts # 文本提取器
-│   │   └── ResultPanel.ts     # 结果面板
-│   ├── MainController.ts      # 主控制器
-│   └── test/                  # 测试文件
-│       ├── setup.ts           # 测试环境设置
-│       ├── project-structure.test.ts
-│       ├── manifest-validation.test.ts
-│       └── dependency-validation.test.ts
-├── package.json               # 项目配置
-├── tsconfig.json             # TypeScript 配置
-└── .eslintrc.js              # ESLint 配置
+│   ├── content.ts            # 内容脚本入口（组合组件）
+│   ├── types.ts              # 类型定义
+│   ├── components/           # 核心组件
+│   │   ├── selection.ts     # 选择框组件
+│   │   ├── extractor.ts     # 文本提取器
+│   │   └── panel.ts         # 结果面板
+│   ├── background.ts         # 后台脚本
+│   ├── popup.ts              # 弹出窗口脚本
+│   ├── popup.html            # 弹出窗口HTML
+│   ├── content.css           # 样式文件
+│   ├── manifest.json         # 扩展配置
+│   └── test/                 # 测试文件
+├── build/                     # 构建输出
+│   ├── dist/                 # TypeScript编译后的模块
+│   └── package/              # 打包输出（最终发布包）
+│       └── content.js        # 合并后的单个文件（MVP设计）
+├── package.json              # 项目配置
+└── tsconfig.json            # TypeScript 配置
 ```
 
 ## 核心组件
 
-### SelectionBox
+### Selection（选择框）
 负责处理鼠标交互，创建和管理选择框UI。
 
-### VisualTextExtractor  
+### Extractor（文本提取器）
 负责从选择区域提取文本并按视觉顺序排列。
 
-### ResultPanel
+### Panel（结果面板）
 显示提取结果和提供复制功能的浮动面板。
 
-### MainController
-协调各组件交互，管理完整的用户操作流程。
+### BrowserSelectionCopy（主类）
+在 `content.ts` 中组合上述组件，管理完整的用户操作流程。
+
+**设计理念**：源码拆分提升可维护性，构建脚本合并为单个文件，符合MVP设计，降低审核风险。
 
 ## 开发命令
 

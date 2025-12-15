@@ -1,76 +1,81 @@
 /**
- * 视觉文本提取器 - 负责从选择区域提取和排序文本
+ * 文本提取器
+ * 从选择区域提取文本并按视觉顺序排列
  */
-export class VisualTextExtractor {
-    LINE_TOLERANCE = 5; // 行分组的像素容差
+export class Extractor {
+    LINE_TOLERANCE = 5;
     /**
-     * 提取选择区域内的文本并按视觉顺序排列
+     * 提取选择区域内的文本
      */
-    extractText(selectionRect) {
-        const textElements = this.getTextElements(selectionRect);
-        const sortedElements = this.sortByVisualOrder(textElements);
-        return this.combineTextElements(sortedElements);
+    extract(rect) {
+        console.log('开始提取文本，选择区域:', rect);
+        // 方法1：使用TreeWalker
+        const elements = this.getTextElements(rect);
+        console.log('TreeWalker找到文本元素数量:', elements.length);
+        if (elements.length > 0) {
+            const sorted = this.sortByVisualOrder(elements);
+            console.log('排序后元素数量:', sorted.length);
+            const result = this.combineText(sorted);
+            console.log('TreeWalker提取结果:', result);
+            if (result.trim()) {
+                return result;
+            }
+        }
+        // 方法2：备用方法 - 使用elementsFromPoint
+        console.log('使用备用提取方法');
+        const centerX = rect.left + (rect.right - rect.left) / 2;
+        const centerY = rect.top + (rect.bottom - rect.top) / 2;
+        const elementsAtPoint = document.elementsFromPoint(centerX, centerY);
+        console.log('中心点元素:', elementsAtPoint);
+        let fallbackText = '';
+        for (const element of elementsAtPoint) {
+            const text = element.textContent || element.innerText || '';
+            if (text.trim()) {
+                fallbackText += text.trim() + '\n';
+                break; // 只取第一个有文本的元素
+            }
+        }
+        console.log('备用方法提取结果:', fallbackText);
+        return fallbackText.trim() || '选择区域内未找到文本';
     }
     /**
-     * 获取选择区域内的所有文本元素
+     * 获取文本元素
      */
     getTextElements(rect) {
+        const elements = [];
         const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
             acceptNode: (node) => {
-                // 过滤空白和隐藏文本
                 if (!node.textContent?.trim())
                     return NodeFilter.FILTER_REJECT;
                 const parent = node.parentElement;
-                if (!parent || !this.isVisible(parent))
-                    return NodeFilter.FILTER_REJECT;
-                return NodeFilter.FILTER_ACCEPT;
+                return parent && this.isVisible(parent) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
             }
         });
-        const elements = [];
         let node;
-        while (node = walker.nextNode()) {
+        while ((node = walker.nextNode())) {
             const parent = node.parentElement;
-            const rects = parent.getClientRects();
-            // 检查每个rect是否与选择区域相交
-            for (let i = 0; i < rects.length; i++) {
-                const domRect = rects[i];
-                if (this.intersects(domRect, rect)) {
+            const clientRects = parent.getClientRects();
+            for (let i = 0; i < clientRects.length; i++) {
+                const clientRect = clientRects[i];
+                const elementRect = {
+                    left: clientRect.left + window.scrollX,
+                    top: clientRect.top + window.scrollY,
+                    right: clientRect.right + window.scrollX,
+                    bottom: clientRect.bottom + window.scrollY
+                };
+                if (this.intersects(elementRect, rect)) {
                     elements.push({
                         text: node.textContent || '',
-                        rect: domRect,
+                        rect: clientRect,
                         element: parent,
-                        lineIndex: -1, // 稍后分配
-                        columnIndex: -1 // 稍后分配
+                        lineIndex: -1,
+                        columnIndex: -1
                     });
-                    break; // 每个文本节点只添加一次
+                    break;
                 }
             }
         }
         return elements;
-    }
-    /**
-     * 按视觉顺序排序文本元素
-     */
-    sortByVisualOrder(elements) {
-        // 1. 按Y坐标分组为视觉行
-        const lines = this.groupIntoVisualLines(elements);
-        // 2. 行内按X坐标排序
-        lines.forEach(line => {
-            line.elements.sort((a, b) => a.rect.left - b.rect.left);
-            // 分配列索引
-            line.elements.forEach((element, index) => {
-                element.columnIndex = index;
-            });
-        });
-        // 3. 按行顺序合并结果并分配行索引
-        return lines
-            .sort((a, b) => a.topY - b.topY)
-            .flatMap((line, lineIndex) => {
-            line.elements.forEach(element => {
-                element.lineIndex = lineIndex;
-            });
-            return line.elements;
-        });
     }
     /**
      * 检查元素是否可见
@@ -82,61 +87,113 @@ export class VisualTextExtractor {
             style.opacity !== '0';
     }
     /**
-     * 检查矩形是否与选择区域相交
+     * 检查矩形是否相交
      */
-    intersects(rect, selection) {
-        return !(rect.right < selection.left ||
-            rect.left > selection.right ||
-            rect.bottom < selection.top ||
-            rect.top > selection.bottom);
+    intersects(rect1, rect2) {
+        return !(rect1.right < rect2.left ||
+            rect1.left > rect2.right ||
+            rect1.bottom < rect2.top ||
+            rect1.top > rect2.bottom);
     }
     /**
-     * 将文本元素分组为视觉行
+     * 按视觉顺序排序
      */
-    groupIntoVisualLines(elements) {
+    sortByVisualOrder(elements) {
+        // 按行分组
         const lines = [];
         elements.forEach(element => {
-            const existingLine = lines.find(line => Math.abs(line.topY - element.rect.top) <= this.LINE_TOLERANCE);
-            if (existingLine) {
-                existingLine.elements.push(element);
-                // 更新行边界
-                existingLine.topY = Math.min(existingLine.topY, element.rect.top);
-                existingLine.bottomY = Math.max(existingLine.bottomY, element.rect.bottom);
+            const elementTop = element.rect.top;
+            let foundLine = false;
+            for (const line of lines) {
+                const lineTop = line[0].rect.top;
+                if (Math.abs(elementTop - lineTop) <= this.LINE_TOLERANCE) {
+                    line.push(element);
+                    foundLine = true;
+                    break;
+                }
             }
-            else {
-                lines.push({
-                    lineIndex: lines.length,
-                    topY: element.rect.top,
-                    bottomY: element.rect.bottom,
-                    elements: [element]
-                });
+            if (!foundLine) {
+                lines.push([element]);
             }
         });
-        return lines;
+        // 行内按X坐标排序，行间按Y坐标排序
+        lines.forEach(line => {
+            line.sort((a, b) => a.rect.left - b.rect.left);
+        });
+        lines.sort((a, b) => a[0].rect.top - b[0].rect.top);
+        return lines.flat();
     }
     /**
-     * 合并文本元素为最终字符串
+     * 合并文本
      */
-    combineTextElements(elements) {
+    combineText(elements) {
         if (elements.length === 0)
             return '';
-        let result = '';
-        let currentLineIndex = -1;
-        elements.forEach((element, index) => {
-            // 如果是新行，添加换行符（除了第一行）
-            if (element.lineIndex !== currentLineIndex) {
-                if (currentLineIndex !== -1) {
-                    result += '\n';
+        try {
+            // 防护措施：严格限制元素数量，避免内存溢出
+            const maxElements = 50;
+            const limitedElements = elements.slice(0, maxElements);
+            const lines = [];
+            let currentLine = [];
+            let lastTop = limitedElements[0].rect.top;
+            limitedElements.forEach(element => {
+                const text = element.text.trim();
+                if (!text || text.length > 1000)
+                    return; // 跳过空文本和过长文本
+                if (Math.abs(element.rect.top - lastTop) > this.LINE_TOLERANCE) {
+                    // 新行
+                    if (currentLine.length > 0) {
+                        // 防护措施：严格限制单行元素数量和文本长度
+                        const safeCurrentLine = currentLine.slice(0, 10);
+                        try {
+                            const lineText = safeCurrentLine.join(' ');
+                            if (lineText.length < 10000) { // 限制行长度
+                                lines.push(lineText);
+                            }
+                        }
+                        catch (e) {
+                            // 如果join失败，使用第一个元素
+                            if (safeCurrentLine.length > 0) {
+                                lines.push(safeCurrentLine[0]);
+                            }
+                        }
+                        currentLine = [];
+                    }
+                    lastTop = element.rect.top;
                 }
-                currentLineIndex = element.lineIndex;
+                // 防护措施：严格限制单行元素数量
+                if (currentLine.length < 10 && text.length < 1000) {
+                    currentLine.push(text);
+                }
+            });
+            if (currentLine.length > 0) {
+                const safeCurrentLine = currentLine.slice(0, 10);
+                try {
+                    const lineText = safeCurrentLine.join(' ');
+                    if (lineText.length < 10000) {
+                        lines.push(lineText);
+                    }
+                }
+                catch (e) {
+                    if (safeCurrentLine.length > 0) {
+                        lines.push(safeCurrentLine[0]);
+                    }
+                }
             }
-            else if (index > 0) {
-                // 同行内添加空格分隔
-                result += ' ';
+            // 防护措施：严格限制总行数
+            const limitedLines = lines.slice(0, 10);
+            try {
+                return limitedLines.join('\n');
             }
-            result += element.text.trim();
-        });
-        return result;
+            catch (e) {
+                // 如果最终join失败，返回第一行
+                return limitedLines.length > 0 ? limitedLines[0] : '';
+            }
+        }
+        catch (error) {
+            console.warn('文本合并出错:', error);
+            return '文本提取出错';
+        }
     }
 }
 //# sourceMappingURL=extractor.js.map

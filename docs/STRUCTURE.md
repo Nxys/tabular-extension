@@ -21,41 +21,43 @@
 
 ```
 src/
-├─ main.ts              # 主控制器（原 MainController.ts）
-├─ types.ts             # 类型定义（原 types/index.ts）
+├─ content.ts           # 内容脚本入口（组合组件）
+├─ types.ts             # 类型定义
 ├─ components/          # 组件目录
-│  ├─ selection.ts      # 选择框（原 SelectionBox.ts）
-│  ├─ extractor.ts      # 文本提取器（原 VisualTextExtractor.ts）
-│  └─ panel.ts          # 结果面板（原 ResultPanel.ts）
+│  ├─ selection.ts      # 选择框组件
+│  ├─ extractor.ts      # 文本提取器
+│  └─ panel.ts          # 结果面板
+├─ background.ts        # 后台脚本
+├─ popup.ts             # 弹出窗口脚本
+├─ popup.html           # 弹出窗口HTML
+├─ content.css          # 样式文件
+├─ manifest.json        # 扩展配置
 └─ test/               # 测试文件
    ├─ setup.ts
    ├─ project-structure.test.ts
    ├─ manifest-validation.test.ts
    ├─ dependency-validation.test.ts
-   ├─ selection-box-ui.test.ts
-   ├─ selection-box-mouse-events.test.ts
-   ├─ selection-box-lifecycle.property.test.ts
-   ├─ visual-text-extractor.test.ts
-   ├─ visual-text-extractor.property.test.ts
-   └─ result-panel-interaction.test.ts
+   └─ browser-selection-copy.test.ts
 ```
 
 ## 🔧 构建目录（build/）
 
 ```
 build/
-├─ build-extension.js   # 合并脚本
-├─ package-extension.js # 打包脚本
-├─ dist/               # 编译输出
-│  ├─ main.js/.d.ts
+├─ build-extension.cjs  # 合并脚本（将组件合并为单个content.js）
+├─ package-extension.cjs # 打包脚本
+├─ dist/               # 编译输出（TypeScript编译后的模块）
 │  ├─ types.js/.d.ts
+│  ├─ content.js/.d.ts
+│  ├─ background.js/.d.ts
+│  ├─ popup.js/.d.ts
 │  └─ components/
 │     ├─ selection.js/.d.ts
 │     ├─ extractor.js/.d.ts
 │     └─ panel.js/.d.ts
-└─ package/            # 打包输出
+└─ package/            # 打包输出（最终发布包）
    ├─ manifest.json
-   ├─ content.js
+   ├─ content.js       # 合并后的单个文件（MVP设计）
    ├─ content.css
    ├─ background.js
    ├─ popup.html
@@ -80,20 +82,38 @@ docs/
 ├─ README.md           # 项目介绍
 ├─ RELEASE.md          # 发布指南
 ├─ PUBLISH_CHECKLIST.md # 发布检查清单
-├─ PROJECT.md          # 项目说明
-├─ STRUCTURE.md        # 本文件
+├─ STRUCTURE.md        # 本文件（项目结构说明）
 └─ store-assets/       # 商店资源说明
    └─ README.md
 ```
 
+## 📦 核心文件（最终产物）
+
+```
+./
+├─ manifest.json      # 扩展清单
+├─ content.js         # 内容脚本（合并后的单个文件）
+├─ content.css        # 样式文件
+├─ background.js      # 后台脚本
+├─ popup.html         # 弹出窗口
+├─ popup.js           # 弹出脚本
+└─ assets/            # 资源文件
+   ├─ icon16.png      # 16x16 图标
+   ├─ icon32.png      # 32x32 图标
+   ├─ icon48.png      # 48x48 图标
+   └─ icon128.png     # 128x128 图标
+```
+
 ## 🎯 极简命名原则
 
-### 源码文件命名
-- `main.ts` - 主控制器（核心逻辑）
-- `types.ts` - 类型定义（接口声明）
+### 源码文件命名（极简原则）
+- `content.ts` - 内容脚本入口（组合组件）
+- `types.ts` - 类型定义
 - `selection.ts` - 选择框组件
 - `extractor.ts` - 文本提取器
 - `panel.ts` - 结果面板
+
+**命名原则**：单一、简洁，通过注释和文档说明功能
 
 ### 目录分类原则
 - **src/** - 所有开发源码
@@ -124,10 +144,12 @@ npm run release       # 完整流程
 
 | 分类 | 文件数 | 说明 |
 |------|--------|------|
-| 源码 | 5个 | TypeScript 开发文件 |
-| 测试 | 10个 | 完整测试覆盖 |
+| 源码 | 7个 | TypeScript 开发文件（content.ts + 3个组件 + 其他） |
+| 测试 | 5个 | 核心功能测试 |
 | 构建 | 2个 | 自动化构建脚本 |
-| 文档 | 6个 | 完整项目文档 |
+| 文档 | 5个 | 完整项目文档 |
 | 资源 | 3个 | 图标和演示工具 |
+
+**设计理念**：源码可拆分（提升可维护性），最终产物合并为单个文件（符合MVP设计，降低审核风险）
 
 **总计**: 清晰分类，各司其职，极简高效！
