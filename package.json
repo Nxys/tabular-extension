@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "浏览器框选复制插件 - Chrome扩展",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "test": "jest",
     "lint": "eslint src/**/*.ts",
