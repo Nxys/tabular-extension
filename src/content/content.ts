@@ -1,7 +1,7 @@
-import { Selection } from './components/selection.js';
-import { Extractor } from './components/extractor.js';
-import { Panel } from './components/panel.js';
-import type { PanelPosition, PluginSettings, SelectionRect } from './types.js';
+import { Selection } from './selection';
+import { Extractor } from './extractor';
+import { Panel } from './panel';
+import type { PanelPosition, PluginSettings, SelectionRect } from '../types';
 
 /**
  * 浏览器框选复制插件 - 内容脚本

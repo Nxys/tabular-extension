@@ -4,75 +4,90 @@
 
 ```
 ./
-├─ src/                   # 📝 源码（开发）
+├─ src/                   # 📝 源码（开发，包含图标资源）
+├─ test/                  # 🧪 测试（单元测试）
 ├─ build/                 # 🔧 构建（编译打包）
-├─ resources/             # 🎨 资源（图标工具）
-├─ docs/                  # 📚 文档（说明指南）
-├─ manifest.json          # 扩展清单
-├─ content.js            # 内容脚本（最终产物）
-├─ content.css           # 样式文件
-├─ background.js         # 后台脚本
-├─ popup.html           # 弹出窗口
-├─ popup.js             # 弹出脚本
-└─ extension.zip        # 发布包
+└─ docs/                  # 📚 文档（说明指南）
 ```
 
 ## 📝 源码目录（src/）
 
 ```
 src/
-├─ content.ts           # 内容脚本入口（组合组件）
-├─ types.ts             # 类型定义
-├─ components/          # 组件目录
-│  ├─ selection.ts      # 选择框组件
-│  ├─ extractor.ts      # 文本提取器
-│  └─ panel.ts          # 结果面板
 ├─ background.ts        # 后台脚本
-├─ popup.ts             # 弹出窗口脚本
-├─ popup.html           # 弹出窗口HTML
-├─ content.css          # 样式文件
+├─ types.ts             # 类型定义
 ├─ manifest.json        # 扩展配置
-└─ test/               # 测试文件
-   ├─ setup.ts
-   ├─ project-structure.test.ts
-   ├─ manifest-validation.test.ts
-   ├─ dependency-validation.test.ts
-   └─ browser-selection-copy.test.ts
+├─ content/             # 内容脚本模块
+│  ├─ content.ts       # 内容脚本入口（组合组件）
+│  ├─ content.css      # 样式文件
+│  ├─ selection.ts     # 选择框组件
+│  ├─ extractor.ts     # 文本提取器
+│  └─ panel.ts         # 结果面板
+├─ popup/               # 弹出窗口模块
+│  ├─ popup.ts         # 弹出窗口脚本
+│  └─ popup.html       # 弹出窗口HTML
+└─ images/              # 图标资源
+   ├─ icon.html        # 图标生成工具（SVG模板）
+   ├─ icon16.png       # 16x16 图标
+   ├─ icon32.png       # 32x32 图标
+   ├─ icon48.png       # 48x48 图标
+   └─ icon128.png      # 128x128 图标
+```
+
+## 🧪 测试目录（test/）
+
+```
+test/
+├─ setup.ts             # 测试配置
+├─ structure.test.ts    # 结构测试
+├─ manifest.test.ts     # 清单测试
+├─ dependency.test.ts   # 依赖测试
+└─ extension.test.ts    # 功能测试
 ```
 
 ## 🔧 构建目录（build/）
 
 ```
 build/
-├─ build-extension.cjs  # 合并脚本（将组件合并为单个content.js）
-├─ package-extension.cjs # 打包脚本
+├─ extension.cjs       # 扩展构建脚本
+├─ merge.cjs           # 合并脚本（将组件合并为单个content.js）
+├─ icon.cjs            # 图标生成脚本
+├─ zip.cjs             # 打包脚本
 ├─ dist/               # 编译输出（TypeScript编译后的模块）
 │  ├─ types.js/.d.ts
-│  ├─ content.js/.d.ts
 │  ├─ background.js/.d.ts
-│  ├─ popup.js/.d.ts
-│  └─ components/
-│     ├─ selection.js/.d.ts
-│     ├─ extractor.js/.d.ts
-│     └─ panel.js/.d.ts
-└─ package/            # 打包输出（最终发布包）
+│  ├─ content/
+│  │  ├─ content.js/.d.ts
+│  │  ├─ selection.js/.d.ts
+│  │  ├─ extractor.js/.d.ts
+│  │  └─ panel.js/.d.ts
+│  └─ popup/
+│     └─ popup.js/.d.ts
+└─ extension/          # 打包输出（最终发布包）
    ├─ manifest.json
-   ├─ content.js       # 合并后的单个文件（MVP设计）
-   ├─ content.css
    ├─ background.js
-   ├─ popup.html
-   ├─ popup.js
-   └─ assets/
+   ├─ content/
+   │  ├─ content.js    # 合并后的单个文件（MVP设计）
+   │  └─ content.css
+   ├─ popup/
+   │  ├─ popup.js
+   │  └─ popup.html
+   └─ images/
+      ├─ icon16.png
+      ├─ icon32.png
+      ├─ icon48.png
+      └─ icon128.png
 ```
 
-## 🎨 资源目录（resources/）
+## 🎨 图标资源（src/images/）
 
 ```
-resources/
-├─ assets/             # 图标资源
-│  └─ icon.svg         # SVG 图标源文件
-├─ create-icons.html   # 图标生成工具
-└─ demo.html          # 功能演示页面
+src/images/
+├─ icon.html          # 图标生成工具（包含SVG模板）
+├─ icon16.png         # 16x16 图标
+├─ icon32.png         # 32x32 图标
+├─ icon48.png         # 48x48 图标
+└─ icon128.png        # 128x128 图标
 ```
 
 ## 📚 文档目录（docs/）
@@ -87,17 +102,19 @@ docs/
    └─ README.md
 ```
 
-## 📦 核心文件（最终产物）
+## 📦 核心文件（最终产物 - build/extension/）
 
 ```
-./
+build/extension/
 ├─ manifest.json      # 扩展清单
-├─ content.js         # 内容脚本（合并后的单个文件）
-├─ content.css        # 样式文件
 ├─ background.js      # 后台脚本
-├─ popup.html         # 弹出窗口
-├─ popup.js           # 弹出脚本
-└─ assets/            # 资源文件
+├─ content/           # 内容脚本目录
+│  ├─ content.js     # 合并后的单个文件（MVP设计）
+│  └─ content.css    # 样式文件
+├─ popup/             # 弹出窗口目录
+│  ├─ popup.js       # 弹出脚本
+│  └─ popup.html     # 弹出窗口
+└─ images/            # 图标资源
    ├─ icon16.png      # 16x16 图标
    ├─ icon32.png      # 32x32 图标
    ├─ icon48.png      # 48x48 图标
@@ -107,18 +124,19 @@ docs/
 ## 🎯 极简命名原则
 
 ### 源码文件命名（极简原则）
-- `content.ts` - 内容脚本入口（组合组件）
+- `content/content.ts` - 内容脚本入口（组合组件）
 - `types.ts` - 类型定义
-- `selection.ts` - 选择框组件
-- `extractor.ts` - 文本提取器
-- `panel.ts` - 结果面板
+- `content/selection.ts` - 选择框组件
+- `content/extractor.ts` - 文本提取器
+- `content/panel.ts` - 结果面板
+- `popup/popup.ts` - 弹出窗口脚本
 
-**命名原则**：单一、简洁，通过注释和文档说明功能
+**命名原则**：模块化组织，通过目录结构清晰分类
 
 ### 目录分类原则
-- **src/** - 所有开发源码
-- **build/** - 所有构建相关
-- **resources/** - 所有资源文件
+- **src/** - 所有开发源码（按功能模块组织，包含图标资源）
+- **test/** - 所有测试文件（独立于源码）
+- **build/** - 所有构建相关（脚本和输出）
 - **docs/** - 所有文档说明
 
 ## 🔄 开发流程
@@ -144,12 +162,12 @@ npm run release       # 完整流程
 
 | 分类 | 文件数 | 说明 |
 |------|--------|------|
-| 源码 | 7个 | TypeScript 开发文件（content.ts + 3个组件 + 其他） |
-| 测试 | 5个 | 核心功能测试 |
-| 构建 | 2个 | 自动化构建脚本 |
+| 源码 | 8个 | TypeScript 开发文件（按模块组织） |
+| 图标 | 5个 | 图标资源（模板+PNG） |
+| 测试 | 5个 | 核心功能测试（独立目录） |
+| 构建 | 4个 | 自动化构建脚本 |
 | 文档 | 5个 | 完整项目文档 |
-| 资源 | 3个 | 图标和演示工具 |
 
-**设计理念**：源码可拆分（提升可维护性），最终产物合并为单个文件（符合MVP设计，降低审核风险）
+**设计理念**：源码模块化组织（提升可维护性），图标资源集中管理（src/images），测试独立管理（清晰分离），最终产物按目录结构打包（清晰的扩展结构）
 
 **总计**: 清晰分类，各司其职，极简高效！

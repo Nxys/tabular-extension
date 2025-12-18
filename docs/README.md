@@ -17,22 +17,46 @@
 ```
 browser-selection-copy/
 ├── src/                       # TypeScript 源代码
-│   ├── content.ts            # 内容脚本入口（组合组件）
+│   ├── background.ts         # 后台脚本
 │   ├── types.ts              # 类型定义
-│   ├── components/           # 核心组件
+│   ├── manifest.json         # 扩展配置
+│   ├── content/              # 内容脚本模块
+│   │   ├── content.ts       # 内容脚本入口（组合组件）
+│   │   ├── content.css      # 样式文件
 │   │   ├── selection.ts     # 选择框组件
 │   │   ├── extractor.ts     # 文本提取器
 │   │   └── panel.ts         # 结果面板
-│   ├── background.ts         # 后台脚本
-│   ├── popup.ts              # 弹出窗口脚本
-│   ├── popup.html            # 弹出窗口HTML
-│   ├── content.css           # 样式文件
-│   ├── manifest.json         # 扩展配置
-│   └── test/                 # 测试文件
+│   ├── popup/                # 弹出窗口模块
+│   │   ├── popup.ts         # 弹出窗口脚本
+│   │   └── popup.html       # 弹出窗口HTML
+│   └── images/               # 图标资源
+│       ├── icon.html        # 图标生成工具（SVG模板）
+│       ├── icon16.png       # 16x16 图标
+│       ├── icon32.png       # 32x32 图标
+│       ├── icon48.png       # 48x48 图标
+│       └── icon128.png      # 128x128 图标
+├── test/                      # 测试文件
+│   ├── setup.ts              # 测试配置
+│   ├── structure.test.ts     # 结构测试
+│   ├── extension.test.ts     # 功能测试
+│   ├── manifest.test.ts      # 清单测试
+│   └── dependency.test.ts    # 依赖测试
 ├── build/                     # 构建输出
 │   ├── dist/                 # TypeScript编译后的模块
-│   └── package/              # 打包输出（最终发布包）
-│       └── content.js        # 合并后的单个文件（MVP设计）
+│   └── extension/            # 打包输出（最终发布包）
+│       ├── manifest.json
+│       ├── background.js
+│       ├── content/
+│       │   ├── content.js   # 合并后的单个文件（MVP设计）
+│       │   └── content.css
+│       ├── popup/
+│       │   ├── popup.js
+│       │   └── popup.html
+│       └── images/
+│           ├── icon16.png
+│           ├── icon32.png
+│           ├── icon48.png
+│           └── icon128.png
 ├── package.json              # 项目配置
 └── tsconfig.json            # TypeScript 配置
 ```
@@ -49,7 +73,7 @@ browser-selection-copy/
 显示提取结果和提供复制功能的浮动面板。
 
 ### BrowserSelectionCopy（主类）
-在 `content.ts` 中组合上述组件，管理完整的用户操作流程。
+在 `content/content.ts` 中组合上述组件，管理完整的用户操作流程。
 
 **设计理念**：源码拆分提升可维护性，构建脚本合并为单个文件，符合MVP设计，降低审核风险。
 

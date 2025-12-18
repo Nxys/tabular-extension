@@ -1,15 +1,15 @@
-// 图标生成脚本 - 从 res/icon.html 读取模板并生成 PNG 图标
-// 直接生成到 build/extension/assets/ 目录
+// 图标生成脚本 - 从 src/images/icon.html 读取模板并生成 PNG 图标
+// 生成到 src/images/ 目录（开发时）或 build/extension/images/ 目录（构建时）
 
 const fs = require('fs');
 const path = require('path');
 
 /**
- * 从 res/icon.html 读取 SVG 模板
+ * 从 src/images/icon.html 读取 SVG 模板
  * @returns {string} SVG 模板字符串
  */
 function loadIconTemplate() {
-  const templatePath = path.join(__dirname, '../res/icon.html');
+  const templatePath = path.join(__dirname, '../src/images/icon.html');
   if (!fs.existsSync(templatePath)) {
     throw new Error(`图标模板文件不存在: ${templatePath}`);
   }
@@ -78,13 +78,13 @@ async function convertSVGToPNG(svgContent, size) {
 
 /**
  * 生成所有尺寸的图标到指定目录
- * @param {string} outputDir - 输出目录（默认 build/extension/assets）
+ * @param {string} outputDir - 输出目录（默认 src/images）
  * @param {boolean} generatePNG - 是否生成PNG图标
  */
-async function generateAllIcons(outputDir = './build/extension/assets', generatePNG = true) {
+async function generateAllIcons(outputDir = './src/images', generatePNG = true) {
   const sizes = [16, 32, 48, 128];
   
-  // 从 res/icon.html 加载模板
+  // 从 src/images/icon.html 加载模板
   console.log('📖 读取图标模板...');
   const template = loadIconTemplate();
   console.log('✓ 模板加载成功');
@@ -128,13 +128,13 @@ async function generateAllIcons(outputDir = './build/extension/assets', generate
     }
   }
   
-  console.log('\n✅ 图标生成完成！');
+  
 }
 
 // 如果直接运行此脚本
 if (require.main === module) {
   const args = process.argv.slice(2);
-  const outputDir = args[0] || './build/extension/assets';
+  const outputDir = args[0] || './src/images';
   const generatePNG = !args.includes('--svg-only');
   
   generateAllIcons(outputDir, generatePNG).catch(error => {

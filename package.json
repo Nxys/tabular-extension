@@ -8,8 +8,9 @@
     "lint": "eslint src/**/*.ts",
     "clean": "rm -rf build/dist",
     "build": "npm run clean && tsc --outDir build/dist",
-    "extension": "node build/extension.cjs",
-    "release": "npm run lint && npm run test && npm run build && node build/icon.cjs && node build/extension.cjs",
+    "icon": "node build/icon.cjs",
+    "extension": "npm run icon && node build/extension.cjs",
+    "release": "npm run lint && npm run test && npm run build && npm run extension",
     "zip": "node build/zip.cjs"
   },
   "devDependencies": {
@@ -31,7 +32,7 @@
     "preset": "ts-jest",
     "testEnvironment": "jsdom",
     "setupFilesAfterEnv": [
-      "<rootDir>/src/test/setup.ts"
+      "<rootDir>/test/setup.ts"
     ],
     "moduleNameMapper": {
       "^(\\.{1,2}/.*)\\.js$": "$1"
@@ -45,8 +46,7 @@
       ]
     },
     "testMatch": [
-      "**/__tests__/**/*.test.ts",
-      "**/*.test.ts"
+      "**/test/**/*.test.ts"
     ]
   }
 }

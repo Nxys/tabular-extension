@@ -1,4 +1,4 @@
-import type { SelectionRect, TextElement } from '../types.js';
+import type { SelectionRect, TextElement } from '../types';
 
 /**
  * 文本提取器
@@ -234,4 +234,3 @@ export class Extractor {
     }
   }
 }
-

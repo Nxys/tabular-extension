@@ -1,4 +1,4 @@
-import type { PanelPosition, PluginSettings } from './types.js';
+import type { PanelPosition, PluginSettings } from '../types';
 
 const DEFAULTS: PluginSettings = {
   enabled: false,

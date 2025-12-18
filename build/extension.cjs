@@ -15,9 +15,13 @@ if (fs.existsSync(extensionDir)) {
 }
 fs.mkdirSync(extensionDir);
 
-// 确保 assets 目录存在
-const assetsDir = path.join(extensionDir, 'assets');
-fs.mkdirSync(assetsDir, { recursive: true });
+// 确保子目录存在
+const contentDir = path.join(extensionDir, 'content');
+const popupDir = path.join(extensionDir, 'popup');
+const imagesDir = path.join(extensionDir, 'images');
+fs.mkdirSync(contentDir, { recursive: true });
+fs.mkdirSync(popupDir, { recursive: true });
+fs.mkdirSync(imagesDir, { recursive: true });
 
 // 2. 编译 TypeScript
 console.log('编译 TypeScript...');
@@ -42,10 +46,10 @@ console.log('复制扩展文件...');
 
 const filesToCopy = [
   { src: 'src/manifest.json', dest: 'manifest.json' },
-  { src: 'src/content.css', dest: 'content.css' },
+  { src: 'src/content/content.css', dest: 'content/content.css' },
   { src: 'build/dist/background.js', dest: 'background.js' },
-  { src: 'src/popup.html', dest: 'popup.html' },
-  { src: 'build/dist/popup.js', dest: 'popup.js' }
+  { src: 'src/popup/popup.html', dest: 'popup/popup.html' },
+  { src: 'build/dist/popup/popup.js', dest: 'popup/popup.js' }
 ];
 
 filesToCopy.forEach(fileConfig => {
@@ -58,19 +62,48 @@ filesToCopy.forEach(fileConfig => {
   }
 });
 
-// 5. 生成图标文件
-console.log('生成图标文件...');
-try {
-  execSync('node build/icon.cjs', { stdio: 'inherit' });
-  console.log('✓ 图标生成完成');
-} catch (error) {
-  console.error('❌ 图标生成失败:', error.message);
-  process.exit(1);
+// 5. 复制图标文件
+console.log('复制图标文件...');
+const iconSizes = [16, 32, 48, 128];
+let allIconsExist = true;
+
+iconSizes.forEach(size => {
+  const iconFile = `icon${size}.png`;
+  const srcPath = path.join('src/images', iconFile);
+  const destPath = path.join(imagesDir, iconFile);
+  
+  if (fs.existsSync(srcPath)) {
+    fs.copyFileSync(srcPath, destPath);
+    console.log(`✓ 复制 ${iconFile}`);
+  } else {
+    console.warn(`⚠ 图标文件不存在: ${srcPath}`);
+    allIconsExist = false;
+  }
+});
+
+if (!allIconsExist) {
+  console.log('⚠ 部分图标文件缺失，尝试生成...');
+  try {
+    execSync('node build/icon.cjs', { stdio: 'inherit' });
+    // 重新复制生成的图标
+    iconSizes.forEach(size => {
+      const iconFile = `icon${size}.png`;
+      const srcPath = path.join('src/images', iconFile);
+      const destPath = path.join(imagesDir, iconFile);
+      if (fs.existsSync(srcPath)) {
+        fs.copyFileSync(srcPath, destPath);
+      }
+    });
+    console.log('✓ 图标生成并复制完成');
+  } catch (error) {
+    console.error('❌ 图标生成失败:', error.message);
+    process.exit(1);
+  }
 }
 
 // content.js 由构建脚本生成，确保它存在
-if (!fs.existsSync(path.join(extensionDir, 'content.js'))) {
-  console.error('❌ content.js 未生成，请先运行构建脚本');
+if (!fs.existsSync(path.join(extensionDir, 'content/content.js'))) {
+  console.error('❌ content/content.js 未生成，请先运行构建脚本');
   process.exit(1);
 }
 
@@ -78,9 +111,11 @@ if (!fs.existsSync(path.join(extensionDir, 'content.js'))) {
 console.log('验证扩展文件...');
 const requiredFiles = [
   'manifest.json',
-  'content.js',
-  'content.css',
-  'background.js'
+  'content/content.js',
+  'content/content.css',
+  'background.js',
+  'popup/popup.html',
+  'popup/popup.js'
 ];
 
 let allFilesExist = true;
@@ -133,4 +168,4 @@ console.log('\n=== 插件文件夹生成完成 ===');
 console.log(`📁 扩展文件夹: ${extensionDir}/`);
 console.log('\n💡 提示: 运行 npm run zip 将插件打包为 ZIP 文件');
 
-console.log('\n✅ 生成完成！');
+

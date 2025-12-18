@@ -4,15 +4,15 @@
 const fs = require('fs');
 
 // 输出文件路径
-const outputFile = './build/extension/content.js';
+const outputFile = './build/extension/content/content.js';
 
 // 读取所有需要的文件（按依赖顺序）
 const files = [
   'build/dist/types.js',
-  'build/dist/components/selection.js',
-  'build/dist/components/extractor.js',
-  'build/dist/components/panel.js',
-  'build/dist/content.js'
+  'build/dist/content/selection.js',
+  'build/dist/content/extractor.js',
+  'build/dist/content/panel.js',
+  'build/dist/content/content.js'
 ];
 
 let bundleContent = `// 浏览器框选复制插件 - 合并后的 Content Script

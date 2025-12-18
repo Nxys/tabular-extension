@@ -5,7 +5,7 @@
 {};
 
 
-// === build/dist/components/selection.js ===
+// === build/dist/content/selection.js ===
 /**
  * 选择框组件
  * 处理鼠标交互，创建和管理选择框UI
@@ -111,7 +111,7 @@ class Selection {
 }
 
 
-// === build/dist/components/extractor.js ===
+// === build/dist/content/extractor.js ===
 /**
  * 文本提取器
  * 从选择区域提取文本并按视觉顺序排列
@@ -320,7 +320,7 @@ class Extractor {
 }
 
 
-// === build/dist/components/panel.js ===
+// === build/dist/content/panel.js ===
 /**
  * 结果面板
  * 显示提取结果和提供复制功能的浮动面板
@@ -560,7 +560,7 @@ class Panel {
 }
 
 
-// === build/dist/content.js ===
+// === build/dist/content/content.js ===
 
 
 

@@ -1,4 +1,4 @@
-import type { SelectionRect } from '../types.js';
+import type { SelectionRect } from '../types';
 
 /**
  * 选择框组件
@@ -117,4 +117,3 @@ export class Selection {
     console.log('选择框已添加到DOM');
   }
 }
-

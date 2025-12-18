@@ -1,9 +1,8 @@
 // 浏览器框选复制插件核心功能测试
 
-import { BrowserSelectionCopy } from '../content.js';
-import { Extractor } from '../components/extractor.js';
-import type { PanelPosition } from '../types.js';
-// 浏览器框选复制插件核心功能测试
+import { BrowserSelectionCopy } from '../src/content/content';
+import { Extractor } from '../src/content/extractor';
+import type { PanelPosition } from '../src/types';
 
 describe('BrowserSelectionCopy 核心功能测试', () => {
   let browserSelectionCopy: BrowserSelectionCopy;

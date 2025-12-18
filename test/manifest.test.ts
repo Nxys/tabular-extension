@@ -39,8 +39,8 @@ describe('Manifest v3 规范验证', () => {
 
     const contentScript = manifest.content_scripts[0];
     expect(contentScript.matches).toEqual(['<all_urls>']);
-    expect(contentScript.js).toEqual(['content.js']);
-    expect(contentScript.css).toEqual(['content.css']);
+    expect(contentScript.js).toEqual(['content/content.js']);
+    expect(contentScript.css).toEqual(['content/content.css']);
     expect(contentScript.run_at).toBe('document_end');
   });
 

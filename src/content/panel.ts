@@ -261,4 +261,3 @@ export class Panel {
     this.dragState = null;
   };
 }
-

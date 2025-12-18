@@ -1,7 +1,7 @@
 // 项目结构验证测试
 
-import { BrowserSelectionCopy } from '../content.js';
-import { SelectionRect, TextElement } from '../types.js';
+import { BrowserSelectionCopy } from '../src/content/content';
+import { SelectionRect, TextElement } from '../src/types';
 
 describe('项目结构测试', () => {
   test('应该能够导入核心组件', () => {
