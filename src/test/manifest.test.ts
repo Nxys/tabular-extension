@@ -1,15 +1,15 @@
 // Manifest v3 规范验证测试
 
-import * as fs from 'fs';
-import * as path from 'path';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 describe('Manifest v3 规范验证', () => {
   let manifest: any;
 
   beforeAll(() => {
     // 读取 manifest.json 文件
-    const manifestPath = path.join(process.cwd(), 'src/manifest.json');
-    const manifestContent = fs.readFileSync(manifestPath, 'utf-8');
+    const manifestPath = join(process.cwd(), 'src/manifest.json');
+    const manifestContent = readFileSync(manifestPath, 'utf-8');
     manifest = JSON.parse(manifestContent);
   });
 

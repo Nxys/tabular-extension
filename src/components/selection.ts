@@ -1,4 +1,4 @@
-import { SelectionRect } from '../types.js';
+import type { SelectionRect } from '../types.js';
 
 /**
  * 选择框组件
