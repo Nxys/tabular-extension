@@ -51,7 +51,7 @@ async function initializePopup(): Promise<void> {
   if (shortcutHint) {
     const platformInfo = await chrome.runtime.getPlatformInfo();
     const isMac = platformInfo.os === 'mac';
-    shortcutHint.textContent = isMac ? 'Command + Shift + Y' : 'Ctrl + Shift + Y';
+    shortcutHint.textContent = `${isMac ? 'Command' : 'Ctrl'} + Shift + Y`;
   }
 
   // 设置版本号

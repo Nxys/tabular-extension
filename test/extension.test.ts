@@ -85,11 +85,22 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
 
     test('快捷键可启用功能', async () => {
       await browserSelectionCopy.applySettings({ enabled: false });
-
-      const keyEvent = new KeyboardEvent('keydown', { ctrlKey: true, shiftKey: true, altKey: true, code: 'KeyC' });
-      document.dispatchEvent(keyEvent);
       await flush();
 
+      // 创建测试文本
+      document.body.innerHTML = `
+        <div data-mock-text style="position: absolute; left: 50px; top: 50px;">测试文本</div>
+      `;
+
+      // 触发快捷键启用
+      const keyEvent = new KeyboardEvent('keydown', { ctrlKey: true, shiftKey: true, code: 'KeyY' });
+      document.dispatchEvent(keyEvent);
+      
+      // 等待异步操作完成
+      await flush();
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      // 执行选择操作
       const mouseDownEvent = new MouseEvent('mousedown', {
         clientX: 0,
         clientY: 0,
@@ -103,6 +114,7 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
       });
       document.dispatchEvent(mouseUpEvent);
 
+      // 验证面板显示
       const resultPanel = document.querySelector('.browser-selection-copy-panel');
       expect(resultPanel).toBeTruthy();
     });

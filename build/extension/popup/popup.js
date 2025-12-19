@@ -39,7 +39,7 @@ async function initializePopup() {
   if (shortcutHint) {
     const platformInfo = await chrome.runtime.getPlatformInfo();
     const isMac = platformInfo.os === "mac";
-    shortcutHint.textContent = isMac ? "Command + Shift + Y" : "Ctrl + Shift + Y";
+    shortcutHint.textContent = `${isMac ? "Command" : "Ctrl"} + Shift + Y`;
   }
   const versionElement = document.getElementById("version");
   if (versionElement) {

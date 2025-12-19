@@ -152,8 +152,8 @@ class BrowserSelectionCopy {
    * 快捷键切换启用状态
    */
   private handleKeydown(event: KeyboardEvent): void {
-    // Ctrl + Alt + Shift + C
-    if (event.ctrlKey && event.shiftKey && event.altKey && event.code === 'KeyC') {
+    // Ctrl + Shift + Y
+    if (event.ctrlKey && event.shiftKey && event.code === 'KeyY') {
       if (
         (event.target instanceof HTMLInputElement) ||
         (event.target instanceof HTMLTextAreaElement) ||

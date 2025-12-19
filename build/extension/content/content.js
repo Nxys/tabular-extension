@@ -559,7 +559,7 @@
      * 快捷键切换启用状态
      */
     handleKeydown(event) {
-      if (event.ctrlKey && event.shiftKey && event.altKey && event.code === "KeyC") {
+      if (event.ctrlKey && event.shiftKey && event.code === "KeyY") {
         if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLButtonElement || event.target && event.target.isContentEditable) {
           return;
         }
