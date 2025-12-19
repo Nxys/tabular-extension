@@ -249,10 +249,9 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
       const resultPanel = document.querySelector('.browser-selection-copy-panel');
       expect(resultPanel).toBeTruthy();
 
-      const buttons = resultPanel?.querySelectorAll('button') || [];
-      const copyButton = buttons[buttons.length - 1];
+      const copyButton = resultPanel?.querySelector('.browser-selection-copy-panel-copy-btn');
       expect(copyButton).toBeTruthy();
-      expect(copyButton?.textContent).toBe('复制到剪贴板');
+      expect(copyButton?.textContent).toContain('复制到剪贴板');
     });
 
     test('应该能够复制文本到剪贴板', async () => {
@@ -276,8 +275,7 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
       document.dispatchEvent(mouseUpEvent);
 
       // 点击复制按钮
-      const buttons = document.querySelectorAll('.browser-selection-copy-panel button');
-      const copyButton = buttons[buttons.length - 1] as HTMLButtonElement;
+      const copyButton = document.querySelector('.browser-selection-copy-panel-copy-btn') as HTMLButtonElement;
       expect(copyButton).toBeTruthy();
 
       copyButton.click();
@@ -289,7 +287,7 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
     test('应该在正确位置显示面板', () => {
       // 创建测试文本
       document.body.innerHTML = `
-        <div style="position: absolute; left: 50px; top: 50px;">测试文本</div>
+        <div data-mock-text style="position: absolute; left: 50px; top: 50px;">测试文本</div>
       `;
 
       // 执行选择操作
@@ -306,12 +304,14 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
       });
       document.dispatchEvent(mouseUpEvent);
 
-      // 检查面板位置
+      // 检查面板位置（position 在 CSS 中定义，只检查动态设置的 top 和 left）
       const resultPanel = document.querySelector('.browser-selection-copy-panel') as HTMLElement;
       expect(resultPanel).toBeTruthy();
-      expect(resultPanel.style.position).toBe('fixed');
       expect(resultPanel.style.top).not.toBe('');
       expect(resultPanel.style.left).not.toBe('');
+      
+      // 验证使用了正确的 CSS 类
+      expect(resultPanel.className).toBe('browser-selection-copy-panel');
     });
 
     test('应该显示正确的文本内容', () => {
@@ -339,7 +339,7 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
       const resultPanel = document.querySelector('.browser-selection-copy-panel');
       expect(resultPanel).toBeTruthy();
       
-      const preview = resultPanel?.querySelector('textarea');
+      const preview = resultPanel?.querySelector('.browser-selection-copy-panel-textarea');
       expect((preview as HTMLTextAreaElement)?.value).toBe(testText);
     });
 
@@ -353,7 +353,7 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
       const mouseUpEvent = new MouseEvent('mouseup', { clientX: 200, clientY: 100 });
       document.dispatchEvent(mouseUpEvent);
 
-      const closeButton = document.querySelector('.browser-selection-copy-panel button[data-role="close"]') as HTMLButtonElement;
+      const closeButton = document.querySelector('.browser-selection-copy-panel-close') as HTMLButtonElement;
       expect(closeButton).toBeTruthy();
       closeButton.click();
       await flush();
@@ -372,13 +372,12 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
       const mouseUpEvent = new MouseEvent('mouseup', { clientX: 200, clientY: 100 });
       document.dispatchEvent(mouseUpEvent);
 
-      const textarea = document.querySelector('.browser-selection-copy-panel textarea') as HTMLTextAreaElement;
+      const textarea = document.querySelector('.browser-selection-copy-panel-textarea') as HTMLTextAreaElement;
       expect(textarea).toBeTruthy();
       textarea.value = '修改后的文本';
       textarea.dispatchEvent(new Event('input'));
 
-      const buttons = document.querySelectorAll('.browser-selection-copy-panel button');
-      const copyButton = buttons[buttons.length - 1] as HTMLButtonElement;
+      const copyButton = document.querySelector('.browser-selection-copy-panel-copy-btn') as HTMLButtonElement;
       copyButton.click();
       await flush();
 
@@ -407,10 +406,10 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
       expect(panel.style.top).toBe('50px');
     });
 
-    test('应该在点击外部区域时隐藏面板', () => {
+    test('点击外部区域不应隐藏面板', () => {
       // 创建测试文本
       document.body.innerHTML = `
-        <div style="position: absolute; left: 50px; top: 50px;">测试文本</div>
+        <div data-mock-text style="position: absolute; left: 50px; top: 50px;">测试文本</div>
       `;
 
       // 执行选择操作显示面板
@@ -439,46 +438,7 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
       });
       document.dispatchEvent(outsideClickEvent);
 
-      // 验证面板已隐藏
-      resultPanel = document.querySelector('.browser-selection-copy-panel');
-      expect(resultPanel).toBeFalsy();
-    });
-
-    test('应该在面板内点击时不隐藏面板', () => {
-      // 创建测试文本
-      document.body.innerHTML = `
-        <div style="position: absolute; left: 50px; top: 50px;">测试文本</div>
-      `;
-
-      // 执行选择操作显示面板
-      const mouseDownEvent = new MouseEvent('mousedown', {
-        clientX: 0,
-        clientY: 0,
-        button: 0
-      });
-      document.dispatchEvent(mouseDownEvent);
-
-      const mouseUpEvent = new MouseEvent('mouseup', {
-        clientX: 200,
-        clientY: 100
-      });
-      document.dispatchEvent(mouseUpEvent);
-
-      // 验证面板已显示
-      let resultPanel = document.querySelector('.browser-selection-copy-panel');
-      expect(resultPanel).toBeTruthy();
-
-      // 点击面板内部
-      const panelClickEvent = new MouseEvent('click', {
-        bubbles: true
-      });
-      Object.defineProperty(panelClickEvent, 'target', {
-        value: resultPanel,
-        enumerable: true
-      });
-      document.dispatchEvent(panelClickEvent);
-
-      // 验证面板仍然存在
+      // 验证面板仍然存在（不会自动关闭）
       resultPanel = document.querySelector('.browser-selection-copy-panel');
       expect(resultPanel).toBeTruthy();
     });
@@ -549,8 +509,7 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
       document.dispatchEvent(mouseUpEvent);
 
       // 点击复制按钮
-      const buttons = document.querySelectorAll('.browser-selection-copy-panel button');
-      const copyButton = buttons[buttons.length - 1] as HTMLButtonElement;
+      const copyButton = document.querySelector('.browser-selection-copy-panel-copy-btn') as HTMLButtonElement;
       expect(copyButton).toBeTruthy();
 
       // 模拟成功的复制操作
@@ -562,9 +521,10 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
       // 等待异步操作完成
       await new Promise(resolve => setTimeout(resolve, 0));
 
-      // 验证按钮显示成功状态
-      expect(copyButton.textContent).toBe('✓ 已复制');
-      expect(copyButton.style.background).toBe('rgb(40, 167, 69)'); // #28a745
+      // 验证按钮显示成功状态（使用 CSS 类）
+      expect(copyButton.classList.contains('success')).toBe(true);
+      const iconSpan = copyButton.querySelector('.browser-selection-copy-panel-copy-btn-icon');
+      expect(iconSpan?.textContent).toBe('✓');
     });
 
     test('应该显示复制失败反馈', async () => {
@@ -593,8 +553,7 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
         document.dispatchEvent(mouseUpEvent);
 
         // 点击复制按钮
-        const buttons = document.querySelectorAll('.browser-selection-copy-panel button');
-        const copyButton = buttons[buttons.length - 1] as HTMLButtonElement;
+        const copyButton = document.querySelector('.browser-selection-copy-panel-copy-btn') as HTMLButtonElement;
         expect(copyButton).toBeTruthy();
 
         // 模拟失败的复制操作
@@ -605,9 +564,10 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
         // 等待异步操作完成
         await new Promise(resolve => setTimeout(resolve, 0));
 
-        // 验证按钮显示失败状态
-        expect(copyButton.textContent).toBe('复制失败');
-        expect(copyButton.style.background).toBe('rgb(220, 53, 69)'); // #dc3545
+        // 验证按钮显示失败状态（使用 CSS 类）
+        expect(copyButton.classList.contains('error')).toBe(true);
+        const iconSpan = copyButton.querySelector('.browser-selection-copy-panel-copy-btn-icon');
+        expect(iconSpan?.textContent).toBe('✗');
 
         // 验证console.error被调用
         expect(console.error).toHaveBeenCalledWith('复制失败:', expect.any(Error));
@@ -615,6 +575,48 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
         // 恢复原始的console.error
         console.error = originalConsoleError;
       }
+    });
+
+    test('复制后应自动关闭面板', async () => {
+      // 创建测试文本
+      document.body.innerHTML = `
+        <div data-mock-text style="position: absolute; left: 50px; top: 50px;">测试文本</div>
+      `;
+
+      // 执行选择操作
+      const mouseDownEvent = new MouseEvent('mousedown', {
+        clientX: 0,
+        clientY: 0,
+        button: 0
+      });
+      document.dispatchEvent(mouseDownEvent);
+
+      const mouseUpEvent = new MouseEvent('mouseup', {
+        clientX: 200,
+        clientY: 100
+      });
+      document.dispatchEvent(mouseUpEvent);
+
+      // 验证面板已显示
+      let resultPanel = document.querySelector('.browser-selection-copy-panel');
+      expect(resultPanel).toBeTruthy();
+
+      // 点击复制按钮
+      const copyButton = document.querySelector('.browser-selection-copy-panel-copy-btn') as HTMLButtonElement;
+      expect(copyButton).toBeTruthy();
+
+      // 模拟成功的复制操作
+      (navigator.clipboard.writeText as jest.Mock).mockResolvedValueOnce(undefined);
+      
+      copyButton.click();
+      await flush();
+
+      // 等待复制成功和自动关闭（1500ms）
+      await new Promise(resolve => setTimeout(resolve, 1600));
+
+      // 验证面板已关闭
+      resultPanel = document.querySelector('.browser-selection-copy-panel');
+      expect(resultPanel).toBeFalsy();
     });
 
     test('应该在无文本内容时不显示面板', () => {
@@ -642,6 +644,54 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
       // 验证没有显示面板（因为没有提取到文本内容）
       const resultPanel = document.querySelector('.browser-selection-copy-panel');
       expect(resultPanel).toBeFalsy();
+    });
+
+    test('面板样式应使用CSS类而非内联样式', () => {
+      document.body.innerHTML = `
+        <div data-mock-text style="position: absolute; left: 50px; top: 50px;">测试文本</div>
+      `;
+
+      const mouseDownEvent = new MouseEvent('mousedown', { clientX: 0, clientY: 0, button: 0 });
+      document.dispatchEvent(mouseDownEvent);
+      const mouseUpEvent = new MouseEvent('mouseup', { clientX: 200, clientY: 100 });
+      document.dispatchEvent(mouseUpEvent);
+
+      const panel = document.querySelector('.browser-selection-copy-panel') as HTMLElement;
+      expect(panel).toBeTruthy();
+      
+      // 验证使用了正确的CSS类
+      expect(panel.className).toBe('browser-selection-copy-panel');
+      
+      // 验证只有位置是内联样式
+      expect(panel.style.top).toBeTruthy();
+      expect(panel.style.left).toBeTruthy();
+      
+      // 验证子元素也使用CSS类
+      const header = panel.querySelector('.browser-selection-copy-panel-header');
+      expect(header).toBeTruthy();
+      
+      const textarea = panel.querySelector('.browser-selection-copy-panel-textarea');
+      expect(textarea).toBeTruthy();
+      
+      const copyBtn = panel.querySelector('.browser-selection-copy-panel-copy-btn');
+      expect(copyBtn).toBeTruthy();
+    });
+
+    test('选择框样式应使用CSS类', () => {
+      const mouseDownEvent = new MouseEvent('mousedown', { clientX: 100, clientY: 100, button: 0 });
+      document.dispatchEvent(mouseDownEvent);
+
+      const selectionBox = document.querySelector('.browser-selection-copy-box') as HTMLElement;
+      expect(selectionBox).toBeTruthy();
+      
+      // 验证使用了正确的CSS类
+      expect(selectionBox.className).toBe('browser-selection-copy-box');
+      
+      // 验证只有位置和尺寸是内联样式
+      expect(selectionBox.style.left).toBeTruthy();
+      expect(selectionBox.style.top).toBeTruthy();
+      expect(selectionBox.style.width).toBeTruthy();
+      expect(selectionBox.style.height).toBeTruthy();
     });
   });
 

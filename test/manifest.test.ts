@@ -27,7 +27,7 @@ describe('Manifest v3 规范验证', () => {
   });
 
   test('应该只请求必要的权限', () => {
-    expect(manifest.permissions).toEqual(['activeTab', 'clipboardWrite']);
+    expect(manifest.permissions).toEqual(['activeTab', 'clipboardWrite', 'storage']);
     // 验证没有请求 host 权限
     expect(manifest.host_permissions).toBeUndefined();
   });

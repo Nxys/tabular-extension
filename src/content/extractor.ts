@@ -11,51 +11,16 @@ export class Extractor {
    * 提取选择区域内的文本
    */
   extract(rect: SelectionRect): string {
-    console.log('开始提取文本，选择区域:', rect);
-    
-    // 方法1：使用TreeWalker
+    // 使用 TreeWalker 提取文本
     const elements = this.getTextElements(rect);
-    console.log('TreeWalker找到文本元素数量:', elements.length);
-    
     if (elements.length > 0) {
       const sorted = this.sortByVisualOrder(elements);
-      console.log('排序后元素数量:', sorted.length);
       const result = this.combineText(sorted);
-      console.log('TreeWalker提取结果:', result);
-      if (result.trim()) {
-        return result;
-      }
-    }
-    
-    // 方法2：备用方法 - 使用elementsFromPoint
-    console.log('使用备用提取方法');
-    const centerX = rect.left + (rect.right - rect.left) / 2;
-    const centerY = rect.top + (rect.bottom - rect.top) / 2;
-    
-    // jsdom 环境可能不存在 elementsFromPoint，这里做兼容处理
-    const elementsFromPoint = typeof document.elementsFromPoint === 'function'
-      ? document.elementsFromPoint.bind(document)
-      : null;
-
-    if (!elementsFromPoint) {
-      console.warn('elementsFromPoint 不可用，返回空结果');
-      return '';
+      return result;
     }
 
-    const elementsAtPoint = elementsFromPoint(centerX, centerY);
-    console.log('中心点元素:', elementsAtPoint);
-    
-    let fallbackText = '';
-    for (const element of elementsAtPoint) {
-      const text = element.textContent || (element as HTMLElement).innerText || '';
-      if (text.trim()) {
-        fallbackText += text.trim() + '\n';
-        break; // 只取第一个有文本的元素
-      }
-    }
-    
-    console.log('备用方法提取结果:', fallbackText);
-    return fallbackText.trim();
+    // 如果没有找到文本元素，返回空字符串
+    return '';
   }
 
   /**

@@ -45,13 +45,10 @@ export class Selection {
    */
   finish(): SelectionRect | null {
     if (!this.element) {
-      console.log('选择框元素不存在');
       return null;
     }
 
     const rect = this.element.getBoundingClientRect();
-    console.log('选择框DOM矩形:', rect);
-    
     // 由于使用了 fixed 定位，不需要加上滚动偏移
     const selectionRect: SelectionRect = {
       left: rect.left + window.scrollX,
@@ -60,7 +57,6 @@ export class Selection {
       bottom: rect.bottom + window.scrollY
     };
 
-    console.log('计算的选择区域:', selectionRect);
     this.clear();
     return selectionRect;
   }
@@ -96,17 +92,11 @@ export class Selection {
    * 创建选择框元素
    */
   private createElement(): void {
-    console.log('创建选择框元素，起始位置:', this.startX, this.startY);
-    
     this.element = document.createElement('div');
     this.element.className = `${this.CSS_CLASS_PREFIX}-box`;
     
+    // 只设置动态位置和尺寸，其他样式由 CSS 控制
     Object.assign(this.element.style, {
-      position: 'fixed', // 改为 fixed 定位，避免滚动问题
-      border: '2px dashed #007acc',
-      backgroundColor: 'rgba(0, 122, 204, 0.1)',
-      pointerEvents: 'none',
-      zIndex: '2147483647',
       left: `${this.startX}px`,
       top: `${this.startY}px`,
       width: '0px',
@@ -114,6 +104,5 @@ export class Selection {
     });
 
     document.body.appendChild(this.element);
-    console.log('选择框已添加到DOM');
   }
 }

@@ -1,18 +1,63 @@
 /* 浏览器框选复制插件样式 */
 
-/* 选择框样式 - 确保在所有页面上都能正确显示 */
+/* ==================== CSS 变量定义 ==================== */
+/* 浅色主题（默认） */
+:root {
+  --bsc-panel-bg: rgba(255, 255, 255, 0.95);
+  --bsc-border: rgba(102, 126, 234, 0.2);
+  --bsc-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(102, 126, 234, 0.1);
+  --bsc-header-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --bsc-header-border: rgba(255, 255, 255, 0.2);
+  --bsc-header-text: rgba(255, 255, 255, 0.95);
+  --bsc-button-bg: rgba(255, 255, 255, 0.2);
+  --bsc-button-hover: rgba(255, 255, 255, 0.3);
+  --bsc-close-btn-hover: rgba(255, 100, 100, 0.3);
+  --bsc-preview-bg: rgba(248, 249, 252, 0.8);
+  --bsc-textarea-bg: rgba(255, 255, 255, 0.9);
+  --bsc-dashed-border: rgba(102, 126, 234, 0.3);
+  --bsc-focus-border: rgba(118, 75, 162, 0.5);
+  --bsc-text: rgba(30, 30, 35, 0.9);
+  --bsc-copy-btn-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --bsc-copy-btn-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+  --bsc-copy-btn-hover-shadow: 0 6px 16px rgba(102, 126, 234, 0.35);
+}
+
+/* 深色主题 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bsc-panel-bg: rgba(30, 30, 35, 0.95);
+    --bsc-border: rgba(102, 126, 234, 0.3);
+    --bsc-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(102, 126, 234, 0.2);
+    --bsc-header-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --bsc-header-border: rgba(255, 255, 255, 0.1);
+    --bsc-header-text: rgba(255, 255, 255, 0.95);
+    --bsc-button-bg: rgba(255, 255, 255, 0.1);
+    --bsc-button-hover: rgba(255, 255, 255, 0.2);
+    --bsc-close-btn-hover: rgba(255, 100, 100, 0.3);
+    --bsc-preview-bg: rgba(25, 25, 30, 0.5);
+    --bsc-textarea-bg: rgba(40, 40, 45, 0.8);
+    --bsc-dashed-border: rgba(102, 126, 234, 0.4);
+    --bsc-focus-border: rgba(118, 75, 162, 0.6);
+    --bsc-text: rgba(255, 255, 255, 0.9);
+    --bsc-copy-btn-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --bsc-copy-btn-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    --bsc-copy-btn-hover-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  }
+}
+
+/* ==================== 选择框样式 ==================== */
 .browser-selection-copy-box {
   position: fixed !important;
-  border: 2px dashed #007acc !important;
-  background-color: rgba(0, 122, 204, 0.1) !important;
+  border: 2px dashed rgba(102, 126, 234, 0.8) !important;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%) !important;
   pointer-events: none !important;
   z-index: 2147483647 !important;
   box-sizing: border-box !important;
   margin: 0 !important;
   padding: 0 !important;
-  border-radius: 0 !important;
+  border-radius: 4px !important;
   outline: none !important;
-  box-shadow: none !important;
+  box-shadow: 0 0 0 1px rgba(102, 126, 234, 0.2), 0 4px 12px rgba(102, 126, 234, 0.15) !important;
   opacity: 1 !important;
   visibility: visible !important;
   display: block !important;
@@ -20,38 +65,169 @@
   transition: none !important;
 }
 
-/* 结果面板样式 */
+/* 深色模式下的选择框 */
+@media (prefers-color-scheme: dark) {
+  .browser-selection-copy-box {
+    border: 2px dashed rgba(102, 126, 234, 0.9) !important;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%) !important;
+    box-shadow: 0 0 0 1px rgba(102, 126, 234, 0.3), 0 4px 12px rgba(102, 126, 234, 0.25) !important;
+  }
+}
+
+/* ==================== 结果面板样式 ==================== */
 .browser-selection-copy-panel {
   position: fixed !important;
-  background: white !important;
-  border: 1px solid #ccc !important;
-  border-radius: 8px !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-  z-index: 1000000 !important;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  width: 340px !important;
+  max-height: 460px !important;
+  background: var(--bsc-panel-bg) !important;
+  border: 1px solid var(--bsc-border) !important;
+  border-radius: 12px !important;
+  box-shadow: var(--bsc-shadow) !important;
+  z-index: 2147483647 !important;
+  font-family: system-ui, -apple-system, sans-serif !important;
   font-size: 14px !important;
-  box-sizing: border-box !important;
+  padding: 0 !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
   overflow: hidden !important;
+  backdrop-filter: blur(10px) !important;
+  box-sizing: border-box !important;
 }
 
 /* 确保面板内容不被页面样式影响 */
 .browser-selection-copy-panel * {
   box-sizing: border-box !important;
+}
+
+/* ==================== 标题栏样式 ==================== */
+.browser-selection-copy-panel-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 12px 16px !important;
+  cursor: move !important;
+  user-select: none !important;
+  background: var(--bsc-header-gradient) !important;
+  border-bottom: 1px solid var(--bsc-header-border) !important;
+  font-weight: 600 !important;
+  color: var(--bsc-header-text) !important;
+  position: relative !important;
+  margin: 0 !important;
+}
+
+.browser-selection-copy-panel-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 15px !important;
   margin: 0 !important;
   padding: 0 !important;
 }
 
-/* 面板按钮悬停效果 */
-.browser-selection-copy-panel button:hover {
-  opacity: 0.8 !important;
-  transform: translateY(-1px) !important;
+.browser-selection-copy-panel-icon {
+  font-size: 16px !important;
+  line-height: 1 !important;
+}
+
+/* ==================== 按钮样式 ==================== */
+.browser-selection-copy-panel-close {
+  width: 24px !important;
+  height: 24px !important;
+  border: none !important;
+  border-radius: 6px !important;
+  background: var(--bsc-button-bg) !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  color: var(--bsc-header-text) !important;
+  padding: 0 !important;
+  margin: 0 !important;
   transition: all 0.2s ease !important;
 }
 
-.browser-selection-copy-panel textarea {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+.browser-selection-copy-panel-close:hover {
+  background: var(--bsc-close-btn-hover) !important;
+  transform: scale(1.1) !important;
 }
 
-.browser-selection-copy-panel-header {
-  cursor: move !important;
+/* ==================== 文本预览区域 ==================== */
+.browser-selection-copy-panel-preview-wrapper {
+  position: relative !important;
+  padding: 16px !important;
+  background: var(--bsc-preview-bg) !important;
+  margin: 0 !important;
+}
+
+.browser-selection-copy-panel-textarea {
+  width: 100% !important;
+  height: 240px !important;
+  resize: none !important;
+  border: 2px dashed var(--bsc-dashed-border) !important;
+  outline: none !important;
+  padding: 12px !important;
+  background: var(--bsc-textarea-bg) !important;
+  border-radius: 8px !important;
+  white-space: pre-wrap !important;
+  box-sizing: border-box !important;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  color: var(--bsc-text) !important;
+  transition: border-color 0.2s ease !important;
+  margin: 0 !important;
+}
+
+.browser-selection-copy-panel-textarea:focus {
+  border-color: var(--bsc-focus-border) !important;
+}
+
+/* ==================== 复制按钮区域 ==================== */
+.browser-selection-copy-panel-copy-wrapper {
+  padding: 0 16px 16px 16px !important;
+  display: flex !important;
+  justify-content: center !important;
+  margin: 0 !important;
+}
+
+.browser-selection-copy-panel-copy-btn {
+  width: 100% !important;
+  padding: 12px !important;
+  background: var(--bsc-copy-btn-gradient) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  box-shadow: var(--bsc-copy-btn-shadow) !important;
+  margin: 0 !important;
+}
+
+.browser-selection-copy-panel-copy-btn:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: var(--bsc-copy-btn-hover-shadow) !important;
+}
+
+.browser-selection-copy-panel-copy-btn-content {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+}
+
+.browser-selection-copy-panel-copy-btn-icon {
+  font-size: 16px !important;
+  line-height: 1 !important;
+}
+
+/* ==================== 复制状态样式 ==================== */
+.browser-selection-copy-panel-copy-btn.success {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+}
+
+.browser-selection-copy-panel-copy-btn.error {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
 }

@@ -6,7 +6,8 @@
   
   "permissions": [
     "activeTab",
-    "clipboardWrite"
+    "clipboardWrite",
+    "storage"
   ],
   
   "content_scripts": [
@@ -19,8 +20,7 @@
   ],
   
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "service_worker": "background.js"
   },
   
   "action": {
@@ -33,5 +33,15 @@
     "32": "images/icon32.png", 
     "48": "images/icon48.png",
     "128": "images/icon128.png"
+  },
+
+  "commands": {
+    "selection-switch": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
+      },
+      "description": "开启/关闭框选复制功能"
+    }
   }
 }

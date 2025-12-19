@@ -1,63 +1,193 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="utf-8">
+  <meta name="color-scheme" content="light dark">
   <style>
-    body {
-      width: 260px;
-      padding: 16px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    * {
       margin: 0;
-      color: #222;
+      padding: 0;
+      box-sizing: border-box;
     }
+
+    :root {
+      /* 浅色主题 - 紫色风格 */
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8f7fc;
+      --bg-hover: #f0eef8;
+      --text-primary: #2d2d2d;
+      --text-secondary: #666666;
+      --text-tertiary: #999999;
+      --border-color: #e8e5f3;
+      --accent-color: #667eea;
+      --accent-bg: #f0edff;
+      --switch-bg: #d0d0d0;
+      --shadow: rgba(102, 126, 234, 0.1);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        /* 深色主题 - 紫色风格 */
+        --bg-primary: #1a1a1f;
+        --bg-secondary: #25242d;
+        --bg-hover: #332f42;
+        --text-primary: #e8e8ea;
+        --text-secondary: #b0b0b5;
+        --text-tertiary: #808085;
+        --border-color: #3a3845;
+        --accent-color: #8b9aff;
+        --accent-bg: #2d2640;
+        --switch-bg: #4a4a52;
+        --shadow: rgba(118, 75, 162, 0.2);
+      }
+    }
+
+    body {
+      width: 212px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 标题栏 */
+    .header {
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
     .title {
-      font-weight: bold;
-      margin-bottom: 4px;
-      color: #111;
       font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
     }
-    .desc {
+
+    /* 会员信息区域（预留） */
+    .user-info {
+      display: none;
+      /* 暂时隐藏，后续开发会员功能时启用 */
       font-size: 12px;
-      color: #666;
-      line-height: 1.4;
-      margin-bottom: 12px;
+      color: var(--text-secondary);
     }
+
+    .user-account {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .user-level {
+      display: inline-block;
+      padding: 2px 8px;
+      background: var(--accent-bg);
+      color: var(--accent-color);
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    /* 内容区域 */
+    .content {
+      padding: 16px;
+    }
+
     .section {
-      margin-bottom: 14px;
-      border: 1px solid #eee;
-      border-radius: 8px;
-      padding: 12px;
-      background: #fafafa;
+      margin-bottom: 18px;
     }
+
+    .section:last-child {
+      margin-bottom: 0;
+    }
+
     .field {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 10px;
       gap: 12px;
+      margin-bottom: 4px;
     }
+
     .field label {
-      font-size: 13px;
-      color: #333;
-      flex: 0 1 auto;
+      font-size: 14px;
+      color: var(--text-primary);
+      white-space: nowrap;
+      font-weight: 500;
+      line-height: 24px;
+    }
+
+    .hint {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
       white-space: nowrap;
     }
-    .field select {
-      flex: 1;
-      padding: 6px 8px;
-      border-radius: 6px;
-      border: 1px solid #ddd;
-      font-size: 13px;
+
+    .hint-label {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      line-height: 20px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
+
+    .field select {
+      flex: 0 0 auto;
+      width: 100px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23666666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 32px;
+    }
+
+    .field select:hover {
+      background-color: var(--bg-hover);
+      border-color: var(--accent-color);
+    }
+
+    .field select:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px var(--shadow);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .field select {
+        background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23b0b0b5' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      }
+    }
+
+    /* 开关按钮 */
     .switch {
       position: relative;
-      width: 38px;
-      height: 20px;
+      width: 44px;
+      height: 24px;
       flex-shrink: 0;
     }
+
     .switch input {
       display: none;
     }
+
     .slider {
       position: absolute;
       cursor: pointer;
@@ -65,79 +195,138 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background-color: #ccc;
-      transition: 0.2s;
+      background-color: var(--switch-bg);
+      transition: 0.3s;
       border-radius: 24px;
     }
+
     .slider:before {
       position: absolute;
       content: "";
-      height: 16px;
-      width: 16px;
-      left: 2px;
-      bottom: 2px;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
       background-color: white;
-      transition: 0.2s;
+      transition: 0.3s;
       border-radius: 50%;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      box-shadow: 0 2px 4px var(--shadow);
     }
-    input:checked + .slider {
-      background-color: #007acc;
+
+    input:checked+.slider {
+      background-color: var(--accent-color);
     }
-    input:checked + .slider:before {
-      transform: translateX(18px);
+
+    input:checked+.slider:before {
+      transform: translateX(20px);
     }
-    .hint {
-      font-size: 12px;
-      color: #888;
-      line-height: 1.5;
-    }
+
     .shortcut {
-      display: inline-block;
-      padding: 4px 8px;
-      background: #eef6ff;
-      color: #0a66c2;
-      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 20px;
+      min-width: 136px;
+      padding: 3px 12px;
+      background: var(--accent-bg);
+      color: var(--accent-color);
+      border-radius: 4px;
       font-weight: 600;
-      font-size: 12px;
+      font-size: 11px;
+      line-height: 1;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      white-space: nowrap;
+      letter-spacing: 0.3px;
+      box-sizing: border-box;
+      text-align: center;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
-    .section-title {
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: #222;
-      font-size: 14px;
+
+    /* 底栏 */
+    .footer {
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .version {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      font-family: 'Courier New', monospace;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 12px;
+    }
+
+    .footer-link {
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+      cursor: pointer;
+    }
+
+    .footer-link:hover {
+      color: var(--accent-color);
     }
   </style>
 </head>
-<body>
-  <div class="title">框选复制</div>
-  <div class="desc">按快捷键或使用开关启用，拖拽选择并复制文本。</div>
 
-  <div class="section">
-    <div class="section-title">开关</div>
-    <div class="field">
-      <label for="enableToggle">启用框选复制</label>
-      <label class="switch">
-        <input type="checkbox" id="enableToggle">
-        <span class="slider"></span>
-      </label>
+<body>
+  <!-- 标题栏 -->
+  <div class="header">
+    <div class="title">框选复制</div>
+    <!-- 会员信息区域（预留，后续开发） -->
+    <div class="user-info">
+      <span class="user-account" id="userAccount">未登录</span>
+      <span class="user-level" id="userLevel">免费版</span>
     </div>
-    <div class="hint">快捷键 <span class="shortcut">Ctrl + Alt + Shift + C</span> 开/关</div>
   </div>
 
-  <div class="section">
-    <div class="section-title">结果面板</div>
-    <div class="field">
-      <label for="positionSelect">弹出位置</label>
-      <select id="positionSelect">
-        <option value="center">页面居中</option>
-        <option value="mouse">跟随鼠标</option>
-        <option value="none">不弹出（直接复制）</option>
-      </select>
+  <!-- 内容区域 -->
+  <div class="content">
+    <div class="section">
+      <div class="field">
+        <label for="enableToggle">启用插件</label>
+        <label class="switch">
+          <input type="checkbox" id="enableToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="hint">
+        <span class="hint-label">快捷键</span>
+        <span class="shortcut" id="shortcutHint">Ctrl + Shift + Y</span>
+      </div>
     </div>
-    <div class="hint">可在页面中拖动面板，内容可编辑，右上角可关闭。</div>
+
+    <div class="section">
+      <div class="field">
+        <label for="positionSelect">面板位置</label>
+        <select id="positionSelect">
+          <option value="center">页面居中</option>
+          <option value="mouse">跟随鼠标</option>
+          <option value="none">直接复制</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底栏 -->
+  <div class="footer">
+    <span class="version" id="version">v1.0.0</span>
+    <div class="footer-links">
+      <a class="footer-link" id="helpLink">帮助</a>
+    </div>
   </div>
 
   <script src="popup.js"></script>
 </body>
+
 </html>

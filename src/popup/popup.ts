@@ -32,11 +32,12 @@ async function persistSettings(settings: PluginSettings): Promise<void> {
 async function notifyContentScripts(settings: PluginSettings): Promise<void> {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
-  if (tab?.id) {
+  if (tab?.id && tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
     try {
       await chrome.tabs.sendMessage(tab.id, { type: 'updateSettings', payload: settings });
     } catch (error) {
-      console.warn('通知内容脚本失败，可能未注入:', error);
+      // 内容脚本可能还未注入（页面刚打开或刚刷新扩展），这是正常情况
+      // 下次用户在该页面使用扩展时会自动加载最新设置
     }
   }
 }
@@ -44,6 +45,21 @@ async function notifyContentScripts(settings: PluginSettings): Promise<void> {
 async function initializePopup(): Promise<void> {
   const { enableToggle, positionSelect } = getControls();
   const settings = await loadSettings();
+
+  // 根据操作系统设置快捷键提示文本
+  const shortcutHint = document.getElementById('shortcutHint');
+  if (shortcutHint) {
+    const platformInfo = await chrome.runtime.getPlatformInfo();
+    const isMac = platformInfo.os === 'mac';
+    shortcutHint.textContent = isMac ? 'Command + Shift + Y' : 'Ctrl + Shift + Y';
+  }
+
+  // 设置版本号
+  const versionElement = document.getElementById('version');
+  if (versionElement) {
+    const manifest = chrome.runtime.getManifest();
+    versionElement.textContent = `v${manifest.version}`;
+  }
 
   enableToggle.checked = settings.enabled;
   positionSelect.value = settings.panelPosition;

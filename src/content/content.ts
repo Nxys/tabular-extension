@@ -8,6 +8,9 @@ import type { PanelPosition, PluginSettings, SelectionRect } from '../types';
  * 组合选择框、文本提取器和结果面板
  */
 class BrowserSelectionCopy {
+  // 需要忽略的交互元素标签名
+  private static readonly IGNORED_TAGS = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'];
+
   private selection: Selection;
   private extractor: Extractor;
   private panel: Panel;
@@ -62,28 +65,23 @@ class BrowserSelectionCopy {
    */
   private handleMouseDown(event: MouseEvent): void {
     if (!this.settings.enabled) return;
-    console.log('鼠标按下事件触发', event.button, event.clientX, event.clientY);
-    
+
     // 忽略右键和中键
     if (event.button !== 0) {
-      console.log('忽略非左键点击');
       return;
     }
-    
+
     // 忽略在面板上的点击
     if (this.panel.contains(event.target as Node)) {
-      console.log('忽略面板内点击');
       return;
     }
-    
-    // 忽略在表单元素上的点击
+
+    // 忽略在交互元素上的点击
     const target = event.target as Element;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.tagName === 'BUTTON') {
-      console.log('忽略表单元素点击');
+    if (BrowserSelectionCopy.IGNORED_TAGS.includes(target.tagName)) {
       return;
     }
-    
-    console.log('开始选择');
+
     this.selection.start(event.clientX, event.clientY);
     event.preventDefault();
     event.stopPropagation();
@@ -95,7 +93,6 @@ class BrowserSelectionCopy {
   private handleMouseMove(event: MouseEvent): void {
     if (!this.settings.enabled) return;
     if (!this.selection.getIsSelecting()) return;
-    console.log('鼠标移动中', event.clientX, event.clientY);
     this.selection.update(event.clientX, event.clientY);
     event.preventDefault();
     event.stopPropagation();
@@ -106,36 +103,26 @@ class BrowserSelectionCopy {
    */
   private handleMouseUp(event: MouseEvent): void {
     if (!this.settings.enabled) return;
-    console.log('鼠标释放事件触发');
-    
+
     if (!this.selection.getIsSelecting()) {
-      console.log('当前未在选择状态');
       return;
     }
-    
-    console.log('完成选择，获取选择区域');
+
     const rect = this.selection.finish();
-    console.log('选择区域:', rect);
     this.lastMouseUpPoint = { x: event.clientX, y: event.clientY };
-    
+
     if (rect && this.selection.isValid(rect)) {
-      console.log('选择区域有效，开始提取文本');
       const text = this.extractor.extract(rect);
-      console.log('提取的文本:', text);
-      
+
       if (text.trim()) {
-        console.log('显示结果面板或直接复制');
         this.lastSelectionRect = rect;
         this.handleShowResult(text);
       } else {
-        console.log('提取的文本为空，不显示面板');
         this.panel.hide();
         this.lastSelectionRect = null;
       }
-    } else {
-      console.log('选择区域无效');
     }
-    
+
     event.preventDefault();
     event.stopPropagation();
   }
@@ -158,9 +145,7 @@ class BrowserSelectionCopy {
     // 重置忽略标记，确保后续点击正常处理
     this.ignoreNextOutsideClick = false;
 
-    if (!this.panel.contains(event.target as Node)) {
-      this.panel.hide();
-    }
+    // 不再自动关闭面板，只能通过关闭按钮或复制按钮关闭
   }
 
   /**
@@ -289,9 +274,7 @@ class BrowserSelectionCopy {
   /**
    * 初始化插件
    */
-  initialize(): void {
-    console.log('浏览器框选复制插件已初始化');
-  }
+  initialize(): void { }
 
   /**
    * 清理资源
@@ -305,7 +288,7 @@ class BrowserSelectionCopy {
     document.removeEventListener('click', this.handleOutsideClickBound);
     document.removeEventListener('keydown', this.handleKeydownBound);
     if (this.messageListener && typeof chrome !== 'undefined' && chrome.runtime?.onMessage?.removeListener) {
-      chrome.runtime.onMessage.removeListener(this.messageListener as (message: any, sender: any, sendResponse: (response?: any) => void) => void);
+      chrome.runtime.onMessage.removeListener(this.messageListener as (message: any, sender: any, sendResponse: (response?: unknown) => void) => void);
     }
     this.messageListener = null;
   }
@@ -320,12 +303,8 @@ declare global {
 
 // 防止重复初始化
 if (!window.browserSelectionCopy) {
-  console.log('开始初始化浏览器框选复制插件');
   window.browserSelectionCopy = new BrowserSelectionCopy();
   window.browserSelectionCopy.initialize();
-  console.log('插件初始化完成');
-} else {
-  console.log('插件已经初始化过了');
 }
 
 export { BrowserSelectionCopy };

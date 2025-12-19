@@ -127,8 +127,6 @@ async function generateAllIcons(outputDir = './src/images', generatePNG = true) 
       console.log(`✓ 生成 ${svgFilename}`);
     }
   }
-  
-  
 }
 
 // 如果直接运行此脚本
