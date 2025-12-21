@@ -21,7 +21,11 @@ src/
 │  ├─ content.ts       # 内容脚本入口（组合组件）
 │  ├─ content.css      # 样式文件
 │  ├─ selection.ts     # 选择框组件
-│  ├─ extractor.ts     # 文本提取器
+│  ├─ extractor/       # 文本提取器模块
+│  │  ├─ index.ts     # 统一对外接口
+│  │  ├─ collect.ts   # 数据采集（DOM遍历）
+│  │  ├─ layout.ts    # 视觉行分组（核心算法）
+│  │  └─ format.ts    # 文本格式化
 │  └─ panel.ts         # 结果面板
 ├─ popup/               # 弹出窗口模块
 │  ├─ popup.ts         # 弹出窗口脚本
@@ -94,12 +98,13 @@ src/images/
 
 ```
 docs/
-├─ README.md           # 项目介绍
-├─ RELEASE.md          # 发布指南
-├─ PUBLISH_CHECKLIST.md # 发布检查清单
 ├─ STRUCTURE.md        # 本文件（项目结构说明）
-└─ store-assets/       # 商店资源说明
-   └─ README.md
+├─ PUBLISHING_GUIDE.md # 发布指南和检查清单
+├─ RELEASE.md          # 技术发布文档
+└─ report/             # 项目报告
+   ├─ FINAL_ACCEPTANCE_REPORT.md
+   ├─ PERFORMANCE_OPTIMIZATION_REPORT.md
+   └─ VERIFICATION_REPORT.md
 ```
 
 ## 📦 核心文件（最终产物 - build/extension/）
@@ -127,11 +132,15 @@ build/extension/
 - `content/content.ts` - 内容脚本入口（组合组件）
 - `types.ts` - 类型定义
 - `content/selection.ts` - 选择框组件
-- `content/extractor.ts` - 文本提取器
+- `content/extractor/` - 文本提取器模块（三段式 pipeline）
+  - `index.ts` - 统一对外接口
+  - `collect.ts` - 数据采集（DOM遍历）
+  - `layout.ts` - 视觉行分组（核心算法）
+  - `format.ts` - 文本格式化
 - `content/panel.ts` - 结果面板
 - `popup/popup.ts` - 弹出窗口脚本
 
-**命名原则**：模块化组织，通过目录结构清晰分类
+**命名原则**：模块化组织，通过目录结构清晰分类。Extractor 采用三段式 pipeline 设计（collect → layout → format），职责单一，易于维护和演进。
 
 ### 目录分类原则
 - **src/** - 所有开发源码（按功能模块组织，包含图标资源）
@@ -162,14 +171,19 @@ npm run release       # 完整流程
 
 | 分类 | 文件数 | 说明 |
 |------|--------|------|
-| 源码 | 8个 | TypeScript 开发文件（按模块组织） |
+| 源码 | 11个 | TypeScript 开发文件（按模块组织） |
 | 图标 | 5个 | 图标资源（模板+PNG） |
 | 测试 | 5个 | 核心功能测试（独立目录） |
 | 构建 | 4个 | 自动化构建脚本 |
-| 文档 | 5个 | 完整项目文档 |
+| 文档 | 3个 | 完整项目文档 |
 
 **设计理念**：
 - 源码模块化组织（提升可维护性）
+- Extractor 三段式 pipeline（collect → layout → format）
+  - **collect**：纯事实采集，遍历 DOM 收集文本和位置
+  - **layout**：视觉行分组，将文本按视觉位置组织成二维结构（核心算法）
+  - **format**：文本格式化，将视觉行转换为可复制的文本字符串
+  - 职责单一，易于测试和演进
 - 样式提取到 CSS（使用 CSS 变量和媒体查询）
 - 图标资源集中管理（src/images，紫色渐变风格）
 - 测试独立管理（清晰分离）

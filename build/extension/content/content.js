@@ -89,162 +89,136 @@
     }
   };
 
-  // src/content/extractor.ts
-  var Extractor = class {
-    LINE_TOLERANCE = 5;
-    /**
-     * 提取选择区域内的文本
-     */
-    extract(rect) {
-      const elements = this.getTextElements(rect);
-      if (elements.length > 0) {
-        const sorted = this.sortByVisualOrder(elements);
-        const result = this.combineText(sorted);
-        return result;
-      }
-      return "";
-    }
-    /**
-     * 获取文本元素
-     */
-    getTextElements(rect) {
-      const elements = [];
-      const walker = document.createTreeWalker(
-        document.body,
-        NodeFilter.SHOW_TEXT,
-        {
-          acceptNode: (node2) => {
-            if (!node2.textContent?.trim()) return NodeFilter.FILTER_REJECT;
-            const parent = node2.parentElement;
-            return parent && this.isVisible(parent) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+  // src/content/extractor/collect.ts
+  function collect(selectionRect) {
+    const items = [];
+    const visibilityCache = /* @__PURE__ */ new Map();
+    const walker = document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: (node2) => {
+          if (!node2.textContent?.trim()) return NodeFilter.FILTER_REJECT;
+          const parent = node2.parentElement;
+          if (!parent) return NodeFilter.FILTER_REJECT;
+          let visible = visibilityCache.get(parent);
+          if (visible === void 0) {
+            visible = isVisible(parent);
+            visibilityCache.set(parent, visible);
           }
-        }
-      );
-      let node;
-      while (node = walker.nextNode()) {
-        const parent = node.parentElement;
-        const clientRects = parent.getClientRects();
-        for (let i = 0; i < clientRects.length; i++) {
-          const clientRect = clientRects[i];
-          const elementRect = {
-            left: clientRect.left + window.scrollX,
-            top: clientRect.top + window.scrollY,
-            right: clientRect.right + window.scrollX,
-            bottom: clientRect.bottom + window.scrollY
-          };
-          if (this.intersects(elementRect, rect)) {
-            elements.push({
-              text: node.textContent || "",
-              rect: clientRect,
-              element: parent,
-              lineIndex: -1,
-              columnIndex: -1
-            });
-            break;
-          }
+          return visible ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
         }
       }
-      return elements;
-    }
-    /**
-     * 检查元素是否可见
-     */
-    isVisible(element) {
-      const style = window.getComputedStyle(element);
-      return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
-    }
-    /**
-     * 检查矩形是否相交
-     */
-    intersects(rect1, rect2) {
-      return !(rect1.right < rect2.left || rect1.left > rect2.right || rect1.bottom < rect2.top || rect1.top > rect2.bottom);
-    }
-    /**
-     * 按视觉顺序排序
-     */
-    sortByVisualOrder(elements) {
-      const lines = [];
-      elements.forEach((element) => {
-        const elementTop = element.rect.top;
-        let foundLine = false;
-        for (const line of lines) {
-          const lineTop = line[0].rect.top;
-          if (Math.abs(elementTop - lineTop) <= this.LINE_TOLERANCE) {
-            line.push(element);
-            foundLine = true;
-            break;
-          }
+    );
+    let node;
+    while (node = walker.nextNode()) {
+      const parent = node.parentElement;
+      const clientRects = parent.getClientRects();
+      for (let i = 0; i < clientRects.length; i++) {
+        const clientRect = clientRects[i];
+        const elementRect = {
+          left: clientRect.left + window.scrollX,
+          top: clientRect.top + window.scrollY,
+          right: clientRect.right + window.scrollX,
+          bottom: clientRect.bottom + window.scrollY
+        };
+        if (intersects(elementRect, selectionRect)) {
+          items.push({
+            text: node.textContent || "",
+            rect: clientRect
+          });
+          break;
         }
-        if (!foundLine) {
-          lines.push([element]);
-        }
-      });
-      lines.forEach((line) => {
-        line.sort((a, b) => a.rect.left - b.rect.left);
-      });
-      lines.sort((a, b) => a[0].rect.top - b[0].rect.top);
-      return lines.flat();
+      }
     }
-    /**
-     * 合并文本
-     */
-    combineText(elements) {
-      if (elements.length === 0) return "";
-      try {
-        const maxElements = 50;
-        const limitedElements = elements.slice(0, maxElements);
-        const lines = [];
-        let currentLine = [];
-        let lastTop = limitedElements[0].rect.top;
-        limitedElements.forEach((element) => {
-          const text = element.text.trim();
-          if (!text || text.length > 1e3) return;
-          if (Math.abs(element.rect.top - lastTop) > this.LINE_TOLERANCE) {
-            if (currentLine.length > 0) {
-              const safeCurrentLine = currentLine.slice(0, 10);
-              try {
-                const lineText = safeCurrentLine.join(" ");
-                if (lineText.length < 1e4) {
-                  lines.push(lineText);
-                }
-              } catch (e) {
-                if (safeCurrentLine.length > 0) {
-                  lines.push(safeCurrentLine[0]);
-                }
-              }
-              currentLine = [];
-            }
-            lastTop = element.rect.top;
-          }
-          if (currentLine.length < 10 && text.length < 1e3) {
-            currentLine.push(text);
-          }
-        });
-        if (currentLine.length > 0) {
-          const safeCurrentLine = currentLine.slice(0, 10);
+    return items;
+  }
+  function isVisible(element) {
+    const style = window.getComputedStyle(element);
+    return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+  }
+  function intersects(rect1, rect2) {
+    return !(rect1.right < rect2.left || rect1.left > rect2.right || rect1.bottom < rect2.top || rect1.top > rect2.bottom);
+  }
+
+  // src/content/extractor/layout.ts
+  function layout(items, options) {
+    if (items.length === 0) return [];
+    const lines = [];
+    items.forEach((item) => {
+      const itemTop = item.rect.top;
+      let foundLine = false;
+      for (const line of lines) {
+        const lineTop = line[0].rect.top;
+        if (Math.abs(itemTop - lineTop) <= options.lineThresholdRatio) {
+          line.push(item);
+          foundLine = true;
+          break;
+        }
+      }
+      if (!foundLine) {
+        lines.push([item]);
+      }
+    });
+    lines.forEach((line) => {
+      line.sort((a, b) => a.rect.left - b.rect.left);
+    });
+    lines.sort((a, b) => a[0].rect.top - b[0].rect.top);
+    return lines;
+  }
+
+  // src/content/extractor/format.ts
+  function format(lines) {
+    if (lines.length === 0) return "";
+    try {
+      const maxLines = 10;
+      const limitedLines = lines.slice(0, maxLines);
+      const resultLines = [];
+      for (const line of limitedLines) {
+        if (line.length === 0) continue;
+        const maxElementsPerLine = 10;
+        const limitedLine = line.slice(0, maxElementsPerLine);
+        const lineTexts = [];
+        for (const item of limitedLine) {
+          const text = item.text.trim();
+          if (!text || text.length > 1e3) continue;
+          lineTexts.push(text);
+        }
+        if (lineTexts.length > 0) {
           try {
-            const lineText = safeCurrentLine.join(" ");
+            const lineText = lineTexts.join(" ");
             if (lineText.length < 1e4) {
-              lines.push(lineText);
+              resultLines.push(lineText);
             }
           } catch (e) {
-            if (safeCurrentLine.length > 0) {
-              lines.push(safeCurrentLine[0]);
+            if (lineTexts.length > 0) {
+              resultLines.push(lineTexts[0]);
             }
           }
         }
-        const limitedLines = lines.slice(0, 10);
-        try {
-          return limitedLines.join("\n");
-        } catch (e) {
-          return limitedLines.length > 0 ? limitedLines[0] : "";
-        }
-      } catch (error) {
-        console.warn("\u6587\u672C\u5408\u5E76\u51FA\u9519:", error);
-        return "\u6587\u672C\u63D0\u53D6\u51FA\u9519";
       }
+      try {
+        return resultLines.join("\n");
+      } catch (e) {
+        return resultLines.length > 0 ? resultLines[0] : "";
+      }
+    } catch (error) {
+      console.warn("\u6587\u672C\u5408\u5E76\u51FA\u9519:", error);
+      return "\u6587\u672C\u63D0\u53D6\u51FA\u9519";
     }
+  }
+
+  // src/content/extractor/index.ts
+  var DEFAULT_LAYOUT_OPTIONS = {
+    lineThresholdRatio: 5,
+    minHorizontalGap: 10
   };
+  function extractText(selectionRect, options = DEFAULT_LAYOUT_OPTIONS) {
+    const items = collect(selectionRect);
+    const lines = layout(items, options);
+    const text = format(lines);
+    return text;
+  }
 
   // src/content/panel.ts
   var Panel = class {
@@ -442,8 +416,12 @@
   var BrowserSelectionCopy = class _BrowserSelectionCopy {
     // 需要忽略的交互元素标签名
     static IGNORED_TAGS = ["INPUT", "TEXTAREA", "SELECT", "BUTTON"];
+    // 默认布局选项
+    static DEFAULT_LAYOUT_OPTIONS = {
+      lineThresholdRatio: 5,
+      minHorizontalGap: 10
+    };
     selection;
-    extractor;
     panel;
     // 仅忽略紧随选择动作产生的首个 click
     ignoreNextOutsideClick = false;
@@ -462,7 +440,6 @@
     settingsReady;
     constructor() {
       this.selection = new Selection();
-      this.extractor = new Extractor();
       this.panel = new Panel();
       this.settingsReady = this.initializeSettings();
       this.bindEvents();
@@ -527,7 +504,7 @@
       const rect = this.selection.finish();
       this.lastMouseUpPoint = { x: event.clientX, y: event.clientY };
       if (rect && this.selection.isValid(rect)) {
-        const text = this.extractor.extract(rect);
+        const text = extractText(rect, _BrowserSelectionCopy.DEFAULT_LAYOUT_OPTIONS);
         if (text.trim()) {
           this.lastSelectionRect = rect;
           this.handleShowResult(text);

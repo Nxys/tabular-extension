@@ -1,5 +1,5 @@
 import { Selection } from './selection';
-import { Extractor } from './extractor';
+import { extractText, type LayoutOptions } from './extractor/index';
 import { Panel } from './panel';
 import type { PanelPosition, PluginSettings, SelectionRect } from '../types';
 
@@ -11,8 +11,13 @@ class BrowserSelectionCopy {
   // 需要忽略的交互元素标签名
   private static readonly IGNORED_TAGS = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'];
 
+  // 默认布局选项
+  private static readonly DEFAULT_LAYOUT_OPTIONS: LayoutOptions = {
+    lineThresholdRatio: 5,
+    minHorizontalGap: 10
+  };
+
   private selection: Selection;
-  private extractor: Extractor;
   private panel: Panel;
   // 仅忽略紧随选择动作产生的首个 click
   private ignoreNextOutsideClick = false;
@@ -32,7 +37,6 @@ class BrowserSelectionCopy {
 
   constructor() {
     this.selection = new Selection();
-    this.extractor = new Extractor();
     this.panel = new Panel();
     this.settingsReady = this.initializeSettings();
     this.bindEvents();
@@ -112,7 +116,7 @@ class BrowserSelectionCopy {
     this.lastMouseUpPoint = { x: event.clientX, y: event.clientY };
 
     if (rect && this.selection.isValid(rect)) {
-      const text = this.extractor.extract(rect);
+      const text = extractText(rect, BrowserSelectionCopy.DEFAULT_LAYOUT_OPTIONS);
 
       if (text.trim()) {
         this.lastSelectionRect = rect;

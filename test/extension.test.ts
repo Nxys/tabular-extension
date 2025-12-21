@@ -1,7 +1,7 @@
 // 浏览器框选复制插件核心功能测试
 
 import { BrowserSelectionCopy } from '../src/content/content';
-import { Extractor } from '../src/content/extractor';
+import * as extractorModule from '../src/content/extractor';
 import type { PanelPosition } from '../src/types';
 
 describe('BrowserSelectionCopy 核心功能测试', () => {
@@ -62,7 +62,7 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
     let extractSpy: jest.SpyInstance;
 
     beforeEach(() => {
-      extractSpy = jest.spyOn(Extractor.prototype, 'extract').mockReturnValue('测试文本');
+      extractSpy = jest.spyOn(extractorModule, 'extractText').mockReturnValue('测试文本');
     });
 
     afterEach(() => {
@@ -226,7 +226,7 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
     let extractSpy: jest.SpyInstance;
 
     beforeEach(async () => {
-      extractSpy = jest.spyOn(Extractor.prototype, 'extract').mockImplementation(() => {
+      extractSpy = jest.spyOn(extractorModule, 'extractText').mockImplementation(() => {
         const marker = document.querySelector('[data-mock-text]');
         return marker?.textContent?.trim() || '测试文本';
       });
