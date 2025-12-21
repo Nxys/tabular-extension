@@ -25,6 +25,23 @@ export class Panel {
   }
 
   /**
+   * 显示使用限制提示
+   */
+  showLimitReached(): void {
+    this.createElement(
+      { left: 50, top: 50 },
+      false,
+      {
+        type: 'limit',
+        title: '使用限制',
+        icon: '🚫',
+        message: '今日免费次数已用完',
+        showUpgradeButton: true
+      }
+    );
+  }
+
+  /**
    * 隐藏面板
    */
   hide(): void {
@@ -47,7 +64,17 @@ export class Panel {
   /**
    * 创建面板
    */
-  private createElement(position: { left: number; top: number }, editable: boolean): void {
+  private createElement(
+    position: { left: number; top: number },
+    editable: boolean,
+    config?: {
+      type?: 'limit';
+      title?: string;
+      icon?: string;
+      message?: string;
+      showUpgradeButton?: boolean;
+    }
+  ): void {
     this.hide(); // 确保只有一个面板
 
     // 创建面板容器
@@ -67,11 +94,11 @@ export class Panel {
     // 图标
     const icon = document.createElement('span');
     icon.className = `${this.CSS_CLASS_PREFIX}-panel-icon`;
-    icon.textContent = '📋';
+    icon.textContent = config?.icon ?? '📋';
     
     // 标题文本
     const titleText = document.createElement('span');
-    titleText.textContent = '文本预览';
+    titleText.textContent = config?.title ?? '文本预览';
     
     title.appendChild(icon);
     title.appendChild(titleText);
@@ -86,56 +113,99 @@ export class Panel {
     header.appendChild(title);
     header.appendChild(closeBtn);
 
-    // 文本预览区域
-    const previewWrapper = document.createElement('div');
-    previewWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-preview-wrapper`;
+    // 根据类型创建不同的内容
+    if (config?.type === 'limit') {
+      // 限制提示内容
+      const messageWrapper = document.createElement('div');
+      messageWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-message-wrapper`;
 
-    const preview = document.createElement('textarea');
-    preview.className = `${this.CSS_CLASS_PREFIX}-panel-textarea`;
-    preview.readOnly = !editable;
-    preview.value = this.currentText;
-    preview.oninput = (e) => {
-      const target = e.target as HTMLTextAreaElement;
-      this.currentText = target.value;
-    };
+      const message = document.createElement('div');
+      message.className = `${this.CSS_CLASS_PREFIX}-panel-message`;
+      message.textContent = config.message ?? '';
 
-    previewWrapper.appendChild(preview);
+      const subMessage = document.createElement('div');
+      subMessage.className = `${this.CSS_CLASS_PREFIX}-panel-submessage`;
+      subMessage.textContent = '(20/20)';
 
-    // 复制按钮容器
-    const copyBtnWrapper = document.createElement('div');
-    copyBtnWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-copy-wrapper`;
+      const resetInfo = document.createElement('div');
+      resetInfo.className = `${this.CSS_CLASS_PREFIX}-panel-reset-info`;
+      resetInfo.textContent = '明天将自动重置';
 
-    // 复制按钮
-    const copyBtn = document.createElement('button');
-    copyBtn.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn`;
-    copyBtn.dataset.role = 'copy';
-    
-    const copyBtnContent = document.createElement('span');
-    copyBtnContent.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-content`;
-    
-    const copyBtnIcon = document.createElement('span');
-    copyBtnIcon.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-icon`;
-    copyBtnIcon.textContent = '📄';
-    
-    const copyBtnText = document.createElement('span');
-    copyBtnText.textContent = '复制到剪贴板';
-    
-    copyBtnContent.appendChild(copyBtnIcon);
-    copyBtnContent.appendChild(copyBtnText);
-    copyBtn.appendChild(copyBtnContent);
-    
-    copyBtn.onclick = () => {
-      this.copyToClipboard();
-      // 复制后关闭面板
-      setTimeout(() => this.hide(), 1500);
-    };
+      messageWrapper.appendChild(message);
+      messageWrapper.appendChild(subMessage);
+      messageWrapper.appendChild(resetInfo);
 
-    copyBtnWrapper.appendChild(copyBtn);
+      this.element.appendChild(header);
+      this.element.appendChild(messageWrapper);
 
-    // 组装面板
-    this.element.appendChild(header);
-    this.element.appendChild(previewWrapper);
-    this.element.appendChild(copyBtnWrapper);
+      // 升级按钮（占位）
+      if (config.showUpgradeButton) {
+        const upgradeBtnWrapper = document.createElement('div');
+        upgradeBtnWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-upgrade-wrapper`;
+
+        const upgradeBtn = document.createElement('button');
+        upgradeBtn.className = `${this.CSS_CLASS_PREFIX}-panel-upgrade-btn`;
+        upgradeBtn.textContent = '升级 Pro（占位）';
+        upgradeBtn.onclick = () => {
+          // 占位按钮，当前无实际功能
+          console.log('升级 Pro 功能尚未实现');
+        };
+
+        upgradeBtnWrapper.appendChild(upgradeBtn);
+        this.element.appendChild(upgradeBtnWrapper);
+      }
+    } else {
+      // 原有的文本预览内容
+      const previewWrapper = document.createElement('div');
+      previewWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-preview-wrapper`;
+
+      const preview = document.createElement('textarea');
+      preview.className = `${this.CSS_CLASS_PREFIX}-panel-textarea`;
+      preview.readOnly = !editable;
+      preview.value = this.currentText;
+      preview.oninput = (e) => {
+        const target = e.target as HTMLTextAreaElement;
+        this.currentText = target.value;
+      };
+
+      previewWrapper.appendChild(preview);
+
+      // 复制按钮容器
+      const copyBtnWrapper = document.createElement('div');
+      copyBtnWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-copy-wrapper`;
+
+      // 复制按钮
+      const copyBtn = document.createElement('button');
+      copyBtn.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn`;
+      copyBtn.dataset.role = 'copy';
+      
+      const copyBtnContent = document.createElement('span');
+      copyBtnContent.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-content`;
+      
+      const copyBtnIcon = document.createElement('span');
+      copyBtnIcon.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-icon`;
+      copyBtnIcon.textContent = '📄';
+      
+      const copyBtnText = document.createElement('span');
+      copyBtnText.textContent = '复制到剪贴板';
+      
+      copyBtnContent.appendChild(copyBtnIcon);
+      copyBtnContent.appendChild(copyBtnText);
+      copyBtn.appendChild(copyBtnContent);
+      
+      copyBtn.onclick = () => {
+        this.copyToClipboard();
+        // 复制后关闭面板
+        setTimeout(() => this.hide(), 1500);
+      };
+
+      copyBtnWrapper.appendChild(copyBtn);
+
+      // 组装面板
+      this.element.appendChild(header);
+      this.element.appendChild(previewWrapper);
+      this.element.appendChild(copyBtnWrapper);
+    }
 
     document.body.appendChild(this.element);
 

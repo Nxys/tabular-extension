@@ -2,6 +2,7 @@ import { Selection } from './selection';
 import { extractText, type LayoutOptions } from './extractor/index';
 import { Panel } from './panel';
 import type { PanelPosition, PluginSettings, SelectionRect } from '../types';
+import { checkUsage, consumeUsage } from './usage/usage';
 
 /**
  * 浏览器框选复制插件 - 内容脚本
@@ -105,7 +106,7 @@ class BrowserSelectionCopy {
   /**
    * 鼠标释放事件
    */
-  private handleMouseUp(event: MouseEvent): void {
+  private async handleMouseUp(event: MouseEvent): Promise<void> {
     if (!this.settings.enabled) return;
 
     if (!this.selection.getIsSelecting()) {
@@ -116,11 +117,21 @@ class BrowserSelectionCopy {
     this.lastMouseUpPoint = { x: event.clientX, y: event.clientY };
 
     if (rect && this.selection.isValid(rect)) {
+      // 检查使用限制
+      const usage = await checkUsage();
+      if (!usage.allowed) {
+        this.panel.showLimitReached();
+        return;
+      }
+
+      // 执行提取
       const text = extractText(rect, BrowserSelectionCopy.DEFAULT_LAYOUT_OPTIONS);
 
       if (text.trim()) {
         this.lastSelectionRect = rect;
         this.handleShowResult(text);
+        // 消耗使用次数
+        await consumeUsage();
       } else {
         this.panel.hide();
         this.lastSelectionRect = null;
