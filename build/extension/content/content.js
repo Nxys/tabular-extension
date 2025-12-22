@@ -145,7 +145,7 @@
   function layout(items, options) {
     if (items.length === 0) return [];
     const lines = [];
-    items.forEach((item) => {
+    for (const item of items) {
       const itemTop = item.rect.top;
       let foundLine = false;
       for (const line of lines) {
@@ -159,10 +159,10 @@
       if (!foundLine) {
         lines.push([item]);
       }
-    });
-    lines.forEach((line) => {
+    }
+    for (const line of lines) {
       line.sort((a, b) => a.rect.left - b.rect.left);
-    });
+    }
     lines.sort((a, b) => a[0].rect.top - b[0].rect.top);
     return lines;
   }
@@ -237,6 +237,22 @@
       this.createElement(options.position, options.editable ?? true);
     }
     /**
+     * 显示使用限制提示
+     */
+    showLimitReached() {
+      this.createElement(
+        { left: 50, top: 50 },
+        false,
+        {
+          type: "limit",
+          title: "\u4F7F\u7528\u9650\u5236",
+          icon: "\u{1F6AB}",
+          message: "\u4ECA\u65E5\u514D\u8D39\u6B21\u6570\u5DF2\u7528\u5B8C",
+          showUpgradeButton: true
+        }
+      );
+    }
+    /**
      * 隐藏面板
      */
     hide() {
@@ -257,7 +273,7 @@
     /**
      * 创建面板
      */
-    createElement(position, editable) {
+    createElement(position, editable, config) {
       this.hide();
       this.element = document.createElement("div");
       this.element.className = `${this.CSS_CLASS_PREFIX}-panel`;
@@ -269,9 +285,9 @@
       title.className = `${this.CSS_CLASS_PREFIX}-panel-title`;
       const icon = document.createElement("span");
       icon.className = `${this.CSS_CLASS_PREFIX}-panel-icon`;
-      icon.textContent = "\u{1F4CB}";
+      icon.textContent = config?.icon ?? "\u{1F4CB}";
       const titleText = document.createElement("span");
-      titleText.textContent = "\u6587\u672C\u9884\u89C8";
+      titleText.textContent = config?.title ?? "\u6587\u672C\u9884\u89C8";
       title.appendChild(icon);
       title.appendChild(titleText);
       const closeBtn = document.createElement("button");
@@ -281,40 +297,71 @@
       closeBtn.onclick = () => this.hide();
       header.appendChild(title);
       header.appendChild(closeBtn);
-      const previewWrapper = document.createElement("div");
-      previewWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-preview-wrapper`;
-      const preview = document.createElement("textarea");
-      preview.className = `${this.CSS_CLASS_PREFIX}-panel-textarea`;
-      preview.readOnly = !editable;
-      preview.value = this.currentText;
-      preview.oninput = (e) => {
-        const target = e.target;
-        this.currentText = target.value;
-      };
-      previewWrapper.appendChild(preview);
-      const copyBtnWrapper = document.createElement("div");
-      copyBtnWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-copy-wrapper`;
-      const copyBtn = document.createElement("button");
-      copyBtn.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn`;
-      copyBtn.dataset.role = "copy";
-      const copyBtnContent = document.createElement("span");
-      copyBtnContent.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-content`;
-      const copyBtnIcon = document.createElement("span");
-      copyBtnIcon.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-icon`;
-      copyBtnIcon.textContent = "\u{1F4C4}";
-      const copyBtnText = document.createElement("span");
-      copyBtnText.textContent = "\u590D\u5236\u5230\u526A\u8D34\u677F";
-      copyBtnContent.appendChild(copyBtnIcon);
-      copyBtnContent.appendChild(copyBtnText);
-      copyBtn.appendChild(copyBtnContent);
-      copyBtn.onclick = () => {
-        this.copyToClipboard();
-        setTimeout(() => this.hide(), 1500);
-      };
-      copyBtnWrapper.appendChild(copyBtn);
-      this.element.appendChild(header);
-      this.element.appendChild(previewWrapper);
-      this.element.appendChild(copyBtnWrapper);
+      if (config?.type === "limit") {
+        const messageWrapper = document.createElement("div");
+        messageWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-message-wrapper`;
+        const message = document.createElement("div");
+        message.className = `${this.CSS_CLASS_PREFIX}-panel-message`;
+        message.textContent = config.message ?? "";
+        const subMessage = document.createElement("div");
+        subMessage.className = `${this.CSS_CLASS_PREFIX}-panel-submessage`;
+        subMessage.textContent = "(20/20)";
+        const resetInfo = document.createElement("div");
+        resetInfo.className = `${this.CSS_CLASS_PREFIX}-panel-reset-info`;
+        resetInfo.textContent = "\u660E\u5929\u5C06\u81EA\u52A8\u91CD\u7F6E";
+        messageWrapper.appendChild(message);
+        messageWrapper.appendChild(subMessage);
+        messageWrapper.appendChild(resetInfo);
+        this.element.appendChild(header);
+        this.element.appendChild(messageWrapper);
+        if (config.showUpgradeButton) {
+          const upgradeBtnWrapper = document.createElement("div");
+          upgradeBtnWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-upgrade-wrapper`;
+          const upgradeBtn = document.createElement("button");
+          upgradeBtn.className = `${this.CSS_CLASS_PREFIX}-panel-upgrade-btn`;
+          upgradeBtn.textContent = "\u5347\u7EA7 Pro\uFF08\u5360\u4F4D\uFF09";
+          upgradeBtn.onclick = () => {
+            console.log("\u5347\u7EA7 Pro \u529F\u80FD\u5C1A\u672A\u5B9E\u73B0");
+          };
+          upgradeBtnWrapper.appendChild(upgradeBtn);
+          this.element.appendChild(upgradeBtnWrapper);
+        }
+      } else {
+        const previewWrapper = document.createElement("div");
+        previewWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-preview-wrapper`;
+        const preview = document.createElement("textarea");
+        preview.className = `${this.CSS_CLASS_PREFIX}-panel-textarea`;
+        preview.readOnly = !editable;
+        preview.value = this.currentText;
+        preview.oninput = (e) => {
+          const target = e.target;
+          this.currentText = target.value;
+        };
+        previewWrapper.appendChild(preview);
+        const copyBtnWrapper = document.createElement("div");
+        copyBtnWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-copy-wrapper`;
+        const copyBtn = document.createElement("button");
+        copyBtn.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn`;
+        copyBtn.dataset.role = "copy";
+        const copyBtnContent = document.createElement("span");
+        copyBtnContent.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-content`;
+        const copyBtnIcon = document.createElement("span");
+        copyBtnIcon.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-icon`;
+        copyBtnIcon.textContent = "\u{1F4C4}";
+        const copyBtnText = document.createElement("span");
+        copyBtnText.textContent = "\u590D\u5236\u5230\u526A\u8D34\u677F";
+        copyBtnContent.appendChild(copyBtnIcon);
+        copyBtnContent.appendChild(copyBtnText);
+        copyBtn.appendChild(copyBtnContent);
+        copyBtn.onclick = () => {
+          this.copyToClipboard();
+          setTimeout(() => this.hide(), 1500);
+        };
+        copyBtnWrapper.appendChild(copyBtn);
+        this.element.appendChild(header);
+        this.element.appendChild(previewWrapper);
+        this.element.appendChild(copyBtnWrapper);
+      }
       document.body.appendChild(this.element);
       header.addEventListener("mousedown", (event) => this.startDrag(event));
       document.addEventListener("mousemove", this.handleDrag);
@@ -412,6 +459,82 @@
     };
   };
 
+  // src/content/usage/storage.ts
+  var STORAGE_KEYS = {
+    USAGE_COUNT: "usage_count",
+    LAST_USAGE_DATE: "last_usage_date"
+  };
+  var memoryFallback = {
+    usageCount: 0,
+    lastUsageDate: ""
+  };
+  async function getUsageCount() {
+    try {
+      const result = await chrome.storage.local.get([STORAGE_KEYS.USAGE_COUNT]);
+      return result[STORAGE_KEYS.USAGE_COUNT] || 0;
+    } catch (error) {
+      console.warn("Storage access failed, using memory fallback", error);
+      return memoryFallback.usageCount;
+    }
+  }
+  async function incrementUsage() {
+    try {
+      const count = await getUsageCount();
+      await chrome.storage.local.set({
+        [STORAGE_KEYS.USAGE_COUNT]: count + 1
+      });
+    } catch (error) {
+      console.warn("Failed to increment usage, using memory fallback", error);
+      memoryFallback.usageCount += 1;
+    }
+  }
+  async function resetIfNewDay() {
+    try {
+      const today = (/* @__PURE__ */ new Date()).toDateString();
+      const result = await chrome.storage.local.get([STORAGE_KEYS.LAST_USAGE_DATE]);
+      const lastDate = result[STORAGE_KEYS.LAST_USAGE_DATE];
+      if (!lastDate || lastDate !== today) {
+        await chrome.storage.local.set({
+          [STORAGE_KEYS.USAGE_COUNT]: 0,
+          [STORAGE_KEYS.LAST_USAGE_DATE]: today
+        });
+      }
+    } catch (error) {
+      console.warn("Date reset failed, using memory fallback", error);
+      const today = (/* @__PURE__ */ new Date()).toDateString();
+      if (memoryFallback.lastUsageDate !== today) {
+        memoryFallback.usageCount = 0;
+        memoryFallback.lastUsageDate = today;
+      }
+    }
+  }
+
+  // src/content/usage/policy.ts
+  var FREE_POLICY = {
+    maxPerDay: 20
+  };
+
+  // src/content/usage/usage.ts
+  async function checkUsage() {
+    await resetIfNewDay();
+    const count = await getUsageCount();
+    const policy = FREE_POLICY;
+    if (count >= policy.maxPerDay) {
+      return {
+        allowed: false,
+        reason: "limit-reached",
+        remaining: 0
+      };
+    }
+    return {
+      allowed: true,
+      remaining: policy.maxPerDay - count
+    };
+  }
+  async function consumeUsage() {
+    await incrementUsage();
+  }
+
   // src/content/content.ts
   var BrowserSelectionCopy = class _BrowserSelectionCopy {
     // 需要忽略的交互元素标签名
@@ -496,7 +619,7 @@
     /**
      * 鼠标释放事件
      */
-    handleMouseUp(event) {
+    async handleMouseUp(event) {
       if (!this.settings.enabled) return;
       if (!this.selection.getIsSelecting()) {
         return;
@@ -504,10 +627,16 @@
       const rect = this.selection.finish();
       this.lastMouseUpPoint = { x: event.clientX, y: event.clientY };
       if (rect && this.selection.isValid(rect)) {
+        const usage = await checkUsage();
+        if (!usage.allowed) {
+          this.panel.showLimitReached();
+          return;
+        }
         const text = extractText(rect, _BrowserSelectionCopy.DEFAULT_LAYOUT_OPTIONS);
         if (text.trim()) {
           this.lastSelectionRect = rect;
           this.handleShowResult(text);
+          await consumeUsage();
         } else {
           this.panel.hide();
           this.lastSelectionRect = null;
