@@ -54,6 +54,7 @@
     },
     "testMatch": [
       "**/test/**/*.test.ts"
-    ]
+    ],
+    "coverageDirectory": "test/coverage"
   }
 }
