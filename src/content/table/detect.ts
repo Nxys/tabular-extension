@@ -25,8 +25,11 @@ export interface Table {
 /**
  * 列聚类的阈值（像素）
  * X 坐标差距小于此值的文本项会被合并到同一列
+ * 
+ * 调整为 50px 以更好地处理列内的 X 坐标偏移
+ * 这可以防止将一列分裂为多列
  */
-const COLUMN_THRESHOLD = 30;
+const COLUMN_THRESHOLD = 50;
 
 /**
  * 检测表格结构
@@ -119,10 +122,12 @@ export function detectTable(lines: TextItem[][]): Table {
  * 
  * 使用改进的聚类算法：
  * 1. 对坐标排序
- * 2. 使用滑动窗口，检查当前聚类的范围（最大值 - 最小值）
- * 3. 如果添加新坐标后范围仍在阈值内，则加入当前聚类
+ * 2. 使用相邻坐标的间距判断（而不是范围）
+ * 3. 如果相邻坐标间距小于阈值，则属于同一聚类
  * 4. 否则开始新聚类
  * 5. 返回每个聚类的中心点
+ * 
+ * 这种方法更稳健，可以更好地处理列内的 X 坐标偏移
  * 
  * @param xPositions X 坐标数组
  * @returns 聚类中心点数组
@@ -135,24 +140,22 @@ function clusterXPositions(xPositions: number[]): number[] {
   // 排序
   const sorted = [...xPositions].sort((a, b) => a - b);
 
-  // 聚类：使用范围判断
+  // 聚类：使用相邻间距判断
   const clusters: number[] = [];
-  let clusterStart = sorted[0];
   let clusterSum = sorted[0];
   let clusterCount = 1;
 
   for (let i = 1; i < sorted.length; i++) {
-    // 检查如果加入当前坐标，聚类的范围是否仍在阈值内
-    const potentialRange = sorted[i] - clusterStart;
+    // 检查与前一个坐标的间距
+    const gap = sorted[i] - sorted[i - 1];
     
-    if (potentialRange <= COLUMN_THRESHOLD) {
-      // 范围在阈值内，加入当前聚类
+    if (gap <= COLUMN_THRESHOLD) {
+      // 间距在阈值内，加入当前聚类
       clusterSum += sorted[i];
       clusterCount++;
     } else {
-      // 范围超出阈值，保存当前聚类，开始新聚类
+      // 间距超出阈值，保存当前聚类，开始新聚类
       clusters.push(clusterSum / clusterCount);
-      clusterStart = sorted[i];
       clusterSum = sorted[i];
       clusterCount = 1;
     }

@@ -455,5 +455,234 @@ describe('Pro 门控系统单元测试', () => {
       const result = await allow('table-detect');
       expect(result).toBe(false);
     });
+
+    it('签名验证抛出错误应该拒绝访问', async () => {
+      // 设置一个会导致签名验证失败的状态
+      mockStorage['pro_state'] = {
+        isPro: true,
+        signature: null, // null 会导致验证逻辑出错
+        features: {
+          'table-detect': true,
+          'column-align': true,
+          'csv-export': true
+        }
+      };
+
+      const result = await allow('table-detect');
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('使用模式验证', () => {
+    beforeEach(async () => {
+      // 清空 usage 数据
+      await chrome.storage.local.remove(['usage_stats']);
+    });
+
+    it('正常使用频率应该通过验证', async () => {
+      mockStorage['pro_state'] = {
+        isPro: true,
+        signature: 'valid-signature-1234567890',
+        features: {
+          'table-detect': true,
+          'column-align': true,
+          'csv-export': true
+        }
+      };
+
+      // 设置正常的使用统计
+      mockStorage['usage_stats'] = {
+        date: new Date().toISOString().split('T')[0],
+        tableDetectCount: 10,
+        columnAlignCount: 5,
+        csvExportCount: 3
+      };
+
+      const result = await allow('table-detect');
+      expect(result).toBe(true);
+    });
+
+    it('异常高频使用 table-detect 应该被拒绝', async () => {
+      mockStorage['pro_state'] = {
+        isPro: true,
+        signature: 'valid-signature-1234567890',
+        features: {
+          'table-detect': true,
+          'column-align': true,
+          'csv-export': true
+        }
+      };
+
+      // 设置异常高频的使用统计
+      mockStorage['usage_stats'] = {
+        date: new Date().toISOString().split('T')[0],
+        tableDetectCount: 1001, // 超过阈值 1000
+        columnAlignCount: 5,
+        csvExportCount: 3
+      };
+
+      const result = await allow('table-detect');
+      expect(result).toBe(false);
+    });
+
+    it('异常高频使用 column-align 应该被拒绝', async () => {
+      mockStorage['pro_state'] = {
+        isPro: true,
+        signature: 'valid-signature-1234567890',
+        features: {
+          'table-detect': true,
+          'column-align': true,
+          'csv-export': true
+        }
+      };
+
+      mockStorage['usage_stats'] = {
+        date: new Date().toISOString().split('T')[0],
+        tableDetectCount: 10,
+        columnAlignCount: 1001, // 超过阈值
+        csvExportCount: 3
+      };
+
+      const result = await allow('column-align');
+      expect(result).toBe(false);
+    });
+
+    it('异常高频使用 csv-export 应该被拒绝', async () => {
+      mockStorage['pro_state'] = {
+        isPro: true,
+        signature: 'valid-signature-1234567890',
+        features: {
+          'table-detect': true,
+          'column-align': true,
+          'csv-export': true
+        }
+      };
+
+      mockStorage['usage_stats'] = {
+        date: new Date().toISOString().split('T')[0],
+        tableDetectCount: 10,
+        columnAlignCount: 5,
+        csvExportCount: 1001 // 超过阈值
+      };
+
+      const result = await allow('csv-export');
+      expect(result).toBe(false);
+    });
+
+    it('恰好达到阈值应该通过验证', async () => {
+      mockStorage['pro_state'] = {
+        isPro: true,
+        signature: 'valid-signature-1234567890',
+        features: {
+          'table-detect': true,
+          'column-align': true,
+          'csv-export': true
+        }
+      };
+
+      mockStorage['usage_stats'] = {
+        date: new Date().toISOString().split('T')[0],
+        tableDetectCount: 1000, // 恰好等于阈值
+        columnAlignCount: 5,
+        csvExportCount: 3
+      };
+
+      const result = await allow('table-detect');
+      expect(result).toBe(true);
+    });
+
+    it('没有使用统计数据应该默认通过', async () => {
+      mockStorage['pro_state'] = {
+        isPro: true,
+        signature: 'valid-signature-1234567890',
+        features: {
+          'table-detect': true,
+          'column-align': true,
+          'csv-export': true
+        }
+      };
+
+      // 不设置 usage_stats
+
+      const result = await allow('table-detect');
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('调用路径验证详细测试', () => {
+    it('测试环境应该跳过调用路径检查', async () => {
+      mockStorage['pro_state'] = {
+        isPro: true,
+        signature: 'valid-signature-1234567890',
+        features: {
+          'table-detect': true,
+          'column-align': true,
+          'csv-export': true
+        }
+      };
+
+      // 在测试环境中，调用路径检查应该被跳过
+      const result = await allow('table-detect');
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('边缘情况', () => {
+    it('features 对象为空应该拒绝所有功能', async () => {
+      mockStorage['pro_state'] = {
+        isPro: true,
+        signature: 'valid-signature-1234567890',
+        features: {}
+      };
+
+      const detectResult = await allow('table-detect');
+      const alignResult = await allow('column-align');
+      const csvResult = await allow('csv-export');
+
+      expect(detectResult).toBe(false);
+      expect(alignResult).toBe(false);
+      expect(csvResult).toBe(false);
+    });
+
+    it('features 字段为 undefined 应该拒绝所有功能', async () => {
+      mockStorage['pro_state'] = {
+        isPro: true,
+        signature: 'valid-signature-1234567890',
+        features: undefined
+      };
+
+      const result = await allow('table-detect');
+      expect(result).toBe(false);
+    });
+
+    it('signature 为 null 应该被拒绝', async () => {
+      mockStorage['pro_state'] = {
+        isPro: true,
+        signature: null,
+        features: {
+          'table-detect': true,
+          'column-align': true,
+          'csv-export': true
+        }
+      };
+
+      const result = await allow('table-detect');
+      expect(result).toBe(false);
+    });
+
+    it('signature 为 undefined 应该被拒绝', async () => {
+      mockStorage['pro_state'] = {
+        isPro: true,
+        signature: undefined,
+        features: {
+          'table-detect': true,
+          'column-align': true,
+          'csv-export': true
+        }
+      };
+
+      const result = await allow('table-detect');
+      expect(result).toBe(false);
+    });
   });
 });

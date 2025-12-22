@@ -15,10 +15,12 @@ import * as fc from 'fast-check';
 // Mock usage 模块 - 必须在导入之前
 const mockCheckUsage = jest.fn();
 const mockConsumeUsage = jest.fn();
+const mockRecord = jest.fn();
 
 jest.mock('../src/content/usage/usage', () => ({
   checkUsage: mockCheckUsage,
-  consumeUsage: mockConsumeUsage
+  consumeUsage: mockConsumeUsage,
+  record: mockRecord
 }));
 
 // Mock extractor 模块 - 现在 mock collect, layout, format
@@ -142,6 +144,7 @@ describe('端到端属性测试', () => {
               remaining: 20 - usageCount
             });
             mockConsumeUsage.mockResolvedValue(undefined);
+            mockRecord.mockResolvedValue(undefined);
 
             // 创建测试 DOM
             document.body.innerHTML = `
@@ -258,6 +261,7 @@ describe('端到端属性测试', () => {
               remaining: remaining
             });
             mockConsumeUsage.mockResolvedValue(undefined);
+            mockRecord.mockResolvedValue(undefined);
 
             // 创建测试 DOM
             document.body.innerHTML = `
@@ -319,6 +323,7 @@ describe('端到端属性测试', () => {
               remaining: 20 - usageCount
             });
             mockConsumeUsage.mockResolvedValue(undefined);
+            mockRecord.mockResolvedValue(undefined);
             
             // Mock extractText 返回空文本
             mockFormat.mockReturnValue('   '); // 只有空格
@@ -394,6 +399,7 @@ describe('端到端属性测试', () => {
                 remaining: 20 - currentCount
               });
               mockConsumeUsage.mockResolvedValue(undefined);
+              mockRecord.mockResolvedValue(undefined);
 
               // 创建测试 DOM
               document.body.innerHTML = `
@@ -499,6 +505,7 @@ describe('端到端属性测试', () => {
         remaining: 1
       });
       mockConsumeUsage.mockResolvedValue(undefined);
+      mockRecord.mockResolvedValue(undefined);
 
       // 创建测试 DOM
       document.body.innerHTML = `

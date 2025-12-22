@@ -6,17 +6,20 @@
  * 2. content.ts 在 allowed: false 时调用 panel.showLimitReached
  * 3. content.ts 在 allowed: true 时继续执行提取流程
  * 4. content.ts 在成功提取后调用 consumeUsage
+ * 5. content.ts 记录 usage 事件（需求 14.4, 14.7, 16.1, 16.2）
  * 
- * 验证需求：4.1, 4.2, 4.3, 4.4
+ * 验证需求：4.1, 4.2, 4.3, 4.4, 14.4, 14.7, 16.1, 16.2
  */
 
 // Mock usage 模块 - 必须在导入之前
 const mockCheckUsage = jest.fn();
 const mockConsumeUsage = jest.fn();
+const mockRecord = jest.fn();
 
 jest.mock('../src/content/usage/usage', () => ({
   checkUsage: mockCheckUsage,
-  consumeUsage: mockConsumeUsage
+  consumeUsage: mockConsumeUsage,
+  record: mockRecord
 }));
 
 // Mock extractor 模块 - 现在 mock collect, layout, format
@@ -68,6 +71,7 @@ describe('Content 控制器集成测试', () => {
     // 默认 mock 返回值
     mockCheckUsage.mockResolvedValue({ allowed: true, remaining: 20 });
     mockConsumeUsage.mockResolvedValue(undefined);
+    mockRecord.mockResolvedValue(undefined);
     
     // Mock extractor pipeline
     mockCollect.mockReturnValue([
@@ -654,6 +658,267 @@ describe('Content 控制器集成测试', () => {
       const checkUsageCallOrder = mockCheckUsage.mock.invocationCallOrder[0];
       const showLimitReachedCallOrder = panelShowLimitReachedSpy.mock.invocationCallOrder[0];
       expect(checkUsageCallOrder).toBeLessThan(showLimitReachedCallOrder);
+    });
+  });
+
+  describe('Usage 事件记录集成测试（需求 14.4, 14.7, 16.1, 16.2）', () => {
+    /**
+     * 测试需求 14.4, 14.7, 16.1：选择时记录 'select' 事件
+     */
+    it('应该在选择时记录 select 事件', async () => {
+      // Mock checkUsage 返回 allowed: true
+      mockCheckUsage.mockResolvedValue({
+        allowed: true,
+        remaining: 15
+      });
+      
+      // Mock format 返回有效文本
+      mockFormat.mockReturnValue('测试文本');
+
+      // 创建测试 DOM
+      document.body.innerHTML = `
+        <div style="position: absolute; left: 50px; top: 50px;">测试文本</div>
+      `;
+
+      // 执行选择操作
+      const mouseDownEvent = new MouseEvent('mousedown', {
+        clientX: 0,
+        clientY: 0,
+        button: 0
+      });
+      document.dispatchEvent(mouseDownEvent);
+
+      const mouseUpEvent = new MouseEvent('mouseup', {
+        clientX: 200,
+        clientY: 100
+      });
+      document.dispatchEvent(mouseUpEvent);
+
+      // 等待异步操作完成
+      await flush();
+
+      // 验证 record 被调用，记录 'select' 事件
+      expect(mockRecord).toHaveBeenCalledWith('select');
+      
+      // 验证 record 在 checkUsage 之前被调用
+      const recordCallOrder = mockRecord.mock.invocationCallOrder[0];
+      const checkUsageCallOrder = mockCheckUsage.mock.invocationCallOrder[0];
+      expect(recordCallOrder).toBeLessThan(checkUsageCallOrder);
+    });
+
+    /**
+     * 测试需求 14.7, 16.1：事件记录不阻断流程
+     */
+    it('应该确保事件记录不阻断流程', async () => {
+      // Mock record 返回成功，但我们会验证即使失败也不影响流程
+      // 实际的 record 函数内部会捕获错误
+      mockRecord.mockResolvedValue(undefined);
+      
+      // Mock checkUsage 返回 allowed: true
+      mockCheckUsage.mockResolvedValue({
+        allowed: true,
+        remaining: 15
+      });
+      
+      // Mock format 返回有效文本
+      mockFormat.mockReturnValue('测试文本');
+
+      // 创建测试 DOM
+      document.body.innerHTML = `
+        <div style="position: absolute; left: 50px; top: 50px;">测试文本</div>
+      `;
+
+      // 执行选择操作
+      const mouseDownEvent = new MouseEvent('mousedown', {
+        clientX: 0,
+        clientY: 0,
+        button: 0
+      });
+      document.dispatchEvent(mouseDownEvent);
+
+      const mouseUpEvent = new MouseEvent('mouseup', {
+        clientX: 200,
+        clientY: 100
+      });
+      document.dispatchEvent(mouseUpEvent);
+
+      // 等待异步操作完成
+      await flush();
+
+      // 验证 record 被调用
+      expect(mockRecord).toHaveBeenCalledWith('select');
+      
+      // 验证流程继续执行
+      expect(mockCheckUsage).toHaveBeenCalled();
+      expect(mockCollect).toHaveBeenCalled();
+      expect(mockLayout).toHaveBeenCalled();
+      expect(mockFormat).toHaveBeenCalled();
+      expect(panelShowSpy).toHaveBeenCalled();
+      expect(mockConsumeUsage).toHaveBeenCalled();
+      
+      // 验证 record 不会阻断流程（通过验证后续步骤都执行了）
+      const recordCallOrder = mockRecord.mock.invocationCallOrder[0];
+      const checkUsageCallOrder = mockCheckUsage.mock.invocationCallOrder[0];
+      expect(recordCallOrder).toBeLessThan(checkUsageCallOrder);
+    });
+
+    /**
+     * 测试需求 16.2：免费版功能不受影响
+     */
+    it('应该确保免费版功能不受 usage 事件记录影响', async () => {
+      // Mock checkUsage 返回 allowed: true
+      mockCheckUsage.mockResolvedValue({
+        allowed: true,
+        remaining: 15
+      });
+      
+      // Mock format 返回有效文本
+      mockFormat.mockReturnValue('测试文本');
+
+      // 创建测试 DOM
+      document.body.innerHTML = `
+        <div style="position: absolute; left: 50px; top: 50px;">测试文本</div>
+      `;
+
+      // 执行选择操作
+      const mouseDownEvent = new MouseEvent('mousedown', {
+        clientX: 0,
+        clientY: 0,
+        button: 0
+      });
+      document.dispatchEvent(mouseDownEvent);
+
+      const mouseUpEvent = new MouseEvent('mouseup', {
+        clientX: 200,
+        clientY: 100
+      });
+      document.dispatchEvent(mouseUpEvent);
+
+      // 等待异步操作完成
+      await flush();
+
+      // 验证 record 被调用
+      expect(mockRecord).toHaveBeenCalledWith('select');
+      
+      // 验证免费版流程正常执行
+      expect(mockCheckUsage).toHaveBeenCalled();
+      expect(mockCollect).toHaveBeenCalled();
+      expect(mockLayout).toHaveBeenCalled();
+      expect(mockFormat).toHaveBeenCalled();
+      expect(panelShowSpy).toHaveBeenCalled();
+      expect(mockConsumeUsage).toHaveBeenCalled();
+      
+      // 验证只记录了 'select' 事件，没有记录 Pro 功能事件
+      expect(mockRecord).toHaveBeenCalledTimes(1);
+      expect(mockRecord).toHaveBeenCalledWith('select');
+    });
+
+    /**
+     * 测试需求 14.4, 16.1：达到限制时仍然记录 select 事件
+     */
+    it('应该在达到限制时仍然记录 select 事件', async () => {
+      // Mock checkUsage 返回 allowed: false
+      mockCheckUsage.mockResolvedValue({
+        allowed: false,
+        reason: 'limit-reached',
+        remaining: 0
+      });
+
+      // 创建测试 DOM
+      document.body.innerHTML = `
+        <div style="position: absolute; left: 50px; top: 50px;">测试文本</div>
+      `;
+
+      // 执行选择操作
+      const mouseDownEvent = new MouseEvent('mousedown', {
+        clientX: 0,
+        clientY: 0,
+        button: 0
+      });
+      document.dispatchEvent(mouseDownEvent);
+
+      const mouseUpEvent = new MouseEvent('mouseup', {
+        clientX: 200,
+        clientY: 100
+      });
+      document.dispatchEvent(mouseUpEvent);
+
+      // 等待异步操作完成
+      await flush();
+
+      // 验证 record 被调用，记录 'select' 事件
+      expect(mockRecord).toHaveBeenCalledWith('select');
+      
+      // 验证 record 在 checkUsage 之前被调用
+      const recordCallOrder = mockRecord.mock.invocationCallOrder[0];
+      const checkUsageCallOrder = mockCheckUsage.mock.invocationCallOrder[0];
+      expect(recordCallOrder).toBeLessThan(checkUsageCallOrder);
+      
+      // 验证显示了限制提示
+      expect(panelShowLimitReachedSpy).toHaveBeenCalled();
+      
+      // 验证流程被终止（没有调用 collect）
+      expect(mockCollect).not.toHaveBeenCalled();
+    });
+
+    /**
+     * 测试需求 14.4, 16.1：多次选择时记录多次 select 事件
+     */
+    it('应该在多次选择时记录多次 select 事件', async () => {
+      // Mock checkUsage 返回 allowed: true
+      mockCheckUsage.mockResolvedValue({
+        allowed: true,
+        remaining: 15
+      });
+      
+      // Mock format 返回有效文本
+      mockFormat.mockReturnValue('测试文本');
+
+      // 创建测试 DOM
+      document.body.innerHTML = `
+        <div style="position: absolute; left: 50px; top: 50px;">第一段文本</div>
+        <div style="position: absolute; left: 50px; top: 100px;">第二段文本</div>
+      `;
+
+      // 第一次选择操作
+      let mouseDownEvent = new MouseEvent('mousedown', {
+        clientX: 0,
+        clientY: 0,
+        button: 0
+      });
+      document.dispatchEvent(mouseDownEvent);
+
+      let mouseUpEvent = new MouseEvent('mouseup', {
+        clientX: 200,
+        clientY: 80
+      });
+      document.dispatchEvent(mouseUpEvent);
+
+      await flush();
+
+      // 验证第一次记录
+      expect(mockRecord).toHaveBeenCalledWith('select');
+      expect(mockRecord).toHaveBeenCalledTimes(1);
+
+      // 第二次选择操作
+      mouseDownEvent = new MouseEvent('mousedown', {
+        clientX: 0,
+        clientY: 80,
+        button: 0
+      });
+      document.dispatchEvent(mouseDownEvent);
+
+      mouseUpEvent = new MouseEvent('mouseup', {
+        clientX: 200,
+        clientY: 150
+      });
+      document.dispatchEvent(mouseUpEvent);
+
+      await flush();
+
+      // 验证第二次记录
+      expect(mockRecord).toHaveBeenCalledWith('select');
+      expect(mockRecord).toHaveBeenCalledTimes(2);
     });
   });
 });

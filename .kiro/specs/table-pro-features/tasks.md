@@ -194,7 +194,7 @@
   - 验证免费版功能不受影响
   - 询问用户是否有问题
 
-- [ ] 12. 运行回归测试
+- [x] 12. 运行回归测试
   - 运行所有现有测试套件
   - 验证 free pipeline 行为不变
   - 验证 UI 和交互不变
@@ -239,7 +239,7 @@
 
 ## Usage 模块语义升级任务（追加）
 
-- [ ] 15. 重构 Usage 模块为行为信号记录器
+- [x] 15. 重构 Usage 模块为行为信号记录器
   - 修改 `src/content/usage/usage.ts` 文件
   - 新增 `UsageEvent` 类型定义（'select', 'table-detect', 'column-align', 'csv-export'）
   - 新增 `UsageStats` 接口定义
@@ -248,7 +248,7 @@
   - 标记 `checkUsage` 和 `consumeUsage` 为 deprecated（保留用于兼容）
   - _需求：13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 14.1, 14.2, 14.3_
 
-- [ ] 15.1 编写 Usage 升级的单元测试
+- [x] 15.1 编写 Usage 升级的单元测试
   - 创建 `test/usage-upgrade.test.ts`
   - 测试 record 函数记录各种事件
   - 测试 getRecentStats 返回正确的统计
@@ -257,7 +257,7 @@
   - 测试事件计数独立性（Property 8）
   - _需求：14.4, 14.5, 14.6, 14.7, 14.9_
 
-- [ ] 15.2 编写 Usage 兼容性测试
+- [x] 15.2 编写 Usage 兼容性测试
   - 在 `test/usage-upgrade.test.ts` 中添加
   - 测试 checkUsage 仍然工作（deprecated）
   - 测试 consumeUsage 仍然工作（deprecated）
@@ -265,7 +265,7 @@
   - 测试未触发 Pro 功能时无副作用
   - _需求：13.7, 13.8, 16.1, 16.2, 16.3_
 
-- [ ] 16. 扩展 Storage 模块支持事件统计
+- [x] 16. 扩展 Storage 模块支持事件统计
   - 修改 `src/content/usage/storage.ts` 文件
   - 新增 `USAGE_STATS` 存储键
   - 实现 `saveStats(stats: UsageStats)` 函数
@@ -274,14 +274,14 @@
   - 保留原有的 `USAGE_COUNT` 和 `LAST_USAGE_DATE`（兼容性）
   - _需求：14.4, 14.5, 14.10_
 
-- [ ] 16.1 编写 Storage 扩展的单元测试
+- [x] 16.1 编写 Storage 扩展的单元测试
   - 修改 `test/storage.test.ts` 文件
   - 测试 saveStats 和 getStats 函数
   - 测试跨天重置包含事件统计
   - 测试 storage 失败时的降级处理
   - _需求：14.4, 14.5, 14.10_
 
-- [ ] 17. 集成 Usage 信号到 Pro Gate
+- [x] 17. 集成 Usage 信号到 Pro Gate
   - 修改 `src/content/pro/gate.ts` 文件
   - 导入 `getRecentStats` 函数
   - 在 `allow` 函数中调用 `getRecentStats()` 获取行为信号
@@ -290,7 +290,7 @@
   - 确保多点防护机制仍然有效
   - _需求：15.1, 15.2, 15.3, 15.4, 15.5, 15.6, 15.7_
 
-- [ ] 17.1 编写 Pro Gate 集成 Usage 的测试
+- [x] 17.1 编写 Pro Gate 集成 Usage 的测试
   - 创建 `test/pro-gate-usage.test.ts`
   - 测试 allow 函数使用 usage 信号
   - 测试异常使用模式检测
@@ -299,7 +299,7 @@
   - 测试 usage 不是唯一判断条件
   - _需求：15.1, 15.2, 15.3, 15.4, 15.5_
 
-- [ ] 18. 在 Content.ts 中记录 Usage 事件
+- [x] 18. 在 Content.ts 中记录 Usage 事件
   - 修改 `src/content/content.ts` 文件
   - 导入 `record` 函数
   - 在 `handleSelectionComplete` 中记录 'select' 事件
@@ -309,7 +309,7 @@
   - 保留 `checkUsage` 调用（用于免费版限制）
   - _需求：14.4, 14.7, 16.1_
 
-- [ ] 18.1 编写 Content.ts Usage 集成测试
+- [x] 18.1 编写 Content.ts Usage 集成测试
   - 修改 `test/content-integration.test.ts` 文件
   - 测试选择时记录 'select' 事件
   - 测试 Pro 功能时记录对应事件
@@ -317,7 +317,7 @@
   - 测试免费版功能不受影响
   - _需求：14.4, 14.7, 16.1, 16.2_
 
-- [ ] 19. Checkpoint - Usage 升级验证
+- [x] 19. Checkpoint - Usage 升级验证
   - 确保所有 Usage 升级测试通过
   - 验证 usage 不再是单点限制器
   - 验证即使绕过 usage，也无法完整解锁 Pro 能力
@@ -326,7 +326,7 @@
   - 验证免费版功能完全不受影响
   - 询问用户是否有问题
 
-- [ ] 20. 运行完整回归测试（包含 Usage 升级）
+- [x] 20. 运行完整回归测试（包含 Usage 升级）
   - 运行所有现有测试套件
   - 验证免费版功能不受影响
   - 验证 Pro 功能正常工作
@@ -334,7 +334,7 @@
   - 验证构建产物结构不变
   - _需求：16.8, 16.9, 16.10_
 
-- [ ] 21. 更新测试覆盖率报告（包含 Usage 模块）
+- [x] 21. 更新测试覆盖率报告（包含 Usage 模块）
   - 运行 `npm test -- --coverage`
   - 验证 usage 模块覆盖率 ≥ 90%
   - 验证 pro/gate 模块覆盖率 ≥ 90%

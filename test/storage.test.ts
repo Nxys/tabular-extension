@@ -7,11 +7,14 @@
  * 3. resetIfNewDay 在日期变化时重置计数
  * 4. resetIfNewDay 在同一天不重置计数
  * 5. storage 访问失败时的降级策略
+ * 6. saveStats 和 getStats 函数（第三版新增）
+ * 7. 跨天重置包含事件统计
  * 
- * 验证需求：3.6, 3.7
+ * 验证需求：3.6, 3.7, 14.4, 14.5, 14.10
  */
 
-import { getUsageCount, incrementUsage, resetIfNewDay } from '../src/content/usage/storage';
+import { getUsageCount, incrementUsage, resetIfNewDay, saveStats, getStats } from '../src/content/usage/storage';
+import type { UsageStats } from '../src/content/usage/usage';
 
 describe('Storage 模块单元测试', () => {
   // 保存原始的 Date 对象
@@ -138,7 +141,14 @@ describe('Storage 模块单元测试', () => {
       
       expect(chrome.storage.local.set).toHaveBeenCalledWith({
         usage_count: 0,
-        last_usage_date: mockToday.toDateString()
+        last_usage_date: mockToday.toDateString(),
+        usage_stats: {
+          selectCount: 0,
+          tableDetectCount: 0,
+          columnAlignCount: 0,
+          csvExportCount: 0,
+          lastDate: mockToday.toDateString()
+        }
       });
     });
 
@@ -174,7 +184,14 @@ describe('Storage 模块单元测试', () => {
       
       expect(chrome.storage.local.set).toHaveBeenCalledWith({
         usage_count: 0,
-        last_usage_date: mockToday.toDateString()
+        last_usage_date: mockToday.toDateString(),
+        usage_stats: {
+          selectCount: 0,
+          tableDetectCount: 0,
+          columnAlignCount: 0,
+          csvExportCount: 0,
+          lastDate: mockToday.toDateString()
+        }
       });
     });
 
@@ -213,7 +230,14 @@ describe('Storage 模块单元测试', () => {
       
       expect(chrome.storage.local.set).toHaveBeenCalledWith({
         usage_count: 0,
-        last_usage_date: mockToday.toDateString()
+        last_usage_date: mockToday.toDateString(),
+        usage_stats: {
+          selectCount: 0,
+          tableDetectCount: 0,
+          columnAlignCount: 0,
+          csvExportCount: 0,
+          lastDate: mockToday.toDateString()
+        }
       });
     });
   });
@@ -298,7 +322,14 @@ describe('Storage 模块单元测试', () => {
         // 验证：应该调用 set 方法重置使用次数为 0
         expect(chrome.storage.local.set).toHaveBeenCalledWith({
           usage_count: 0,
-          last_usage_date: dateB.toDateString()
+          last_usage_date: dateB.toDateString(),
+          usage_stats: {
+            selectCount: 0,
+            tableDetectCount: 0,
+            columnAlignCount: 0,
+            csvExportCount: 0,
+            lastDate: dateB.toDateString()
+          }
         });
         
         // 恢复真实的 Date
@@ -309,6 +340,208 @@ describe('Storage 模块单元测试', () => {
         (chrome.storage.local.get as jest.Mock).mockResolvedValue({});
         (chrome.storage.local.set as jest.Mock).mockResolvedValue(undefined);
       }
+    });
+  });
+
+  describe('saveStats 和 getStats（第三版新增）', () => {
+    it('应该正确保存使用统计', async () => {
+      const stats: UsageStats = {
+        selectCount: 5,
+        tableDetectCount: 3,
+        columnAlignCount: 2,
+        csvExportCount: 1,
+        lastDate: 'Mon Jan 15 2024'
+      };
+
+      await saveStats(stats);
+      
+      expect(chrome.storage.local.set).toHaveBeenCalledWith({
+        usage_stats: stats
+      });
+    });
+
+    it('应该正确获取使用统计', async () => {
+      const mockStats: UsageStats = {
+        selectCount: 10,
+        tableDetectCount: 5,
+        columnAlignCount: 3,
+        csvExportCount: 2,
+        lastDate: 'Mon Jan 15 2024'
+      };
+
+      (chrome.storage.local.get as jest.Mock).mockResolvedValue({
+        usage_stats: mockStats
+      });
+
+      const stats = await getStats();
+      
+      expect(stats).toEqual(mockStats);
+      expect(chrome.storage.local.get).toHaveBeenCalledWith(['usage_stats']);
+    });
+
+    it('应该在没有存储数据时返回默认统计', async () => {
+      // 模拟当前日期
+      const mockToday = new Date('2024-01-15');
+      const mockDate = jest.fn(() => mockToday) as any;
+      mockDate.prototype = RealDate.prototype;
+      global.Date = mockDate;
+
+      // 模拟存储为空
+      (chrome.storage.local.get as jest.Mock).mockResolvedValue({});
+
+      const stats = await getStats();
+      
+      expect(stats).toEqual({
+        selectCount: 0,
+        tableDetectCount: 0,
+        columnAlignCount: 0,
+        csvExportCount: 0,
+        lastDate: mockToday.toDateString()
+      });
+
+      // 恢复真实的 Date
+      global.Date = RealDate;
+    });
+
+    it('应该在存储访问失败时使用内存降级保存统计', async () => {
+      // 模拟存储访问失败
+      (chrome.storage.local.set as jest.Mock).mockRejectedValue(
+        new Error('Storage access failed')
+      );
+
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const stats: UsageStats = {
+        selectCount: 5,
+        tableDetectCount: 3,
+        columnAlignCount: 2,
+        csvExportCount: 1,
+        lastDate: 'Mon Jan 15 2024'
+      };
+
+      await saveStats(stats);
+      
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Failed to save usage stats, using memory fallback',
+        expect.any(Error)
+      );
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('应该在存储访问失败时使用内存降级获取统计', async () => {
+      // 模拟当前日期
+      const mockToday = new Date('2024-01-15');
+      const mockDate = jest.fn(() => mockToday) as any;
+      mockDate.prototype = RealDate.prototype;
+      global.Date = mockDate;
+
+      // 先重置内存降级状态（通过调用 resetIfNewDay）
+      // 这会确保内存降级中的 usageStats 被初始化
+      (chrome.storage.local.get as jest.Mock).mockRejectedValue(
+        new Error('Storage access failed')
+      );
+      await resetIfNewDay();
+
+      // 清除之前的 mock 调用记录
+      jest.clearAllMocks();
+
+      // 再次模拟存储访问失败
+      (chrome.storage.local.get as jest.Mock).mockRejectedValue(
+        new Error('Storage access failed')
+      );
+
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const stats = await getStats();
+      
+      // 应该返回默认值（从内存降级中获取，已经被 resetIfNewDay 初始化为 0）
+      expect(stats).toEqual({
+        selectCount: 0,
+        tableDetectCount: 0,
+        columnAlignCount: 0,
+        csvExportCount: 0,
+        lastDate: mockToday.toDateString()
+      });
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Failed to get usage stats, using memory fallback',
+        expect.any(Error)
+      );
+
+      consoleWarnSpy.mockRestore();
+
+      // 恢复真实的 Date
+      global.Date = RealDate;
+    });
+  });
+
+  describe('跨天重置包含事件统计', () => {
+    it('应该在跨天重置时同时重置事件统计', async () => {
+      // 模拟当前日期
+      const mockToday = new Date('2024-01-15');
+      const mockDate = jest.fn(() => mockToday) as any;
+      mockDate.prototype = RealDate.prototype;
+      global.Date = mockDate;
+
+      // 模拟存储中的日期是昨天，有一些使用统计
+      (chrome.storage.local.get as jest.Mock).mockResolvedValue({
+        last_usage_date: 'Sun Jan 14 2024',
+        usage_count: 10,
+        usage_stats: {
+          selectCount: 10,
+          tableDetectCount: 5,
+          columnAlignCount: 3,
+          csvExportCount: 2,
+          lastDate: 'Sun Jan 14 2024'
+        }
+      });
+
+      await resetIfNewDay();
+      
+      // 验证：应该重置所有计数和统计
+      expect(chrome.storage.local.set).toHaveBeenCalledWith({
+        usage_count: 0,
+        last_usage_date: mockToday.toDateString(),
+        usage_stats: {
+          selectCount: 0,
+          tableDetectCount: 0,
+          columnAlignCount: 0,
+          csvExportCount: 0,
+          lastDate: mockToday.toDateString()
+        }
+      });
+
+      // 恢复真实的 Date
+      global.Date = RealDate;
+    });
+
+    it('应该在存储失败时使用内存降级重置事件统计', async () => {
+      // 模拟当前日期
+      const mockToday = new Date('2024-01-15');
+      const mockDate = jest.fn(() => mockToday) as any;
+      mockDate.prototype = RealDate.prototype;
+      global.Date = mockDate;
+
+      // 模拟存储访问失败
+      (chrome.storage.local.get as jest.Mock).mockRejectedValue(
+        new Error('Storage access failed')
+      );
+
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      await resetIfNewDay();
+      
+      // 应该记录警告
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Date reset failed, using memory fallback',
+        expect.any(Error)
+      );
+
+      consoleWarnSpy.mockRestore();
+
+      // 恢复真实的 Date
+      global.Date = RealDate;
     });
   });
 });

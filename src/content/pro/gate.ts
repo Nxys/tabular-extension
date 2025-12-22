@@ -2,7 +2,14 @@
  * Pro 功能门控系统
  * 
  * 多点分散的能力限制机制，防止简单绕过
+ * 
+ * 第三版升级：
+ * - 集成 usage 信号作为判断条件之一
+ * - 检测异常使用模式
+ * - 保持多点防护机制
  */
+
+import { getRecentStats, UsageStats } from '../usage/usage';
 
 /**
  * Pro 功能类型
@@ -134,13 +141,68 @@ function verifyCallPath(): boolean {
 }
 
 /**
+ * 验证使用模式（检测异常行为）
+ * 
+ * 使用 usage 信号检测异常使用模式
+ * 例如：短时间内大量调用 Pro 功能可能是在尝试绕过
+ * 
+ * @param feature Pro 功能类型
+ * @param stats 使用统计数据
+ * @returns 使用模式是否正常
+ */
+function verifyUsagePattern(
+  feature: ProFeature,
+  stats: UsageStats
+): boolean {
+  try {
+    // 简化实现：检查是否有异常的使用频率
+    // 实际可以更复杂，例如检测爆破行为、时间模式等
+    
+    // 阈值：每日每个功能最多 1000 次（防止自动化攻击）
+    const THRESHOLD = 1000;
+    
+    switch (feature) {
+      case 'table-detect':
+        // 如果今日表格检测次数异常多，可能是在尝试绕过
+        if (stats.tableDetectCount > THRESHOLD) {
+          console.warn(`Abnormal usage pattern detected for ${feature}: ${stats.tableDetectCount} times`);
+          return false;
+        }
+        break;
+      case 'column-align':
+        if (stats.columnAlignCount > THRESHOLD) {
+          console.warn(`Abnormal usage pattern detected for ${feature}: ${stats.columnAlignCount} times`);
+          return false;
+        }
+        break;
+      case 'csv-export':
+        if (stats.csvExportCount > THRESHOLD) {
+          console.warn(`Abnormal usage pattern detected for ${feature}: ${stats.csvExportCount} times`);
+          return false;
+        }
+        break;
+      default:
+        return true;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Usage pattern verification failed:', error);
+    // 验证失败时默认允许（不因为验证错误而阻断正常用户）
+    return true;
+  }
+}
+
+/**
  * 检查是否允许使用 Pro 功能
  * 
  * 多点判断机制：
  * 1. 获取 Pro 状态
  * 2. 验证签名
  * 3. 验证执行路径
- * 4. 检查功能是否启用
+ * 4. 获取 usage 行为信号（新增）
+ * 5. 验证使用模式（新增）
+ * 6. 检查功能是否启用
  * 
  * @param feature Pro 功能类型
  * @returns 是否允许使用
@@ -167,11 +229,21 @@ export async function allow(feature: ProFeature): Promise<boolean> {
   }
   
   // 5. 检查具体功能是否启用
-  const featureEnabled = state.features[feature] === true;
+  const featureEnabled = state.features?.[feature] === true;
   
   if (!featureEnabled) {
     console.warn(`Pro feature '${feature}' denied: feature not enabled`);
+    return false;
   }
   
-  return featureEnabled;
+  // 6. 获取 usage 行为信号（新增）
+  const usageStats = await getRecentStats();
+  
+  // 7. 验证使用模式（新增）
+  if (!verifyUsagePattern(feature, usageStats)) {
+    console.warn(`Pro feature '${feature}' denied: abnormal usage pattern`);
+    return false;
+  }
+  
+  return true;
 }

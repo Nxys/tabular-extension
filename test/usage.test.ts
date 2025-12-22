@@ -144,6 +144,17 @@ describe('Usage 模块单元测试', () => {
     it('应该正确增加计数', async () => {
       // Mock storage 模块的 incrementUsage
       (storage.incrementUsage as jest.Mock).mockResolvedValue(undefined);
+      
+      // Mock record 函数需要的其他 storage 函数
+      (storage.resetIfNewDay as jest.Mock).mockResolvedValue(undefined);
+      (storage.getStats as jest.Mock).mockResolvedValue({
+        selectCount: 0,
+        tableDetectCount: 0,
+        columnAlignCount: 0,
+        csvExportCount: 0,
+        lastDate: new Date().toDateString()
+      });
+      (storage.saveStats as jest.Mock).mockResolvedValue(undefined);
 
       await consumeUsage();
 
@@ -154,6 +165,17 @@ describe('Usage 模块单元测试', () => {
     it('应该不返回任何值', async () => {
       // Mock storage 模块的 incrementUsage
       (storage.incrementUsage as jest.Mock).mockResolvedValue(undefined);
+      
+      // Mock record 函数需要的其他 storage 函数
+      (storage.resetIfNewDay as jest.Mock).mockResolvedValue(undefined);
+      (storage.getStats as jest.Mock).mockResolvedValue({
+        selectCount: 0,
+        tableDetectCount: 0,
+        columnAlignCount: 0,
+        csvExportCount: 0,
+        lastDate: new Date().toDateString()
+      });
+      (storage.saveStats as jest.Mock).mockResolvedValue(undefined);
 
       const result = await consumeUsage();
 
@@ -164,6 +186,17 @@ describe('Usage 模块单元测试', () => {
     it('应该能够连续调用多次', async () => {
       // Mock storage 模块的 incrementUsage
       (storage.incrementUsage as jest.Mock).mockResolvedValue(undefined);
+      
+      // Mock record 函数需要的其他 storage 函数
+      (storage.resetIfNewDay as jest.Mock).mockResolvedValue(undefined);
+      (storage.getStats as jest.Mock).mockResolvedValue({
+        selectCount: 0,
+        tableDetectCount: 0,
+        columnAlignCount: 0,
+        csvExportCount: 0,
+        lastDate: new Date().toDateString()
+      });
+      (storage.saveStats as jest.Mock).mockResolvedValue(undefined);
 
       // 连续调用 3 次
       await consumeUsage();
@@ -474,6 +507,17 @@ describe('Usage 模块单元测试', () => {
               // 模拟 incrementUsage 的行为：增加计数
               currentCount = currentCount + 1;
             });
+            
+            // Mock record 函数需要的其他 storage 函数
+            (storage.resetIfNewDay as jest.Mock).mockResolvedValue(undefined);
+            (storage.getStats as jest.Mock).mockResolvedValue({
+              selectCount: 0,
+              tableDetectCount: 0,
+              columnAlignCount: 0,
+              csvExportCount: 0,
+              lastDate: new Date().toDateString()
+            });
+            (storage.saveStats as jest.Mock).mockResolvedValue(undefined);
 
             // 记录调用前的使用次数
             const before = await storage.getUsageCount();
@@ -517,6 +561,17 @@ describe('Usage 模块单元测试', () => {
             (storage.incrementUsage as jest.Mock).mockImplementation(async () => {
               currentCount = currentCount + 1;
             });
+            
+            // Mock record 函数需要的其他 storage 函数
+            (storage.resetIfNewDay as jest.Mock).mockResolvedValue(undefined);
+            (storage.getStats as jest.Mock).mockResolvedValue({
+              selectCount: 0,
+              tableDetectCount: 0,
+              columnAlignCount: 0,
+              csvExportCount: 0,
+              lastDate: new Date().toDateString()
+            });
+            (storage.saveStats as jest.Mock).mockResolvedValue(undefined);
 
             // 连续调用 consumeUsage
             for (let i = 0; i < callTimes; i++) {
@@ -540,23 +595,33 @@ describe('Usage 模块单元测试', () => {
       );
     });
 
-    it('对于任意初始使用次数，consumeUsage 应该只调用 incrementUsage 一次', async () => {
+    it('对于任意初始使用次数，consumeUsage 应该调用 incrementUsage 和 record', async () => {
       await fc.assert(
         fc.asyncProperty(
           fc.integer({ min: 0, max: 19 }),
           async (_initialCount) => {
             // Mock storage 模块
             (storage.incrementUsage as jest.Mock).mockResolvedValue(undefined);
+            (storage.resetIfNewDay as jest.Mock).mockResolvedValue(undefined);
+            (storage.getStats as jest.Mock).mockResolvedValue({
+              selectCount: 0,
+              tableDetectCount: 0,
+              columnAlignCount: 0,
+              csvExportCount: 0,
+              lastDate: new Date().toDateString()
+            });
+            (storage.saveStats as jest.Mock).mockResolvedValue(undefined);
 
             // 调用 consumeUsage
             await consumeUsage();
             
-            // 验证 incrementUsage 只被调用一次
+            // 验证 incrementUsage 被调用一次（兼容性）
             expect(storage.incrementUsage).toHaveBeenCalledTimes(1);
             
-            // 验证没有调用其他 storage 函数
-            expect(storage.getUsageCount).not.toHaveBeenCalled();
-            expect(storage.resetIfNewDay).not.toHaveBeenCalled();
+            // 验证 record 相关的函数被调用（新功能）
+            expect(storage.resetIfNewDay).toHaveBeenCalled();
+            expect(storage.getStats).toHaveBeenCalled();
+            expect(storage.saveStats).toHaveBeenCalled();
 
             // 清理 mock 调用记录
             jest.clearAllMocks();

@@ -2,17 +2,21 @@
  * Storage 模块 - 状态持久化层
  * 
  * 职责：
- * - 使用次数的持久化
+ * - 使用次数的持久化（兼容性）
+ * - 事件统计的持久化（第三版新增）
  * - 自动跨天重置
  * - 不暴露给其他模块直接使用（只被 usage.ts 调用）
  */
+
+import type { UsageStats } from './usage';
 
 /**
  * 存储键名
  */
 const STORAGE_KEYS = {
-  USAGE_COUNT: 'usage_count',
-  LAST_USAGE_DATE: 'last_usage_date'
+  USAGE_COUNT: 'usage_count',        // 保留用于兼容
+  LAST_USAGE_DATE: 'last_usage_date', // 保留用于兼容
+  USAGE_STATS: 'usage_stats'          // 新增：事件统计
 } as const;
 
 /**
@@ -20,7 +24,14 @@ const STORAGE_KEYS = {
  */
 const memoryFallback = {
   usageCount: 0,
-  lastUsageDate: ''
+  lastUsageDate: '',
+  usageStats: {
+    selectCount: 0,
+    tableDetectCount: 0,
+    columnAlignCount: 0,
+    csvExportCount: 0,
+    lastDate: ''
+  }
 };
 
 /**
@@ -73,7 +84,14 @@ export async function resetIfNewDay(): Promise<void> {
     if (!lastDate || lastDate !== today) {
       await chrome.storage.local.set({
         [STORAGE_KEYS.USAGE_COUNT]: 0,
-        [STORAGE_KEYS.LAST_USAGE_DATE]: today
+        [STORAGE_KEYS.LAST_USAGE_DATE]: today,
+        [STORAGE_KEYS.USAGE_STATS]: {
+          selectCount: 0,
+          tableDetectCount: 0,
+          columnAlignCount: 0,
+          csvExportCount: 0,
+          lastDate: today
+        }
       });
     }
   } catch (error) {
@@ -82,6 +100,67 @@ export async function resetIfNewDay(): Promise<void> {
     if (memoryFallback.lastUsageDate !== today) {
       memoryFallback.usageCount = 0;
       memoryFallback.lastUsageDate = today;
+      memoryFallback.usageStats = {
+        selectCount: 0,
+        tableDetectCount: 0,
+        columnAlignCount: 0,
+        csvExportCount: 0,
+        lastDate: today
+      };
     }
+  }
+}
+
+/**
+ * 保存使用统计
+ * 
+ * @param stats 使用统计数据
+ */
+export async function saveStats(stats: UsageStats): Promise<void> {
+  try {
+    await chrome.storage.local.set({
+      [STORAGE_KEYS.USAGE_STATS]: stats
+    });
+  } catch (error) {
+    console.warn('Failed to save usage stats, using memory fallback', error);
+    memoryFallback.usageStats = stats;
+  }
+}
+
+/**
+ * 获取使用统计
+ * 
+ * @returns 使用统计数据
+ */
+export async function getStats(): Promise<UsageStats> {
+  try {
+    const result = await chrome.storage.local.get([STORAGE_KEYS.USAGE_STATS]);
+    const stats = result[STORAGE_KEYS.USAGE_STATS];
+    
+    // 如果没有数据，返回默认值
+    if (!stats) {
+      return {
+        selectCount: 0,
+        tableDetectCount: 0,
+        columnAlignCount: 0,
+        csvExportCount: 0,
+        lastDate: new Date().toDateString()
+      };
+    }
+    
+    return stats;
+  } catch (error) {
+    console.warn('Failed to get usage stats, using memory fallback', error);
+    // 确保内存降级存储有有效数据
+    if (!memoryFallback.usageStats.lastDate) {
+      memoryFallback.usageStats = {
+        selectCount: 0,
+        tableDetectCount: 0,
+        columnAlignCount: 0,
+        csvExportCount: 0,
+        lastDate: new Date().toDateString()
+      };
+    }
+    return memoryFallback.usageStats;
   }
 }

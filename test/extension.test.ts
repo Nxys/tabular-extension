@@ -3,10 +3,12 @@
 // Mock usage 模块 - 必须在导入之前
 const mockCheckUsage = jest.fn().mockResolvedValue({ allowed: true, remaining: 20 });
 const mockConsumeUsage = jest.fn().mockResolvedValue(undefined);
+const mockRecord = jest.fn().mockResolvedValue(undefined);
 
 jest.mock('../src/content/usage/usage', () => ({
   checkUsage: mockCheckUsage,
-  consumeUsage: mockConsumeUsage
+  consumeUsage: mockConsumeUsage,
+  record: mockRecord
 }));
 
 import { BrowserSelectionCopy } from '../src/content/content';
@@ -41,6 +43,8 @@ describe('BrowserSelectionCopy 核心功能测试', () => {
     mockCheckUsage.mockResolvedValue({ allowed: true, remaining: 20 });
     mockConsumeUsage.mockClear();
     mockConsumeUsage.mockResolvedValue(undefined);
+    mockRecord.mockClear();
+    mockRecord.mockResolvedValue(undefined);
     
     browserSelectionCopy = new BrowserSelectionCopy();
     await flush();

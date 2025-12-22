@@ -2,7 +2,7 @@ import { Selection } from './selection';
 import type { LayoutOptions, TextItem } from './extractor/index';
 import { Panel } from './panel';
 import type { PanelPosition, PluginSettings, SelectionRect } from '../types';
-import { checkUsage, consumeUsage } from './usage/usage';
+import { checkUsage, consumeUsage, record } from './usage/usage';
 import { collect } from './extractor/collect';
 import { layout } from './extractor/layout';
 import { format } from './extractor/format';
@@ -125,7 +125,10 @@ class BrowserSelectionCopy {
     this.lastMouseUpPoint = { x: event.clientX, y: event.clientY };
 
     if (rect && this.selection.isValid(rect)) {
-      // 检查使用限制
+      // 记录选择事件（需求 14.4, 14.7, 16.1）
+      await record('select');
+      
+      // 检查使用限制（保留用于免费版限制）
       const usage = await checkUsage();
       if (!usage.allowed) {
         this.panel.showLimitReached();
@@ -340,7 +343,10 @@ class BrowserSelectionCopy {
       return;
     }
 
-    // 2. 执行表格检测
+    // 2. 记录表格检测事件（需求 14.4, 14.7, 16.1）
+    await record('table-detect');
+
+    // 3. 执行表格检测
     const table = detectTable(lines);
 
     // 如果检测到的表格为空，回退到 free pipeline
@@ -357,9 +363,11 @@ class BrowserSelectionCopy {
       return;
     }
 
-    // 3. 检查列对齐权限
+    // 4. 检查列对齐权限
     let aligned: string[][] = [];
     if (await allow('column-align')) {
+      // 记录列对齐事件（需求 14.4, 14.7, 16.1）
+      await record('column-align');
       aligned = alignTable(table);
     } else {
       // 如果没有列对齐权限，使用基础格式化
@@ -375,7 +383,7 @@ class BrowserSelectionCopy {
       return;
     }
 
-    // 4. 显示结果
+    // 5. 显示结果
     if (aligned.length > 0) {
       this.lastSelectionRect = rect;
       
@@ -393,6 +401,8 @@ class BrowserSelectionCopy {
         
         // 检查 CSV 导出权限
         if (await allow('csv-export')) {
+          // 记录 CSV 导出事件（需求 14.4, 14.7, 16.1）
+          await record('csv-export');
           const csv = toCSV(table);
           this.panel.enableCSVExport(csv);
         }
