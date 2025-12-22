@@ -21,10 +21,21 @@ jest.mock('../src/content/usage/usage', () => ({
   consumeUsage: mockConsumeUsage
 }));
 
-// Mock extractor 模块
-const mockExtractText = jest.fn();
-jest.mock('../src/content/extractor', () => ({
-  extractText: mockExtractText
+// Mock extractor 模块 - 现在 mock collect, layout, format
+const mockCollect = jest.fn();
+const mockLayout = jest.fn();
+const mockFormat = jest.fn();
+
+jest.mock('../src/content/extractor/collect', () => ({
+  collect: mockCollect
+}));
+
+jest.mock('../src/content/extractor/layout', () => ({
+  layout: mockLayout
+}));
+
+jest.mock('../src/content/extractor/format', () => ({
+  format: mockFormat
 }));
 
 import { BrowserSelectionCopy } from '../src/content/content';
@@ -74,7 +85,13 @@ describe('端到端属性测试', () => {
       jest.clearAllMocks();
       
       // 默认 mock 返回值
-      mockExtractText.mockReturnValue('测试文本内容');
+      mockCollect.mockReturnValue([
+        { text: '测试文本内容', rect: { left: 50, top: 50, width: 100, height: 20, right: 150, bottom: 70, x: 50, y: 50, toJSON: () => ({}) } }
+      ]);
+      mockLayout.mockReturnValue([
+        [{ text: '测试文本内容', rect: { left: 50, top: 50, width: 100, height: 20, right: 150, bottom: 70, x: 50, y: 50, toJSON: () => ({}) } }]
+      ]);
+      mockFormat.mockReturnValue('测试文本内容');
       
       // 创建实例
       browserSelectionCopy = new BrowserSelectionCopy();
@@ -151,7 +168,7 @@ describe('端到端属性测试', () => {
             // 验证需求 11.1：提供与第一版完全相同的功能
             // 验证核心流程正常执行
             expect(mockCheckUsage).toHaveBeenCalled();
-            expect(mockExtractText).toHaveBeenCalled();
+            expect(mockCollect).toHaveBeenCalled();
             expect(panelShowSpy).toHaveBeenCalled();
             expect(mockConsumeUsage).toHaveBeenCalled();
 
@@ -170,20 +187,25 @@ describe('端到端属性测试', () => {
             );
 
             // 验证需求 11.4：保持相同的响应速度
-            // checkUsage 应该在 extractText 之前被调用（不阻塞）
+            // checkUsage 应该在 collect 之前被调用（不阻塞）
             const checkUsageCallOrder = mockCheckUsage.mock.invocationCallOrder[0];
-            const extractTextCallOrder = mockExtractText.mock.invocationCallOrder[0];
-            expect(checkUsageCallOrder).toBeLessThan(extractTextCallOrder);
+            const collectCallOrder = mockCollect.mock.invocationCallOrder[0];
+            expect(checkUsageCallOrder).toBeLessThan(collectCallOrder);
 
             // 验证需求 11.5：保持相同的文本提取结果
-            // extractText 应该被正常调用，参数不受影响
-            expect(mockExtractText).toHaveBeenCalledWith(
+            // collect 应该被正常调用，参数不受影响
+            expect(mockCollect).toHaveBeenCalledWith(
               expect.objectContaining({
                 left: expect.any(Number),
                 top: expect.any(Number),
                 right: expect.any(Number),
                 bottom: expect.any(Number)
-              }),
+              })
+            );
+            
+            // layout 应该被调用，参数包含 options
+            expect(mockLayout).toHaveBeenCalledWith(
+              expect.any(Array),
               expect.objectContaining({
                 lineThresholdRatio: expect.any(Number),
                 minHorizontalGap: expect.any(Number)
@@ -261,7 +283,7 @@ describe('端到端属性测试', () => {
 
             // 验证核心行为一致：无论剩余次数是多少，都应该正常执行
             expect(mockCheckUsage).toHaveBeenCalled();
-            expect(mockExtractText).toHaveBeenCalled();
+            expect(mockCollect).toHaveBeenCalled();
             expect(panelShowSpy).toHaveBeenCalled();
             expect(mockConsumeUsage).toHaveBeenCalled();
             expect(panelShowLimitReachedSpy).not.toHaveBeenCalled();
@@ -299,7 +321,7 @@ describe('端到端属性测试', () => {
             mockConsumeUsage.mockResolvedValue(undefined);
             
             // Mock extractText 返回空文本
-            mockExtractText.mockReturnValue('   '); // 只有空格
+            mockFormat.mockReturnValue('   '); // 只有空格
 
             // 创建测试 DOM
             document.body.innerHTML = `
@@ -325,7 +347,7 @@ describe('端到端属性测试', () => {
 
             // 验证空文本情况下的一致性
             expect(mockCheckUsage).toHaveBeenCalled();
-            expect(mockExtractText).toHaveBeenCalled();
+            expect(mockCollect).toHaveBeenCalled();
             
             // 空文本时不应该显示面板
             expect(panelShowSpy).not.toHaveBeenCalled();
@@ -397,7 +419,7 @@ describe('端到端属性测试', () => {
 
               // 验证每次操作的行为一致
               expect(mockCheckUsage).toHaveBeenCalled();
-              expect(mockExtractText).toHaveBeenCalled();
+              expect(mockCollect).toHaveBeenCalled();
               expect(panelShowSpy).toHaveBeenCalled();
               expect(mockConsumeUsage).toHaveBeenCalled();
               expect(panelShowLimitReachedSpy).not.toHaveBeenCalled();
@@ -447,7 +469,7 @@ describe('端到端属性测试', () => {
       existingBoxes.forEach(box => box.remove());
       
       jest.clearAllMocks();
-      mockExtractText.mockReturnValue('测试文本内容');
+      mockFormat.mockReturnValue('测试文本内容');
       
       browserSelectionCopy = new BrowserSelectionCopy();
       await flush();
@@ -501,7 +523,7 @@ describe('端到端属性测试', () => {
 
       // 验证正常执行
       expect(mockCheckUsage).toHaveBeenCalled();
-      expect(mockExtractText).toHaveBeenCalled();
+      expect(mockCollect).toHaveBeenCalled();
       expect(panelShowSpy).toHaveBeenCalled();
       expect(mockConsumeUsage).toHaveBeenCalled();
       

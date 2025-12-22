@@ -42,6 +42,76 @@ export class Panel {
   }
 
   /**
+   * 显示对齐后的表格
+   * 
+   * @param table 对齐后的二维字符串数组
+   */
+  showAligned(table: string[][]): void {
+    // 将二维数组转换为文本
+    const text = table.map(row => row.join('')).join('\n');
+    
+    // 使用现有的 show 方法，但添加特殊标记
+    this.show(text, {
+      position: { left: 50, top: 50 },
+      editable: true
+    });
+    
+    // 添加表格标识（用于样式）
+    if (this.element) {
+      this.element.classList.add(`${this.CSS_CLASS_PREFIX}-table-mode`);
+    }
+  }
+
+  /**
+   * 启用 CSV 导出
+   * 
+   * @param csv CSV 字符串
+   * @param onExport 导出时的回调函数（可选）
+   */
+  enableCSVExport(csv: string, onExport?: () => void | Promise<void>): void {
+    if (!this.element) return;
+    
+    // 查找复制按钮容器
+    const copyWrapper = this.element.querySelector(
+      `.${this.CSS_CLASS_PREFIX}-panel-copy-wrapper`
+    );
+    
+    if (!copyWrapper) return;
+    
+    // 创建 CSV 导出按钮
+    const csvBtn = document.createElement('button');
+    csvBtn.className = `${this.CSS_CLASS_PREFIX}-panel-csv-btn`;
+    csvBtn.textContent = '📊 导出 CSV';
+    csvBtn.onclick = async () => {
+      this.downloadCSV(csv);
+      // 调用回调函数（如果提供）
+      if (onExport) {
+        await onExport();
+      }
+    };
+    
+    // 插入到复制按钮之前
+    copyWrapper.insertBefore(csvBtn, copyWrapper.firstChild);
+  }
+
+  /**
+   * 显示 Pro 升级提示
+   */
+  showProRequired(): void {
+    this.createElement(
+      { left: 50, top: 50 },
+      false,
+      {
+        type: 'pro-required',
+        title: 'Pro 功能',
+        icon: '⭐',
+        message: '表格识别是 Pro 功能',
+        showUpgradeButton: true
+      }
+    );
+  }
+
+  /**
    * 隐藏面板
    */
   hide(): void {
@@ -68,7 +138,7 @@ export class Panel {
     position: { left: number; top: number },
     editable: boolean,
     config?: {
-      type?: 'limit';
+      type?: 'limit' | 'pro-required';
       title?: string;
       icon?: string;
       message?: string;
@@ -114,8 +184,8 @@ export class Panel {
     header.appendChild(closeBtn);
 
     // 根据类型创建不同的内容
-    if (config?.type === 'limit') {
-      // 限制提示内容
+    if (config?.type === 'limit' || config?.type === 'pro-required') {
+      // 限制提示内容或 Pro 升级提示
       const messageWrapper = document.createElement('div');
       messageWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-message-wrapper`;
 
@@ -123,17 +193,21 @@ export class Panel {
       message.className = `${this.CSS_CLASS_PREFIX}-panel-message`;
       message.textContent = config.message ?? '';
 
-      const subMessage = document.createElement('div');
-      subMessage.className = `${this.CSS_CLASS_PREFIX}-panel-submessage`;
-      subMessage.textContent = '(20/20)';
-
-      const resetInfo = document.createElement('div');
-      resetInfo.className = `${this.CSS_CLASS_PREFIX}-panel-reset-info`;
-      resetInfo.textContent = '明天将自动重置';
-
       messageWrapper.appendChild(message);
-      messageWrapper.appendChild(subMessage);
-      messageWrapper.appendChild(resetInfo);
+
+      // 如果是限制类型，添加额外信息
+      if (config.type === 'limit') {
+        const subMessage = document.createElement('div');
+        subMessage.className = `${this.CSS_CLASS_PREFIX}-panel-submessage`;
+        subMessage.textContent = '(20/20)';
+
+        const resetInfo = document.createElement('div');
+        resetInfo.className = `${this.CSS_CLASS_PREFIX}-panel-reset-info`;
+        resetInfo.textContent = '明天将自动重置';
+
+        messageWrapper.appendChild(subMessage);
+        messageWrapper.appendChild(resetInfo);
+      }
 
       this.element.appendChild(header);
       this.element.appendChild(messageWrapper);
@@ -226,6 +300,23 @@ export class Panel {
       console.error('复制失败:', error);
       this.showCopyError();
     }
+  }
+
+  /**
+   * 下载 CSV 文件
+   * 
+   * @param csv CSV 字符串
+   */
+  private downloadCSV(csv: string): void {
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `table-${Date.now()}.csv`;
+    link.click();
+    
+    URL.revokeObjectURL(url);
   }
 
   /**

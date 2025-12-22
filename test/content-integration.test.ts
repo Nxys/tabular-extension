@@ -2,9 +2,9 @@
  * Content 控制器集成测试
  * 
  * 测试范围：
- * 1. content.ts 在 extractText 前调用 checkUsage
+ * 1. content.ts 在提取文本前调用 checkUsage
  * 2. content.ts 在 allowed: false 时调用 panel.showLimitReached
- * 3. content.ts 在 allowed: true 时继续执行 extractText
+ * 3. content.ts 在 allowed: true 时继续执行提取流程
  * 4. content.ts 在成功提取后调用 consumeUsage
  * 
  * 验证需求：4.1, 4.2, 4.3, 4.4
@@ -19,10 +19,21 @@ jest.mock('../src/content/usage/usage', () => ({
   consumeUsage: mockConsumeUsage
 }));
 
-// Mock extractor 模块
-const mockExtractText = jest.fn();
-jest.mock('../src/content/extractor', () => ({
-  extractText: mockExtractText
+// Mock extractor 模块 - 现在 mock collect, layout, format
+const mockCollect = jest.fn();
+const mockLayout = jest.fn();
+const mockFormat = jest.fn();
+
+jest.mock('../src/content/extractor/collect', () => ({
+  collect: mockCollect
+}));
+
+jest.mock('../src/content/extractor/layout', () => ({
+  layout: mockLayout
+}));
+
+jest.mock('../src/content/extractor/format', () => ({
+  format: mockFormat
 }));
 
 import { BrowserSelectionCopy } from '../src/content/content';
@@ -57,7 +68,15 @@ describe('Content 控制器集成测试', () => {
     // 默认 mock 返回值
     mockCheckUsage.mockResolvedValue({ allowed: true, remaining: 20 });
     mockConsumeUsage.mockResolvedValue(undefined);
-    mockExtractText.mockReturnValue('测试文本');
+    
+    // Mock extractor pipeline
+    mockCollect.mockReturnValue([
+      { text: '测试文本', rect: { left: 50, top: 50, width: 100, height: 20, right: 150, bottom: 70, x: 50, y: 50, toJSON: () => ({}) } }
+    ]);
+    mockLayout.mockReturnValue([
+      [{ text: '测试文本', rect: { left: 50, top: 50, width: 100, height: 20, right: 150, bottom: 70, x: 50, y: 50, toJSON: () => ({}) } }]
+    ]);
+    mockFormat.mockReturnValue('测试文本');
     
     // 创建实例
     browserSelectionCopy = new BrowserSelectionCopy();
@@ -90,9 +109,9 @@ describe('Content 控制器集成测试', () => {
 
   describe('使用限制集成 - 基本流程', () => {
     /**
-     * 测试需求 4.1：在调用 extractText 之前调用 checkUsage
+     * 测试需求 4.1：在调用提取流程之前调用 checkUsage
      */
-    it('应该在 extractText 前调用 checkUsage', async () => {
+    it('应该在提取流程前调用 checkUsage', async () => {
       // 创建测试 DOM
       document.body.innerHTML = `
         <div style="position: absolute; left: 50px; top: 50px;">测试文本</div>
@@ -115,14 +134,14 @@ describe('Content 控制器集成测试', () => {
       // 等待异步操作完成
       await flush();
 
-      // 验证调用顺序：checkUsage 应该在 extractText 之前被调用
+      // 验证调用顺序：checkUsage 应该在 collect 之前被调用
       expect(mockCheckUsage).toHaveBeenCalled();
-      expect(mockExtractText).toHaveBeenCalled();
+      expect(mockCollect).toHaveBeenCalled();
       
-      // 验证 checkUsage 的调用顺序早于 extractText
+      // 验证 checkUsage 的调用顺序早于 collect
       const checkUsageCallOrder = mockCheckUsage.mock.invocationCallOrder[0];
-      const extractTextCallOrder = mockExtractText.mock.invocationCallOrder[0];
-      expect(checkUsageCallOrder).toBeLessThan(extractTextCallOrder);
+      const collectCallOrder = mockCollect.mock.invocationCallOrder[0];
+      expect(checkUsageCallOrder).toBeLessThan(collectCallOrder);
     });
 
     /**
@@ -164,17 +183,17 @@ describe('Content 控制器集成测试', () => {
       // 验证调用了 panel.showLimitReached
       expect(panelShowLimitReachedSpy).toHaveBeenCalled();
       
-      // 验证没有调用 extractText（流程终止）
-      expect(mockExtractText).not.toHaveBeenCalled();
+      // 验证没有调用 collect（流程终止）
+      expect(mockCollect).not.toHaveBeenCalled();
       
       // 验证没有调用 consumeUsage（流程终止）
       expect(mockConsumeUsage).not.toHaveBeenCalled();
     });
 
     /**
-     * 测试需求 4.3：当 allowed: true 时，继续执行 extractText
+     * 测试需求 4.3：当 allowed: true 时，继续执行提取流程
      */
-    it('应该在 allowed: true 时继续执行 extractText', async () => {
+    it('应该在 allowed: true 时继续执行提取流程', async () => {
       // Mock checkUsage 返回 allowed: true
       mockCheckUsage.mockResolvedValue({
         allowed: true,
@@ -206,8 +225,10 @@ describe('Content 控制器集成测试', () => {
       // 验证调用了 checkUsage
       expect(mockCheckUsage).toHaveBeenCalled();
       
-      // 验证调用了 extractText（流程继续）
-      expect(mockExtractText).toHaveBeenCalled();
+      // 验证调用了提取流程（流程继续）
+      expect(mockCollect).toHaveBeenCalled();
+      expect(mockLayout).toHaveBeenCalled();
+      expect(mockFormat).toHaveBeenCalled();
       
       // 验证没有调用 panel.showLimitReached
       expect(panelShowLimitReachedSpy).not.toHaveBeenCalled();
@@ -223,8 +244,8 @@ describe('Content 控制器集成测试', () => {
         remaining: 15
       });
       
-      // Mock extractText 返回有效文本
-      mockExtractText.mockReturnValue('提取的文本内容');
+      // Mock format 返回有效文本
+      mockFormat.mockReturnValue('提取的文本内容');
 
       // 创建测试 DOM
       document.body.innerHTML = `
@@ -251,8 +272,10 @@ describe('Content 控制器集成测试', () => {
       // 验证调用了 checkUsage
       expect(mockCheckUsage).toHaveBeenCalled();
       
-      // 验证调用了 extractText
-      expect(mockExtractText).toHaveBeenCalled();
+      // 验证调用了提取流程
+      expect(mockCollect).toHaveBeenCalled();
+      expect(mockLayout).toHaveBeenCalled();
+      expect(mockFormat).toHaveBeenCalled();
       
       // 验证调用了 panel.show（显示结果）
       expect(panelShowSpy).toHaveBeenCalled();
@@ -260,12 +283,12 @@ describe('Content 控制器集成测试', () => {
       // 验证调用了 consumeUsage（消耗使用次数）
       expect(mockConsumeUsage).toHaveBeenCalled();
       
-      // 验证调用顺序：extractText -> show -> consumeUsage
-      const extractTextCallOrder = mockExtractText.mock.invocationCallOrder[0];
+      // 验证调用顺序：format -> show -> consumeUsage
+      const formatCallOrder = mockFormat.mock.invocationCallOrder[0];
       const showCallOrder = panelShowSpy.mock.invocationCallOrder[0];
       const consumeUsageCallOrder = mockConsumeUsage.mock.invocationCallOrder[0];
       
-      expect(extractTextCallOrder).toBeLessThan(showCallOrder);
+      expect(formatCallOrder).toBeLessThan(showCallOrder);
       expect(showCallOrder).toBeLessThan(consumeUsageCallOrder);
     });
   });
@@ -278,8 +301,8 @@ describe('Content 控制器集成测试', () => {
         remaining: 15
       });
       
-      // Mock extractText 返回空文本
-      mockExtractText.mockReturnValue('   '); // 只有空格
+      // Mock format 返回空文本
+      mockFormat.mockReturnValue('   '); // 只有空格
 
       // 创建测试 DOM
       document.body.innerHTML = `
@@ -306,8 +329,10 @@ describe('Content 控制器集成测试', () => {
       // 验证调用了 checkUsage
       expect(mockCheckUsage).toHaveBeenCalled();
       
-      // 验证调用了 extractText
-      expect(mockExtractText).toHaveBeenCalled();
+      // 验证调用了提取流程
+      expect(mockCollect).toHaveBeenCalled();
+      expect(mockLayout).toHaveBeenCalled();
+      expect(mockFormat).toHaveBeenCalled();
       
       // 验证没有调用 panel.show（因为文本为空）
       expect(panelShowSpy).not.toHaveBeenCalled();
@@ -352,8 +377,8 @@ describe('Content 控制器集成测试', () => {
       // 验证调用了 panel.showLimitReached
       expect(panelShowLimitReachedSpy).toHaveBeenCalled();
       
-      // 验证没有调用 extractText
-      expect(mockExtractText).not.toHaveBeenCalled();
+      // 验证没有调用 collect
+      expect(mockCollect).not.toHaveBeenCalled();
       
       // 验证没有调用 panel.show
       expect(panelShowSpy).not.toHaveBeenCalled();
@@ -369,8 +394,8 @@ describe('Content 控制器集成测试', () => {
         remaining: 1
       });
       
-      // Mock extractText 返回有效文本
-      mockExtractText.mockReturnValue('测试文本');
+      // Mock format 返回有效文本
+      mockFormat.mockReturnValue('测试文本');
 
       // 创建测试 DOM
       document.body.innerHTML = `
@@ -394,9 +419,11 @@ describe('Content 控制器集成测试', () => {
       // 等待异步操作完成
       await flush();
 
-      // 验证正常流程：checkUsage -> extractText -> show -> consumeUsage
+      // 验证正常流程：checkUsage -> collect -> layout -> format -> show -> consumeUsage
       expect(mockCheckUsage).toHaveBeenCalled();
-      expect(mockExtractText).toHaveBeenCalled();
+      expect(mockCollect).toHaveBeenCalled();
+      expect(mockLayout).toHaveBeenCalled();
+      expect(mockFormat).toHaveBeenCalled();
       expect(panelShowSpy).toHaveBeenCalled();
       expect(mockConsumeUsage).toHaveBeenCalled();
       
@@ -413,8 +440,8 @@ describe('Content 控制器集成测试', () => {
         remaining: 15
       });
       
-      // Mock extractText 返回有效文本
-      mockExtractText.mockReturnValue('测试文本');
+      // Mock format 返回有效文本
+      mockFormat.mockReturnValue('测试文本');
 
       // 创建测试 DOM
       document.body.innerHTML = `
@@ -440,7 +467,7 @@ describe('Content 控制器集成测试', () => {
 
       // 验证第一次调用
       expect(mockCheckUsage).toHaveBeenCalledTimes(1);
-      expect(mockExtractText).toHaveBeenCalledTimes(1);
+      expect(mockCollect).toHaveBeenCalledTimes(1);
       expect(mockConsumeUsage).toHaveBeenCalledTimes(1);
 
       // 第二次选择操作
@@ -461,7 +488,7 @@ describe('Content 控制器集成测试', () => {
 
       // 验证第二次调用
       expect(mockCheckUsage).toHaveBeenCalledTimes(2);
-      expect(mockExtractText).toHaveBeenCalledTimes(2);
+      expect(mockCollect).toHaveBeenCalledTimes(2);
       expect(mockConsumeUsage).toHaveBeenCalledTimes(2);
     });
 
@@ -472,8 +499,8 @@ describe('Content 控制器集成测试', () => {
         remaining: 1
       });
       
-      // Mock extractText 返回有效文本
-      mockExtractText.mockReturnValue('测试文本');
+      // Mock format 返回有效文本
+      mockFormat.mockReturnValue('测试文本');
 
       // 创建测试 DOM
       document.body.innerHTML = `
@@ -499,7 +526,7 @@ describe('Content 控制器集成测试', () => {
 
       // 验证第一次成功
       expect(mockCheckUsage).toHaveBeenCalledTimes(1);
-      expect(mockExtractText).toHaveBeenCalledTimes(1);
+      expect(mockCollect).toHaveBeenCalledTimes(1);
       expect(panelShowSpy).toHaveBeenCalledTimes(1);
       expect(mockConsumeUsage).toHaveBeenCalledTimes(1);
       expect(panelShowLimitReachedSpy).not.toHaveBeenCalled();
@@ -531,8 +558,8 @@ describe('Content 控制器集成测试', () => {
       expect(mockCheckUsage).toHaveBeenCalledTimes(2);
       expect(panelShowLimitReachedSpy).toHaveBeenCalledTimes(1);
       
-      // extractText 和 consumeUsage 不应该再被调用
-      expect(mockExtractText).toHaveBeenCalledTimes(1); // 仍然是 1 次
+      // collect 和 consumeUsage 不应该再被调用
+      expect(mockCollect).toHaveBeenCalledTimes(1); // 仍然是 1 次
       expect(mockConsumeUsage).toHaveBeenCalledTimes(1); // 仍然是 1 次
     });
   });
@@ -548,8 +575,8 @@ describe('Content 控制器集成测试', () => {
         remaining: 15
       });
       
-      // Mock extractText 返回有效文本
-      mockExtractText.mockReturnValue('测试文本');
+      // Mock format 返回有效文本
+      mockFormat.mockReturnValue('测试文本');
 
       // 创建测试 DOM
       document.body.innerHTML = `
@@ -577,14 +604,14 @@ describe('Content 控制器集成测试', () => {
       expect(mockCheckUsage).toHaveBeenCalled();
       expect(mockConsumeUsage).toHaveBeenCalled();
       
-      // 验证 extractText 被调用（但不应该调用 usage 模块）
-      expect(mockExtractText).toHaveBeenCalled();
+      // 验证 collect 被调用（但不应该调用 usage 模块）
+      expect(mockCollect).toHaveBeenCalled();
       
-      // extractText 的调用参数不应该包含 usage 相关的信息
-      const extractTextArgs = mockExtractText.mock.calls[0];
-      expect(extractTextArgs).toBeDefined();
-      // 验证参数是 rect 和 options，不包含 usage 相关信息
-      expect(extractTextArgs.length).toBe(2);
+      // collect 的调用参数不应该包含 usage 相关的信息
+      const collectArgs = mockCollect.mock.calls[0];
+      expect(collectArgs).toBeDefined();
+      // 验证参数是 rect，不包含 usage 相关信息
+      expect(collectArgs.length).toBe(1);
     });
 
     it('应该确保 usage 模块不依赖 panel 模块', async () => {
