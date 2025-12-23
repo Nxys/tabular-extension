@@ -96,6 +96,14 @@
   box-sizing: border-box !important;
 }
 
+/* 限制面板强制居中样式 */
+.browser-selection-copy-panel-force-center {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
+
 /* 确保面板内容不被页面样式影响 */
 .browser-selection-copy-panel * {
   box-sizing: border-box !important;
@@ -129,6 +137,14 @@
 .browser-selection-copy-panel-icon {
   font-size: 16px !important;
   line-height: 1 !important;
+}
+
+/* 免费额度显示（次要信息） */
+.browser-selection-copy-panel-usage-info {
+  font-size: 12px !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-weight: 400 !important;
+  margin-left: 8px !important;
 }
 
 /* ==================== 按钮样式 ==================== */
@@ -282,6 +298,25 @@
   .browser-selection-copy-panel-csv-btn:hover {
     box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4) !important;
   }
+}
+
+/* ==================== 限制面板文本样式 ==================== */
+/* 限制面板主提示样式 */
+.browser-selection-copy-panel-limit-count {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: var(--bsc-text) !important;
+  margin: 8px 0 !important;
+  line-height: 1.5 !important;
+}
+
+/* 限制面板次要说明样式 */
+.browser-selection-copy-panel-limit-secondary {
+  font-size: 13px !important;
+  color: var(--bsc-text) !important;
+  opacity: 0.7 !important;
+  margin: 4px 0 !important;
+  line-height: 1.6 !important;
 }
 
 /* ==================== Pro 升级提示样式 ==================== */

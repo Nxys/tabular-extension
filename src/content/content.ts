@@ -3,6 +3,7 @@ import type { LayoutOptions, TextItem } from './extractor/index';
 import { Panel } from './panel';
 import type { PanelPosition, PluginSettings, SelectionRect } from '../types';
 import { checkUsage, consumeUsage, record } from './usage/usage';
+import { FREE_POLICY } from './usage/policy';
 import { collect } from './extractor/collect';
 import { layout } from './extractor/layout';
 import { format } from './extractor/format';
@@ -154,7 +155,7 @@ class BrowserSelectionCopy {
         
         if (text.trim()) {
           this.lastSelectionRect = rect;
-          this.handleShowResult(text);
+          await this.handleShowResult(text);
           // 消耗使用次数
           await consumeUsage();
         } else {
@@ -274,7 +275,7 @@ class BrowserSelectionCopy {
   /**
    * 根据配置展示结果或直接复制
    */
-  private handleShowResult(text: string): void {
+  private async handleShowResult(text: string): Promise<void> {
     const mode = this.settings.panelPosition;
     if (mode === 'none') {
       navigator.clipboard?.writeText(text).catch((error) => {
@@ -284,7 +285,30 @@ class BrowserSelectionCopy {
     }
 
     const position = this.calcPanelPosition(mode);
-    this.panel.show(text, { position, editable: true });
+    
+    // 获取剩余次数信息
+    const usage = await checkUsage();
+    
+    // 构建选项对象
+    const options: { 
+      position: { left: number; top: number }; 
+      editable: boolean;
+      usageInfo?: { remaining: number; max: number };
+    } = {
+      position,
+      editable: true
+    };
+    
+    // 只在有剩余次数信息时添加 usageInfo
+    if (usage.remaining !== undefined) {
+      options.usageInfo = {
+        remaining: usage.remaining,
+        max: FREE_POLICY.maxPerDay
+      };
+    }
+    
+    this.panel.show(text, options);
+    
     // 只忽略紧随本次选择动作的首个 click
     this.ignoreNextOutsideClick = true;
   }
@@ -305,10 +329,11 @@ class BrowserSelectionCopy {
       };
     }
 
+    // mouse 模式：简化为基础偏移，让 Panel 类负责边界检测
     const anchor = this.lastMouseUpPoint || { x: viewportWidth / 2, y: viewportHeight / 2 };
     return {
-      left: Math.min(Math.max(10, anchor.x + 16), viewportWidth - panelWidth - 10),
-      top: Math.min(Math.max(10, anchor.y + 16), viewportHeight - panelHeight - 10)
+      left: anchor.x + 16,
+      top: anchor.y + 16
     };
   }
 
@@ -354,7 +379,7 @@ class BrowserSelectionCopy {
       const text = format(lines);
       if (text.trim()) {
         this.lastSelectionRect = rect;
-        this.handleShowResult(text);
+        await this.handleShowResult(text);
         await consumeUsage();
       } else {
         this.panel.hide();
@@ -374,7 +399,7 @@ class BrowserSelectionCopy {
       const text = format(lines);
       if (text.trim()) {
         this.lastSelectionRect = rect;
-        this.handleShowResult(text);
+        await this.handleShowResult(text);
         await consumeUsage();
       } else {
         this.panel.hide();

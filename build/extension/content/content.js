@@ -89,6 +89,11 @@
     }
   };
 
+  // src/content/usage/policy.ts
+  var FREE_POLICY = {
+    maxPerDay: 20
+  };
+
   // src/content/panel.ts
   var Panel = class {
     element = null;
@@ -103,12 +108,24 @@
       editable: true
     }) {
       this.currentText = text;
-      this.createElement(options.position, options.editable ?? true);
+      this.createElement(
+        options.position,
+        options.editable ?? true,
+        void 0,
+        // config 参数
+        false,
+        // forceCenter 参数
+        options.usageInfo
+        // 传递 usageInfo
+      );
+      this.adjustPositionForViewport();
     }
     /**
      * 显示使用限制提示
      */
-    showLimitReached() {
+    showLimitReached(usageInfo) {
+      const maxPerDay = usageInfo?.max ?? FREE_POLICY.maxPerDay;
+      const current = usageInfo?.current ?? maxPerDay;
       this.createElement(
         { left: 50, top: 50 },
         false,
@@ -117,8 +134,11 @@
           title: "\u4F7F\u7528\u9650\u5236",
           icon: "\u{1F6AB}",
           message: "\u4ECA\u65E5\u514D\u8D39\u6B21\u6570\u5DF2\u7528\u5B8C",
-          showUpgradeButton: true
-        }
+          showUpgradeButton: true,
+          usageInfo: { current, max: maxPerDay }
+        },
+        true
+        // forceCenter: 强制居中显示
       );
     }
     /**
@@ -172,7 +192,9 @@
           icon: "\u2B50",
           message: "\u8868\u683C\u8BC6\u522B\u662F Pro \u529F\u80FD",
           showUpgradeButton: true
-        }
+        },
+        true
+        // forceCenter: 强制居中显示
       );
     }
     /**
@@ -196,12 +218,16 @@
     /**
      * 创建面板
      */
-    createElement(position, editable, config) {
+    createElement(position, editable, config, forceCenter, usageInfo) {
       this.hide();
       this.element = document.createElement("div");
       this.element.className = `${this.CSS_CLASS_PREFIX}-panel`;
-      this.element.style.top = `${position.top}px`;
-      this.element.style.left = `${position.left}px`;
+      if (forceCenter) {
+        this.element.classList.add(`${this.CSS_CLASS_PREFIX}-panel-force-center`);
+      } else {
+        this.element.style.top = `${position.top}px`;
+        this.element.style.left = `${position.left}px`;
+      }
       const header = document.createElement("div");
       header.className = `${this.CSS_CLASS_PREFIX}-panel-header`;
       const title = document.createElement("span");
@@ -213,6 +239,12 @@
       titleText.textContent = config?.title ?? "\u6587\u672C\u9884\u89C8";
       title.appendChild(icon);
       title.appendChild(titleText);
+      if (!config?.type && usageInfo) {
+        const usageInfoSpan = document.createElement("span");
+        usageInfoSpan.className = `${this.CSS_CLASS_PREFIX}-panel-usage-info`;
+        usageInfoSpan.textContent = `\u5269\u4F59 ${usageInfo.remaining} \u6B21`;
+        title.appendChild(usageInfoSpan);
+      }
       const closeBtn = document.createElement("button");
       closeBtn.type = "button";
       closeBtn.className = `${this.CSS_CLASS_PREFIX}-panel-close`;
@@ -228,13 +260,17 @@
         message.textContent = config.message ?? "";
         messageWrapper.appendChild(message);
         if (config.type === "limit") {
-          const subMessage = document.createElement("div");
-          subMessage.className = `${this.CSS_CLASS_PREFIX}-panel-submessage`;
-          subMessage.textContent = "(20/20)";
+          const countInfo = document.createElement("div");
+          countInfo.className = `${this.CSS_CLASS_PREFIX}-panel-limit-count`;
+          if (config.usageInfo) {
+            countInfo.textContent = `(${config.usageInfo.current}/${config.usageInfo.max})`;
+          } else {
+            countInfo.textContent = `(${FREE_POLICY.maxPerDay}/${FREE_POLICY.maxPerDay})`;
+          }
           const resetInfo = document.createElement("div");
-          resetInfo.className = `${this.CSS_CLASS_PREFIX}-panel-reset-info`;
+          resetInfo.className = `${this.CSS_CLASS_PREFIX}-panel-limit-secondary`;
           resetInfo.textContent = "\u660E\u5929\u5C06\u81EA\u52A8\u91CD\u7F6E";
-          messageWrapper.appendChild(subMessage);
+          messageWrapper.appendChild(countInfo);
           messageWrapper.appendChild(resetInfo);
         }
         this.element.appendChild(header);
@@ -396,6 +432,39 @@
     endDrag = () => {
       this.dragState = null;
     };
+    /**
+     * 调整面板位置以确保完整显示在视口内
+     * 优先保证底部和右侧可见
+     */
+    adjustPositionForViewport() {
+      if (!this.element) return;
+      const rect = this.element.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      let left = rect.left;
+      let top = rect.top;
+      let adjusted = false;
+      if (rect.right > viewportWidth) {
+        left = viewportWidth - rect.width;
+        adjusted = true;
+      }
+      if (rect.bottom > viewportHeight) {
+        top = viewportHeight - rect.height;
+        adjusted = true;
+      }
+      if (left < 0) {
+        left = 0;
+        adjusted = true;
+      }
+      if (top < 0) {
+        top = 0;
+        adjusted = true;
+      }
+      if (adjusted) {
+        this.element.style.left = `${left}px`;
+        this.element.style.top = `${top}px`;
+      }
+    }
   };
 
   // src/content/usage/storage.ts
@@ -510,11 +579,6 @@
       return memoryFallback.usageStats;
     }
   }
-
-  // src/content/usage/policy.ts
-  var FREE_POLICY = {
-    maxPerDay: 5
-  };
 
   // src/content/usage/usage.ts
   async function record(event) {
@@ -1077,7 +1141,7 @@
           const text = format(lines);
           if (text.trim()) {
             this.lastSelectionRect = rect;
-            this.handleShowResult(text);
+            await this.handleShowResult(text);
             await consumeUsage();
           } else {
             this.panel.hide();
@@ -1172,7 +1236,7 @@
     /**
      * 根据配置展示结果或直接复制
      */
-    handleShowResult(text) {
+    async handleShowResult(text) {
       const mode = this.settings.panelPosition;
       if (mode === "none") {
         navigator.clipboard?.writeText(text).catch((error) => {
@@ -1181,7 +1245,18 @@
         return;
       }
       const position = this.calcPanelPosition(mode);
-      this.panel.show(text, { position, editable: true });
+      const usage = await checkUsage();
+      const options = {
+        position,
+        editable: true
+      };
+      if (usage.remaining !== void 0) {
+        options.usageInfo = {
+          remaining: usage.remaining,
+          max: FREE_POLICY.maxPerDay
+        };
+      }
+      this.panel.show(text, options);
       this.ignoreNextOutsideClick = true;
     }
     /**
@@ -1200,8 +1275,8 @@
       }
       const anchor = this.lastMouseUpPoint || { x: viewportWidth / 2, y: viewportHeight / 2 };
       return {
-        left: Math.min(Math.max(10, anchor.x + 16), viewportWidth - panelWidth - 10),
-        top: Math.min(Math.max(10, anchor.y + 16), viewportHeight - panelHeight - 10)
+        left: anchor.x + 16,
+        top: anchor.y + 16
       };
     }
     /**
@@ -1235,7 +1310,7 @@
         const text = format(lines);
         if (text.trim()) {
           this.lastSelectionRect = rect;
-          this.handleShowResult(text);
+          await this.handleShowResult(text);
           await consumeUsage();
         } else {
           this.panel.hide();
@@ -1251,7 +1326,7 @@
         const text = format(lines);
         if (text.trim()) {
           this.lastSelectionRect = rect;
-          this.handleShowResult(text);
+          await this.handleShowResult(text);
           await consumeUsage();
         } else {
           this.panel.hide();

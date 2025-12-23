@@ -59,7 +59,7 @@
   - 验证样式效果符合设计要求
   - 如有问题，向用户报告
 
-- [ ] 8. 修改 content.ts 传递剩余次数信息
+- [x] 8. 修改 content.ts 传递剩余次数信息
   - 在 `handleShowResult()` 方法中调用 `checkUsage()` 获取剩余次数
   - 将 `usageInfo` 参数传递给 `panel.show()`
   - 修改 `calcPanelPosition()` 方法中 'mouse' 模式的逻辑
@@ -67,7 +67,7 @@
   - 简化为：`{ left: anchor.x + 16, top: anchor.y + 16 }`
   - _需求：1.4, 2.1, 2.2_
 
-- [ ] 9. 最终检查点 - 完整功能验证
+- [x] 9. 最终检查点 - 完整功能验证
   - 运行完整测试套件
   - 手动测试所有需求场景
   - 验证没有引入回归问题

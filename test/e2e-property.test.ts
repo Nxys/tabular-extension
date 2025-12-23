@@ -216,13 +216,17 @@ describe('端到端属性测试', () => {
             );
 
             // 验证需求 11.6：不显示任何额外提示
-            // 验证 panel.show 的参数中没有限制相关的信息
+            // 验证 panel.show 的参数中包含 usageInfo（这是任务 8 的修改）
             const showCallArgs = panelShowSpy.mock.calls[0];
             expect(showCallArgs[0]).toBe('测试文本内容'); // 文本内容不变
             expect(showCallArgs[1]).toEqual({
               position: expect.any(Object),
-              editable: true
-            }); // 选项不变
+              editable: true,
+              usageInfo: expect.objectContaining({
+                remaining: expect.any(Number),
+                max: expect.any(Number)
+              })
+            }); // 选项包含 usageInfo
 
             // 验证需求 11.7：不改变任何现有行为
             // 验证 consumeUsage 在成功提取后被调用

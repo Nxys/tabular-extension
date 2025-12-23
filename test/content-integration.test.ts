@@ -470,7 +470,8 @@ describe('Content 控制器集成测试', () => {
       await flush();
 
       // 验证第一次调用
-      expect(mockCheckUsage).toHaveBeenCalledTimes(1);
+      // checkUsage 会被调用两次：一次检查权限，一次获取剩余次数
+      expect(mockCheckUsage).toHaveBeenCalledTimes(2);
       expect(mockCollect).toHaveBeenCalledTimes(1);
       expect(mockConsumeUsage).toHaveBeenCalledTimes(1);
 
@@ -491,7 +492,8 @@ describe('Content 控制器集成测试', () => {
       await flush();
 
       // 验证第二次调用
-      expect(mockCheckUsage).toHaveBeenCalledTimes(2);
+      // checkUsage 会被调用四次：每次操作调用两次（检查权限 + 获取剩余次数）
+      expect(mockCheckUsage).toHaveBeenCalledTimes(4);
       expect(mockCollect).toHaveBeenCalledTimes(2);
       expect(mockConsumeUsage).toHaveBeenCalledTimes(2);
     });
@@ -529,7 +531,8 @@ describe('Content 控制器集成测试', () => {
       await flush();
 
       // 验证第一次成功
-      expect(mockCheckUsage).toHaveBeenCalledTimes(1);
+      // checkUsage 会被调用两次：一次检查权限，一次获取剩余次数
+      expect(mockCheckUsage).toHaveBeenCalledTimes(2);
       expect(mockCollect).toHaveBeenCalledTimes(1);
       expect(panelShowSpy).toHaveBeenCalledTimes(1);
       expect(mockConsumeUsage).toHaveBeenCalledTimes(1);
@@ -559,7 +562,8 @@ describe('Content 控制器集成测试', () => {
       await flush();
 
       // 验证第二次被拒绝
-      expect(mockCheckUsage).toHaveBeenCalledTimes(2);
+      // checkUsage 会被调用 3 次：第一次操作 2 次（检查权限 + 获取剩余次数），第二次操作 1 次（检查权限后被拒绝）
+      expect(mockCheckUsage).toHaveBeenCalledTimes(3);
       expect(panelShowLimitReachedSpy).toHaveBeenCalledTimes(1);
       
       // collect 和 consumeUsage 不应该再被调用
