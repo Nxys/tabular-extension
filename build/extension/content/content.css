@@ -231,3 +231,129 @@
 .browser-selection-copy-panel-copy-btn.error {
   background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
 }
+
+/* ==================== 表格模式样式 ==================== */
+/* 表格模式下使用等宽字体，确保列对齐 */
+.browser-selection-copy-table-mode .browser-selection-copy-panel-textarea {
+  font-family: 'SF Mono', 'Monaco', 'Consolas', 'Courier New', monospace !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  letter-spacing: 0 !important;
+  white-space: pre !important;
+  overflow-x: auto !important;
+  word-wrap: normal !important;
+  word-break: normal !important;
+}
+
+/* ==================== CSV 导出按钮样式 ==================== */
+.browser-selection-copy-panel-csv-btn {
+  padding: 10px 16px !important;
+  margin-right: 8px !important;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.25) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.browser-selection-copy-panel-csv-btn:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(40, 167, 69, 0.35) !important;
+  background: linear-gradient(135deg, #218838 0%, #1ea87a 100%) !important;
+}
+
+.browser-selection-copy-panel-csv-btn:active {
+  transform: translateY(0) !important;
+}
+
+/* 深色模式下的 CSV 按钮 */
+@media (prefers-color-scheme: dark) {
+  .browser-selection-copy-panel-csv-btn {
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3) !important;
+  }
+  
+  .browser-selection-copy-panel-csv-btn:hover {
+    box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4) !important;
+  }
+}
+
+/* ==================== Pro 升级提示样式 ==================== */
+.browser-selection-copy-panel-pro-required {
+  padding: 24px !important;
+  text-align: center !important;
+  background: var(--bsc-preview-bg) !important;
+  margin: 0 !important;
+}
+
+.browser-selection-copy-panel-pro-icon {
+  font-size: 48px !important;
+  margin-bottom: 16px !important;
+  display: block !important;
+  line-height: 1 !important;
+}
+
+.browser-selection-copy-panel-pro-title {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: var(--bsc-text) !important;
+  margin: 0 0 8px 0 !important;
+  padding: 0 !important;
+}
+
+.browser-selection-copy-panel-pro-message {
+  font-size: 14px !important;
+  color: var(--bsc-text) !important;
+  opacity: 0.8 !important;
+  margin: 0 0 20px 0 !important;
+  padding: 0 !important;
+  line-height: 1.6 !important;
+}
+
+.browser-selection-copy-panel-pro-upgrade-btn {
+  width: 100% !important;
+  padding: 12px !important;
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%) !important;
+  color: #333 !important;
+  border: none !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3) !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+}
+
+.browser-selection-copy-panel-pro-upgrade-btn:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(255, 215, 0, 0.4) !important;
+  background: linear-gradient(135deg, #ffed4e 0%, #ffd700 100%) !important;
+}
+
+.browser-selection-copy-panel-pro-upgrade-btn:active {
+  transform: translateY(0) !important;
+}
+
+/* 深色模式下的 Pro 升级按钮 */
+@media (prefers-color-scheme: dark) {
+  .browser-selection-copy-panel-pro-upgrade-btn {
+    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%) !important;
+    color: #1a1a1a !important;
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.35) !important;
+  }
+  
+  .browser-selection-copy-panel-pro-upgrade-btn:hover {
+    box-shadow: 0 6px 16px rgba(255, 215, 0, 0.45) !important;
+  }
+}

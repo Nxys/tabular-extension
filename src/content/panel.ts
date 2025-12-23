@@ -1,3 +1,5 @@
+import { FREE_POLICY } from './usage/policy';
+
 /**
  * 结果面板
  * 显示提取结果和提供复制功能的浮动面板
@@ -15,19 +17,36 @@ export class Panel {
    */
   show(
     text: string,
-    options: { position: { left: number; top: number }; editable?: boolean } = {
+    options: { 
+      position: { left: number; top: number }; 
+      editable?: boolean;
+      usageInfo?: { remaining: number; max: number }; // 新增：使用信息
+    } = {
       position: { left: 50, top: 50 },
       editable: true
     }
   ): void {
     this.currentText = text;
-    this.createElement(options.position, options.editable ?? true);
+    this.createElement(
+      options.position, 
+      options.editable ?? true, 
+      undefined, // config 参数
+      false, // forceCenter 参数
+      options.usageInfo // 传递 usageInfo
+    );
+    
+    // 调用边界检测，确保面板完整显示在视口内
+    this.adjustPositionForViewport();
   }
 
   /**
    * 显示使用限制提示
    */
-  showLimitReached(): void {
+  showLimitReached(usageInfo?: { current: number; max: number }): void {
+    // 如果没有传入 usageInfo，从策略模块读取
+    const maxPerDay = usageInfo?.max ?? FREE_POLICY.maxPerDay;
+    const current = usageInfo?.current ?? maxPerDay;
+    
     this.createElement(
       { left: 50, top: 50 },
       false,
@@ -36,8 +55,10 @@ export class Panel {
         title: '使用限制',
         icon: '🚫',
         message: '今日免费次数已用完',
-        showUpgradeButton: true
-      }
+        showUpgradeButton: true,
+        usageInfo: { current, max: maxPerDay }
+      },
+      true // forceCenter: 强制居中显示
     );
   }
 
@@ -107,7 +128,8 @@ export class Panel {
         icon: '⭐',
         message: '表格识别是 Pro 功能',
         showUpgradeButton: true
-      }
+      },
+      true // forceCenter: 强制居中显示
     );
   }
 
@@ -143,15 +165,26 @@ export class Panel {
       icon?: string;
       message?: string;
       showUpgradeButton?: boolean;
-    }
+      usageInfo?: { current: number; max: number }; // 限制面板使用信息
+    },
+    forceCenter?: boolean, // 是否强制居中
+    usageInfo?: { remaining: number; max: number } // 文本预览面板使用信息
   ): void {
     this.hide(); // 确保只有一个面板
 
     // 创建面板容器
     this.element = document.createElement('div');
     this.element.className = `${this.CSS_CLASS_PREFIX}-panel`;
-    this.element.style.top = `${position.top}px`;
-    this.element.style.left = `${position.left}px`;
+    
+    // 根据 forceCenter 参数决定定位方式
+    if (forceCenter) {
+      // 强制居中：添加特殊 CSS 类
+      this.element.classList.add(`${this.CSS_CLASS_PREFIX}-panel-force-center`);
+    } else {
+      // 普通定位：使用传入的位置
+      this.element.style.top = `${position.top}px`;
+      this.element.style.left = `${position.left}px`;
+    }
 
     // 标题栏
     const header = document.createElement('div');
@@ -172,6 +205,14 @@ export class Panel {
     
     title.appendChild(icon);
     title.appendChild(titleText);
+    
+    // 如果是文本预览面板且有 usageInfo，添加免费额度显示
+    if (!config?.type && usageInfo) {
+      const usageInfoSpan = document.createElement('span');
+      usageInfoSpan.className = `${this.CSS_CLASS_PREFIX}-panel-usage-info`;
+      usageInfoSpan.textContent = `剩余 ${usageInfo.remaining} 次`;
+      title.appendChild(usageInfoSpan);
+    }
 
     // 关闭按钮
     const closeBtn = document.createElement('button');
@@ -197,15 +238,24 @@ export class Panel {
 
       // 如果是限制类型，添加额外信息
       if (config.type === 'limit') {
-        const subMessage = document.createElement('div');
-        subMessage.className = `${this.CSS_CLASS_PREFIX}-panel-submessage`;
-        subMessage.textContent = '(20/20)';
+        // 主提示：次数信息（应用新样式类）
+        const countInfo = document.createElement('div');
+        countInfo.className = `${this.CSS_CLASS_PREFIX}-panel-limit-count`;
+        
+        // 使用 usageInfo 动态生成次数显示文本
+        if (config.usageInfo) {
+          countInfo.textContent = `(${config.usageInfo.current}/${config.usageInfo.max})`;
+        } else {
+          // 后备方案：从策略模块读取
+          countInfo.textContent = `(${FREE_POLICY.maxPerDay}/${FREE_POLICY.maxPerDay})`;
+        }
 
+        // 次要说明：重置信息（应用新样式类）
         const resetInfo = document.createElement('div');
-        resetInfo.className = `${this.CSS_CLASS_PREFIX}-panel-reset-info`;
+        resetInfo.className = `${this.CSS_CLASS_PREFIX}-panel-limit-secondary`;
         resetInfo.textContent = '明天将自动重置';
 
-        messageWrapper.appendChild(subMessage);
+        messageWrapper.appendChild(countInfo);
         messageWrapper.appendChild(resetInfo);
       }
 
@@ -410,4 +460,50 @@ export class Panel {
   private endDrag = (): void => {
     this.dragState = null;
   };
+
+  /**
+   * 调整面板位置以确保完整显示在视口内
+   * 优先保证底部和右侧可见
+   */
+  private adjustPositionForViewport(): void {
+    if (!this.element) return;
+
+    const rect = this.element.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let left = rect.left;
+    let top = rect.top;
+    let adjusted = false;
+
+    // 检查右侧边界（优先保证右侧可见）
+    if (rect.right > viewportWidth) {
+      left = viewportWidth - rect.width;
+      adjusted = true;
+    }
+
+    // 检查底部边界（优先保证底部可见）
+    if (rect.bottom > viewportHeight) {
+      top = viewportHeight - rect.height;
+      adjusted = true;
+    }
+
+    // 检查左侧边界
+    if (left < 0) {
+      left = 0;
+      adjusted = true;
+    }
+
+    // 检查顶部边界
+    if (top < 0) {
+      top = 0;
+      adjusted = true;
+    }
+
+    // 如果需要调整，应用新位置
+    if (adjusted) {
+      this.element.style.left = `${left}px`;
+      this.element.style.top = `${top}px`;
+    }
+  }
 }

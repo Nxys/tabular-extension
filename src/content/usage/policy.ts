@@ -19,13 +19,3 @@ export interface UsagePolicy {
 export const FREE_POLICY: UsagePolicy = {
   maxPerDay: 20
 };
-
-/**
- * Pro策略（预留，当前不实现）
- * 
- * 未来实现Pro版本时，可以添加：
- * 
- * export const PRO_POLICY: UsagePolicy = {
- *   maxPerDay: Infinity
- * };
- */

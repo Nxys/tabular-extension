@@ -42,12 +42,12 @@ describe('Panel 模块单元测试', () => {
       const message = panelElement?.querySelector('.browser-selection-copy-panel-message');
       expect(message?.textContent).toBe('今日免费次数已用完');
 
-      // 验证次数显示
-      const subMessage = panelElement?.querySelector('.browser-selection-copy-panel-submessage');
-      expect(subMessage?.textContent).toBe('(20/20)');
+      // 验证次数显示（使用新的样式类）
+      const countInfo = panelElement?.querySelector('.browser-selection-copy-panel-limit-count');
+      expect(countInfo?.textContent).toBe('(20/20)');
 
-      // 验证重置信息
-      const resetInfo = panelElement?.querySelector('.browser-selection-copy-panel-reset-info');
+      // 验证重置信息（使用新的样式类）
+      const resetInfo = panelElement?.querySelector('.browser-selection-copy-panel-limit-secondary');
       expect(resetInfo?.textContent).toBe('明天将自动重置');
     });
 
@@ -117,9 +117,12 @@ describe('Panel 模块单元测试', () => {
       const panelElement = document.querySelector('.browser-selection-copy-panel') as HTMLElement;
       expect(panelElement).toBeTruthy();
 
-      // 验证位置（默认位置）
-      expect(panelElement.style.left).toBe('50px');
-      expect(panelElement.style.top).toBe('50px');
+      // 验证强制居中样式类已应用
+      expect(panelElement.classList.contains('browser-selection-copy-panel-force-center')).toBe(true);
+      
+      // 验证不再使用内联样式设置位置（因为使用 CSS 类居中）
+      expect(panelElement.style.left).toBe('');
+      expect(panelElement.style.top).toBe('');
     });
   });
 
