@@ -9,7 +9,7 @@
  * - 保持多点防护机制
  */
 
-import { getRecentStats, UsageStats } from '../usage/usage';
+import { getRecentStats, type UsageStats } from '../usage/usage';
 
 /**
  * Pro 功能类型

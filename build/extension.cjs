@@ -57,7 +57,7 @@ iconSizes.forEach(size => {
   const destPath = path.join(imagesDir, iconFile);
 
   if (fs.existsSync(srcPath)) {
-    fs.copyFileSync(srcPath, destPath);
+    fs.renameSync(srcPath, destPath);
     console.log(`✓ 复制 ${iconFile}`);
   } else {
     console.error(`❌ 图标文件不存在: ${srcPath}`);
