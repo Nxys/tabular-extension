@@ -1,4 +1,4 @@
-import type { SelectionRect } from '../types';
+import type { SelectionRect } from '../shared/types';
 
 /**
  * 选择框组件

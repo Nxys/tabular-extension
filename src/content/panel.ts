@@ -1,9 +1,18 @@
-import { FREE_POLICY } from './usage/policy';
-
 /**
- * 结果面板
- * 显示提取结果和提供复制功能的浮动面板
+ * 面板调度（创建 / 销毁 - 合并版）
+ * 
+ * 职责：
+ * - 成功结果 UI（showResult）
+ * - 免费用尽 UI（showLimit）
+ * - 升级 Pro UI（showPro）
+ * - 面板拖动、定位等交互
+ * 
+ * 禁止：
+ * - 不得包含业务逻辑判断
+ * - 不得拼装业务文案
+ * - 不得读取 usage、pro 状态
  */
+
 export class Panel {
   private element: HTMLDivElement | null = null;
   private currentText = '';
@@ -13,124 +22,133 @@ export class Panel {
     | null = null;
 
   /**
-   * 显示结果
-   */
-  show(
-    text: string,
-    options: { 
-      position: { left: number; top: number }; 
-      editable?: boolean;
-      usageInfo?: { remaining: number; max: number }; // 新增：使用信息
-    } = {
-      position: { left: 50, top: 50 },
-      editable: true
-    }
-  ): void {
-    this.currentText = text;
-    this.createElement(
-      options.position, 
-      options.editable ?? true, 
-      undefined, // config 参数
-      false, // forceCenter 参数
-      options.usageInfo // 传递 usageInfo
-    );
-    
-    // 调用边界检测，确保面板完整显示在视口内
-    this.adjustPositionForViewport();
-  }
-
-  /**
-   * 显示使用限制提示
-   */
-  showLimitReached(usageInfo?: { current: number; max: number }): void {
-    // 如果没有传入 usageInfo，从策略模块读取
-    const maxPerDay = usageInfo?.max ?? FREE_POLICY.maxPerDay;
-    const current = usageInfo?.current ?? maxPerDay;
-    
-    this.createElement(
-      { left: 50, top: 50 },
-      false,
-      {
-        type: 'limit',
-        title: '使用限制',
-        icon: '🚫',
-        message: '今日免费次数已用完',
-        showUpgradeButton: true,
-        usageInfo: { current, max: maxPerDay }
-      },
-      true // forceCenter: 强制居中显示
-    );
-  }
-
-  /**
-   * 显示对齐后的表格
+   * 显示结果面板
    * 
-   * @param table 对齐后的二维字符串数组
+   * 接收 background 生成的数据，纯渲染
    */
-  showAligned(table: string[][]): void {
-    // 将二维数组转换为文本
-    const text = table.map(row => row.join('')).join('\n');
+  showResult(uiData?: { text?: string; table?: string[][]; csv?: string }): void {
+    this.hide();
     
-    // 使用现有的 show 方法，但添加特殊标记
-    this.show(text, {
-      position: { left: 50, top: 50 },
-      editable: true
-    });
+    // 创建面板
+    this.element = document.createElement('div');
+    this.element.className = `${this.CSS_CLASS_PREFIX}-panel`;
     
-    // 添加表格标识（用于样式）
-    if (this.element) {
+    // 标题栏
+    const header = this.createHeader('📋', '文本预览');
+    
+    // 内容区域
+    const previewWrapper = document.createElement('div');
+    previewWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-preview-wrapper`;
+
+    const preview = document.createElement('textarea');
+    preview.className = `${this.CSS_CLASS_PREFIX}-panel-textarea`;
+    preview.readOnly = false;
+    
+    // 渲染内容
+    if (uiData?.text) {
+      this.currentText = uiData.text;
+      preview.value = uiData.text;
+    } else if (uiData?.table) {
+      this.currentText = uiData.table.map(row => row.join('')).join('\n');
+      preview.value = this.currentText;
       this.element.classList.add(`${this.CSS_CLASS_PREFIX}-table-mode`);
     }
+    
+    preview.oninput = (e) => {
+      const target = e.target as HTMLTextAreaElement;
+      this.currentText = target.value;
+    };
+
+    previewWrapper.appendChild(preview);
+
+    // 复制按钮容器
+    const copyBtnWrapper = document.createElement('div');
+    copyBtnWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-copy-wrapper`;
+
+    // 复制按钮
+    const copyBtn = this.createCopyButton();
+    copyBtnWrapper.appendChild(copyBtn);
+
+    // 如果有 CSV，添加导出按钮
+    if (uiData?.csv) {
+      const csvBtn = this.createCSVButton(uiData.csv);
+      copyBtnWrapper.insertBefore(csvBtn, copyBtn);
+    }
+
+    // 组装面板
+    this.element.appendChild(header);
+    this.element.appendChild(previewWrapper);
+    this.element.appendChild(copyBtnWrapper);
+
+    document.body.appendChild(this.element);
+    this.adjustPositionForViewport();
+    this.bindDragEvents(header);
   }
 
   /**
-   * 启用 CSV 导出
+   * 显示限制提示
    * 
-   * @param csv CSV 字符串
-   * @param onExport 导出时的回调函数（可选）
+   * 接收 background 生成的完整文案
    */
-  enableCSVExport(csv: string, onExport?: () => void | Promise<void>): void {
-    if (!this.element) return;
+  showLimit(uiData?: { message?: string }): void {
+    this.hide();
     
-    // 查找复制按钮容器
-    const copyWrapper = this.element.querySelector(
-      `.${this.CSS_CLASS_PREFIX}-panel-copy-wrapper`
-    );
+    // 创建面板
+    this.element = document.createElement('div');
+    this.element.className = `${this.CSS_CLASS_PREFIX}-panel ${this.CSS_CLASS_PREFIX}-panel-force-center`;
     
-    if (!copyWrapper) return;
+    // 标题栏
+    const header = this.createHeader('🚫', '使用限制');
     
-    // 创建 CSV 导出按钮
-    const csvBtn = document.createElement('button');
-    csvBtn.className = `${this.CSS_CLASS_PREFIX}-panel-csv-btn`;
-    csvBtn.textContent = '📊 导出 CSV';
-    csvBtn.onclick = async () => {
-      this.downloadCSV(csv);
-      // 调用回调函数（如果提供）
-      if (onExport) {
-        await onExport();
-      }
-    };
-    
-    // 插入到复制按钮之前
-    copyWrapper.insertBefore(csvBtn, copyWrapper.firstChild);
+    // 消息内容
+    const messageWrapper = document.createElement('div');
+    messageWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-message-wrapper`;
+
+    const message = document.createElement('div');
+    message.className = `${this.CSS_CLASS_PREFIX}-panel-message`;
+    message.textContent = uiData?.message || '今日免费次数已用完';
+
+    messageWrapper.appendChild(message);
+
+    // 组装面板
+    this.element.appendChild(header);
+    this.element.appendChild(messageWrapper);
+
+    document.body.appendChild(this.element);
+    this.bindDragEvents(header);
   }
 
   /**
    * 显示 Pro 升级提示
+   * 
+   * 接收 background 生成的完整文案
    */
-  showProRequired(): void {
-    this.createElement(
-      { left: 50, top: 50 },
-      false,
-      {
-        type: 'pro-required',
-        title: 'Pro 功能',
-        icon: '⭐',
-        message: '表格识别是 Pro 功能',
-        showUpgradeButton: true
-      },
-      true // forceCenter: 强制居中显示
-    );
+  showPro(uiData?: { message?: string }): void {
+    this.hide();
+    
+    // 创建面板
+    this.element = document.createElement('div');
+    this.element.className = `${this.CSS_CLASS_PREFIX}-panel ${this.CSS_CLASS_PREFIX}-panel-force-center`;
+    
+    // 标题栏
+    const header = this.createHeader('⭐', 'Pro 功能');
+    
+    // 消息内容
+    const messageWrapper = document.createElement('div');
+    messageWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-message-wrapper`;
+
+    const message = document.createElement('div');
+    message.className = `${this.CSS_CLASS_PREFIX}-panel-message`;
+    message.textContent = uiData?.message || '这是 Pro 功能';
+
+    messageWrapper.appendChild(message);
+
+    // 组装面板
+    this.element.appendChild(header);
+    this.element.appendChild(messageWrapper);
+
+    document.body.appendChild(this.element);
+    this.bindDragEvents(header);
   }
 
   /**
@@ -154,189 +172,85 @@ export class Panel {
   }
 
   /**
-   * 创建面板
+   * ============================================
+   * 私有辅助方法
+   * ============================================
    */
-  private createElement(
-    position: { left: number; top: number },
-    editable: boolean,
-    config?: {
-      type?: 'limit' | 'pro-required';
-      title?: string;
-      icon?: string;
-      message?: string;
-      showUpgradeButton?: boolean;
-      usageInfo?: { current: number; max: number }; // 限制面板使用信息
-    },
-    forceCenter?: boolean, // 是否强制居中
-    usageInfo?: { remaining: number; max: number } // 文本预览面板使用信息
-  ): void {
-    this.hide(); // 确保只有一个面板
 
-    // 创建面板容器
-    this.element = document.createElement('div');
-    this.element.className = `${this.CSS_CLASS_PREFIX}-panel`;
-    
-    // 根据 forceCenter 参数决定定位方式
-    if (forceCenter) {
-      // 强制居中：添加特殊 CSS 类
-      this.element.classList.add(`${this.CSS_CLASS_PREFIX}-panel-force-center`);
-    } else {
-      // 普通定位：使用传入的位置
-      this.element.style.top = `${position.top}px`;
-      this.element.style.left = `${position.left}px`;
-    }
-
-    // 标题栏
+  /**
+   * 创建标题栏
+   */
+  private createHeader(icon: string, title: string): HTMLDivElement {
     const header = document.createElement('div');
     header.className = `${this.CSS_CLASS_PREFIX}-panel-header`;
 
-    // 标题文字
-    const title = document.createElement('span');
-    title.className = `${this.CSS_CLASS_PREFIX}-panel-title`;
+    const titleSpan = document.createElement('span');
+    titleSpan.className = `${this.CSS_CLASS_PREFIX}-panel-title`;
     
-    // 图标
-    const icon = document.createElement('span');
-    icon.className = `${this.CSS_CLASS_PREFIX}-panel-icon`;
-    icon.textContent = config?.icon ?? '📋';
+    const iconSpan = document.createElement('span');
+    iconSpan.className = `${this.CSS_CLASS_PREFIX}-panel-icon`;
+    iconSpan.textContent = icon;
     
-    // 标题文本
     const titleText = document.createElement('span');
-    titleText.textContent = config?.title ?? '文本预览';
+    titleText.textContent = title;
     
-    title.appendChild(icon);
-    title.appendChild(titleText);
-    
-    // 如果是文本预览面板且有 usageInfo，添加免费额度显示
-    if (!config?.type && usageInfo) {
-      const usageInfoSpan = document.createElement('span');
-      usageInfoSpan.className = `${this.CSS_CLASS_PREFIX}-panel-usage-info`;
-      usageInfoSpan.textContent = `剩余 ${usageInfo.remaining} 次`;
-      title.appendChild(usageInfoSpan);
-    }
+    titleSpan.appendChild(iconSpan);
+    titleSpan.appendChild(titleText);
 
-    // 关闭按钮
     const closeBtn = document.createElement('button');
     closeBtn.type = 'button';
     closeBtn.className = `${this.CSS_CLASS_PREFIX}-panel-close`;
     closeBtn.textContent = '×';
     closeBtn.onclick = () => this.hide();
 
-    header.appendChild(title);
+    header.appendChild(titleSpan);
     header.appendChild(closeBtn);
 
-    // 根据类型创建不同的内容
-    if (config?.type === 'limit' || config?.type === 'pro-required') {
-      // 限制提示内容或 Pro 升级提示
-      const messageWrapper = document.createElement('div');
-      messageWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-message-wrapper`;
+    return header;
+  }
 
-      const message = document.createElement('div');
-      message.className = `${this.CSS_CLASS_PREFIX}-panel-message`;
-      message.textContent = config.message ?? '';
+  /**
+   * 创建复制按钮
+   */
+  private createCopyButton(): HTMLButtonElement {
+    const copyBtn = document.createElement('button');
+    copyBtn.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn`;
+    copyBtn.dataset.role = 'copy';
+    
+    const copyBtnContent = document.createElement('span');
+    copyBtnContent.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-content`;
+    
+    const copyBtnIcon = document.createElement('span');
+    copyBtnIcon.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-icon`;
+    copyBtnIcon.textContent = '📄';
+    
+    const copyBtnText = document.createElement('span');
+    copyBtnText.textContent = '复制到剪贴板';
+    
+    copyBtnContent.appendChild(copyBtnIcon);
+    copyBtnContent.appendChild(copyBtnText);
+    copyBtn.appendChild(copyBtnContent);
+    
+    copyBtn.onclick = () => {
+      this.copyToClipboard();
+      setTimeout(() => this.hide(), 1500);
+    };
 
-      messageWrapper.appendChild(message);
+    return copyBtn;
+  }
 
-      // 如果是限制类型，添加额外信息
-      if (config.type === 'limit') {
-        // 主提示：次数信息（应用新样式类）
-        const countInfo = document.createElement('div');
-        countInfo.className = `${this.CSS_CLASS_PREFIX}-panel-limit-count`;
-        
-        // 使用 usageInfo 动态生成次数显示文本
-        if (config.usageInfo) {
-          countInfo.textContent = `(${config.usageInfo.current}/${config.usageInfo.max})`;
-        } else {
-          // 后备方案：从策略模块读取
-          countInfo.textContent = `(${FREE_POLICY.maxPerDay}/${FREE_POLICY.maxPerDay})`;
-        }
-
-        // 次要说明：重置信息（应用新样式类）
-        const resetInfo = document.createElement('div');
-        resetInfo.className = `${this.CSS_CLASS_PREFIX}-panel-limit-secondary`;
-        resetInfo.textContent = '明天将自动重置';
-
-        messageWrapper.appendChild(countInfo);
-        messageWrapper.appendChild(resetInfo);
-      }
-
-      this.element.appendChild(header);
-      this.element.appendChild(messageWrapper);
-
-      // 升级按钮（占位）
-      if (config.showUpgradeButton) {
-        const upgradeBtnWrapper = document.createElement('div');
-        upgradeBtnWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-upgrade-wrapper`;
-
-        const upgradeBtn = document.createElement('button');
-        upgradeBtn.className = `${this.CSS_CLASS_PREFIX}-panel-upgrade-btn`;
-        upgradeBtn.textContent = '升级 Pro（占位）';
-        upgradeBtn.onclick = () => {
-          // 占位按钮，当前无实际功能
-          console.log('升级 Pro 功能尚未实现');
-        };
-
-        upgradeBtnWrapper.appendChild(upgradeBtn);
-        this.element.appendChild(upgradeBtnWrapper);
-      }
-    } else {
-      // 原有的文本预览内容
-      const previewWrapper = document.createElement('div');
-      previewWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-preview-wrapper`;
-
-      const preview = document.createElement('textarea');
-      preview.className = `${this.CSS_CLASS_PREFIX}-panel-textarea`;
-      preview.readOnly = !editable;
-      preview.value = this.currentText;
-      preview.oninput = (e) => {
-        const target = e.target as HTMLTextAreaElement;
-        this.currentText = target.value;
-      };
-
-      previewWrapper.appendChild(preview);
-
-      // 复制按钮容器
-      const copyBtnWrapper = document.createElement('div');
-      copyBtnWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-copy-wrapper`;
-
-      // 复制按钮
-      const copyBtn = document.createElement('button');
-      copyBtn.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn`;
-      copyBtn.dataset.role = 'copy';
-      
-      const copyBtnContent = document.createElement('span');
-      copyBtnContent.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-content`;
-      
-      const copyBtnIcon = document.createElement('span');
-      copyBtnIcon.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-icon`;
-      copyBtnIcon.textContent = '📄';
-      
-      const copyBtnText = document.createElement('span');
-      copyBtnText.textContent = '复制到剪贴板';
-      
-      copyBtnContent.appendChild(copyBtnIcon);
-      copyBtnContent.appendChild(copyBtnText);
-      copyBtn.appendChild(copyBtnContent);
-      
-      copyBtn.onclick = () => {
-        this.copyToClipboard();
-        // 复制后关闭面板
-        setTimeout(() => this.hide(), 1500);
-      };
-
-      copyBtnWrapper.appendChild(copyBtn);
-
-      // 组装面板
-      this.element.appendChild(header);
-      this.element.appendChild(previewWrapper);
-      this.element.appendChild(copyBtnWrapper);
-    }
-
-    document.body.appendChild(this.element);
-
-    // 绑定拖动
-    header.addEventListener('mousedown', (event) => this.startDrag(event));
-    document.addEventListener('mousemove', this.handleDrag);
-    document.addEventListener('mouseup', this.endDrag);
+  /**
+   * 创建 CSV 导出按钮
+   */
+  private createCSVButton(csv: string): HTMLButtonElement {
+    const csvBtn = document.createElement('button');
+    csvBtn.className = `${this.CSS_CLASS_PREFIX}-panel-csv-btn`;
+    csvBtn.textContent = '📊 导出 CSV';
+    csvBtn.onclick = () => {
+      this.downloadCSV(csv);
+    };
+    
+    return csvBtn;
   }
 
   /**
@@ -354,8 +268,6 @@ export class Panel {
 
   /**
    * 下载 CSV 文件
-   * 
-   * @param csv CSV 字符串
    */
   private downloadCSV(csv: string): void {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -422,6 +334,15 @@ export class Panel {
   }
 
   /**
+   * 绑定拖动事件
+   */
+  private bindDragEvents(header: HTMLDivElement): void {
+    header.addEventListener('mousedown', (event) => this.startDrag(event));
+    document.addEventListener('mousemove', this.handleDrag);
+    document.addEventListener('mouseup', this.endDrag);
+  }
+
+  /**
    * 开始拖动
    */
   private startDrag(event: MouseEvent): void {
@@ -463,7 +384,6 @@ export class Panel {
 
   /**
    * 调整面板位置以确保完整显示在视口内
-   * 优先保证底部和右侧可见
    */
   private adjustPositionForViewport(): void {
     if (!this.element) return;
@@ -476,13 +396,13 @@ export class Panel {
     let top = rect.top;
     let adjusted = false;
 
-    // 检查右侧边界（优先保证右侧可见）
+    // 检查右侧边界
     if (rect.right > viewportWidth) {
       left = viewportWidth - rect.width;
       adjusted = true;
     }
 
-    // 检查底部边界（优先保证底部可见）
+    // 检查底部边界
     if (rect.bottom > viewportHeight) {
       top = viewportHeight - rect.height;
       adjusted = true;
@@ -500,7 +420,7 @@ export class Panel {
       adjusted = true;
     }
 
-    // 如果需要调整，应用新位置
+    // 应用新位置
     if (adjusted) {
       this.element.style.left = `${left}px`;
       this.element.style.top = `${top}px`;

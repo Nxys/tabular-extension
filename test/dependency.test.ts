@@ -33,7 +33,8 @@ describe('外部依赖验证', () => {
         !line.includes('jest') &&
         !line.includes('fast-check') &&
         !line.includes('fs') &&
-        !line.includes('path')
+        !line.includes('path') &&
+        !line.includes('import type') // 允许 TypeScript 类型导入
       );
 
       expect(externalImports).toEqual([]);

@@ -1,7 +1,7 @@
 // 项目结构验证测试
 
 import { BrowserSelectionCopy } from '../src/content/content';
-import { SelectionRect, TextElement } from '../src/types';
+import { SelectionRect, TextItem } from '../src/shared/types';
 
 describe('项目结构测试', () => {
   test('应该能够导入核心组件', () => {
@@ -19,23 +19,14 @@ describe('项目结构测试', () => {
     };
     expect(rect).toBeDefined();
 
-    const element: TextElement = {
+    const textItem: TextItem = {
       text: '测试文本',
-      rect: {
-        left: 0,
-        top: 0,
-        right: 100,
-        bottom: 20,
-        width: 100,
-        height: 20,
-        x: 0,
-        y: 0
-      } as DOMRect,
-      element: document.createElement('div'),
-      lineIndex: 0,
-      columnIndex: 0
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 20
     };
-    expect(element).toBeDefined();
+    expect(textItem).toBeDefined();
   });
 
   test('应该能够创建组件实例', () => {

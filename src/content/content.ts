@@ -1,21 +1,31 @@
+/**
+ * Content 入口（事件监听 / 消息 - 重构版）
+ * 
+ * 职责：
+ * - 事件监听（mousedown / mousemove / mouseup）
+ * - 消息发送（REQUEST_ACTION）
+ * - UI Action 执行（根据 uiAction 调用 panel）
+ * 
+ * 禁止：
+ * - 不得包含业务逻辑判断
+ * - 不得读取 usage、pro 状态
+ * - 不得根据 status 二次判断
+ * - 不得 import background 下的任何文件
+ */
+
 import { Selection } from './selection';
-import type { LayoutOptions, TextItem } from './extractor/index';
 import { Panel } from './panel';
-import type { PanelPosition, PluginSettings, SelectionRect } from '../types';
-import { checkUsage, consumeUsage, record } from './usage/usage';
-import { FREE_POLICY } from './usage/policy';
-import { collect } from './extractor/collect';
-import { layout } from './extractor/layout';
-import { format } from './extractor/format';
-import { detectTable } from './table/detect';
-import { alignTable } from './table/align';
-import { toCSV } from './table/csv';
-import { allow } from './pro/gate';
-import { resolvePipeline, type ContentMode } from './pro/strategy';
+import { collect, layout, format } from './extractor';
+import type { 
+  RequestActionMessage, 
+  ActionResultMessage, 
+  PluginSettings,
+  SelectionRect,
+  LayoutOptions 
+} from '../shared/types';
 
 /**
  * 浏览器框选复制插件 - 内容脚本
- * 组合选择框、文本提取器和结果面板
  */
 class BrowserSelectionCopy {
   // 需要忽略的交互元素标签名
@@ -29,14 +39,12 @@ class BrowserSelectionCopy {
 
   private selection: Selection;
   private panel: Panel;
-  // 仅忽略紧随选择动作产生的首个 click
   private ignoreNextOutsideClick = false;
   private lastSelectionRect: SelectionRect | null = null;
   private settings: PluginSettings = {
     enabled: false,
     panelPosition: 'center'
   };
-  private lastMouseUpPoint: { x: number; y: number } | null = null;
   private readonly handleMouseDownBound = this.handleMouseDown.bind(this);
   private readonly handleMouseMoveBound = this.handleMouseMove.bind(this);
   private readonly handleMouseUpBound = this.handleMouseUp.bind(this);
@@ -53,7 +61,7 @@ class BrowserSelectionCopy {
   }
 
   /**
-   * 绑定鼠标事件
+   * 绑定事件
    */
   private bindEvents(): void {
     document.addEventListener('mousedown', this.handleMouseDownBound);
@@ -81,20 +89,14 @@ class BrowserSelectionCopy {
     if (!this.settings.enabled) return;
 
     // 忽略右键和中键
-    if (event.button !== 0) {
-      return;
-    }
+    if (event.button !== 0) return;
 
     // 忽略在面板上的点击
-    if (this.panel.contains(event.target as Node)) {
-      return;
-    }
+    if (this.panel.contains(event.target as Node)) return;
 
     // 忽略在交互元素上的点击
     const target = event.target as Element;
-    if (BrowserSelectionCopy.IGNORED_TAGS.includes(target.tagName)) {
-      return;
-    }
+    if (BrowserSelectionCopy.IGNORED_TAGS.includes(target.tagName)) return;
 
     this.selection.start(event.clientX, event.clientY);
     event.preventDefault();
@@ -117,52 +119,21 @@ class BrowserSelectionCopy {
    */
   private async handleMouseUp(event: MouseEvent): Promise<void> {
     if (!this.settings.enabled) return;
-
-    if (!this.selection.getIsSelecting()) {
-      return;
-    }
+    if (!this.selection.getIsSelecting()) return;
 
     const rect = this.selection.finish();
-    this.lastMouseUpPoint = { x: event.clientX, y: event.clientY };
 
     if (rect && this.selection.isValid(rect)) {
-      // 记录选择事件（需求 14.4, 14.7, 16.1）
-      await record('select');
-      
-      // 检查使用限制（保留用于免费版限制）
-      const usage = await checkUsage();
-      if (!usage.allowed) {
-        this.panel.showLimitReached();
-        return;
-      }
-
-      // 执行 collect 和 layout（核心资产）
+      // 1. 执行数据提取（核心资产，保留在 content）
       const items = collect(rect);
       const lines = layout(items, BrowserSelectionCopy.DEFAULT_LAYOUT_OPTIONS);
+      const text = format(lines);
 
-      // 获取用户选择的模式（默认 text）
-      const mode = this.getUserSelectedMode();
+      // 2. 发送 REQUEST_ACTION 到 background
+      const result = await this.requestAction('text-extract', text);
 
-      // 根据模式选择 pipeline
-      const pipelineType = resolvePipeline(mode);
-
-      if (pipelineType === 'pro') {
-        // Pro Pipeline
-        await this.handleProPipeline(lines, rect);
-      } else {
-        // Free Pipeline（现有逻辑）
-        const text = format(lines);
-        
-        if (text.trim()) {
-          this.lastSelectionRect = rect;
-          await this.handleShowResult(text);
-          // 消耗使用次数
-          await consumeUsage();
-        } else {
-          this.panel.hide();
-          this.lastSelectionRect = null;
-        }
-      }
+      // 3. 根据 uiAction 执行 UI 渲染（无条件执行）
+      this.executeUIAction(result);
     }
 
     event.preventDefault();
@@ -179,15 +150,11 @@ class BrowserSelectionCopy {
       const { left, right, top, bottom } = this.lastSelectionRect;
       const insideSelection = docX >= left && docX <= right && docY >= top && docY <= bottom;
       if (insideSelection) {
-        // 忽略释放鼠标后紧随而来的点击
         this.ignoreNextOutsideClick = false;
         return;
       }
     }
-    // 重置忽略标记，确保后续点击正常处理
     this.ignoreNextOutsideClick = false;
-
-    // 不再自动关闭面板，只能通过关闭按钮或复制按钮关闭
   }
 
   /**
@@ -236,7 +203,7 @@ class BrowserSelectionCopy {
       const result = await chrome.storage.local.get(['enabled', 'panelPosition']);
       this.settings = {
         enabled: typeof result.enabled === 'boolean' ? result.enabled : defaults.enabled,
-        panelPosition: (['center', 'mouse', 'none'] as PanelPosition[]).includes(result.panelPosition)
+        panelPosition: (['center', 'mouse', 'none'] as const).includes(result.panelPosition)
           ? result.panelPosition
           : defaults.panelPosition
       };
@@ -273,173 +240,58 @@ class BrowserSelectionCopy {
   }
 
   /**
-   * 根据配置展示结果或直接复制
+   * 向 background 请求执行操作
    */
-  private async handleShowResult(text: string): Promise<void> {
-    const mode = this.settings.panelPosition;
-    if (mode === 'none') {
-      navigator.clipboard?.writeText(text).catch((error) => {
-        console.error('直接复制失败:', error);
-      });
-      return;
-    }
-
-    const position = this.calcPanelPosition(mode);
-    
-    // 获取剩余次数信息
-    const usage = await checkUsage();
-    
-    // 构建选项对象
-    const options: { 
-      position: { left: number; top: number }; 
-      editable: boolean;
-      usageInfo?: { remaining: number; max: number };
-    } = {
-      position,
-      editable: true
+  private async requestAction(
+    action: RequestActionMessage['payload']['action'],
+    data?: unknown
+  ): Promise<ActionResultMessage['payload']> {
+    const message: RequestActionMessage = {
+      type: 'REQUEST_ACTION',
+      payload: { action, data }
     };
-    
-    // 只在有剩余次数信息时添加 usageInfo
-    if (usage.remaining !== undefined) {
-      options.usageInfo = {
-        remaining: usage.remaining,
-        max: FREE_POLICY.maxPerDay
-      };
-    }
-    
-    this.panel.show(text, options);
-    
-    // 只忽略紧随本次选择动作的首个 click
-    this.ignoreNextOutsideClick = true;
-  }
 
-  /**
-   * 计算面板位置
-   */
-  private calcPanelPosition(mode: PanelPosition): { left: number; top: number } {
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const panelWidth = 320;
-    const panelHeight = 320;
-
-    if (mode === 'center') {
+    try {
+      const response = await chrome.runtime.sendMessage(message);
+      return response as ActionResultMessage['payload'];
+    } catch (error) {
+      console.error('Failed to request action:', error);
+      // 降级处理
       return {
-        left: Math.max(10, (viewportWidth - panelWidth) / 2),
-        top: Math.max(10, (viewportHeight - panelHeight) / 2)
+        status: 'blocked',
+        uiAction: 'SHOW_RESULT_PANEL',
+        uiData: {
+          message: '操作失败，请重试'
+        }
       };
     }
-
-    // mouse 模式：简化为基础偏移，让 Panel 类负责边界检测
-    const anchor = this.lastMouseUpPoint || { x: viewportWidth / 2, y: viewportHeight / 2 };
-    return {
-      left: anchor.x + 16,
-      top: anchor.y + 16
-    };
   }
 
   /**
-   * 获取用户选择的模式
+   * 执行 UI 动作
    * 
-   * 默认为 text 模式，用户可以通过 UI 切换
-   * 当前简化实现：从 storage 读取
-   * 
-   * @returns 内容模式
+   * 关键：content 不判断 status，只执行 uiAction
    */
-  private getUserSelectedMode(): ContentMode {
-    // 简化实现：默认返回 'text'
-    // 实际应该有 UI 开关让用户选择
-    // 可以从 storage 读取用户偏好
-    return 'text';
-  }
+  private executeUIAction(result: ActionResultMessage['payload']): void {
+    const { uiAction, uiData } = result;
 
-  /**
-   * 处理 Pro Pipeline
-   * 
-   * 执行表格检测、列对齐和 CSV 导出的完整流程
-   * 每个步骤都有独立的权限检查
-   * 
-   * @param lines 视觉行数组
-   * @param rect 选择区域
-   */
-  private async handleProPipeline(lines: TextItem[][], rect: SelectionRect): Promise<void> {
-    // 1. 检查表格检测权限
-    if (!await allow('table-detect')) {
-      this.panel.showProRequired();
-      return;
-    }
-
-    // 2. 记录表格检测事件（需求 14.4, 14.7, 16.1）
-    await record('table-detect');
-
-    // 3. 执行表格检测
-    const table = detectTable(lines);
-
-    // 如果检测到的表格为空，回退到 free pipeline
-    if (table.columns === 0 || table.rows.length === 0) {
-      const text = format(lines);
-      if (text.trim()) {
-        this.lastSelectionRect = rect;
-        await this.handleShowResult(text);
-        await consumeUsage();
-      } else {
-        this.panel.hide();
-        this.lastSelectionRect = null;
-      }
-      return;
-    }
-
-    // 4. 检查列对齐权限
-    let aligned: string[][] = [];
-    if (await allow('column-align')) {
-      // 记录列对齐事件（需求 14.4, 14.7, 16.1）
-      await record('column-align');
-      aligned = alignTable(table);
-    } else {
-      // 如果没有列对齐权限，使用基础格式化
-      const text = format(lines);
-      if (text.trim()) {
-        this.lastSelectionRect = rect;
-        await this.handleShowResult(text);
-        await consumeUsage();
-      } else {
-        this.panel.hide();
-        this.lastSelectionRect = null;
-      }
-      return;
-    }
-
-    // 5. 显示结果
-    if (aligned.length > 0) {
-      this.lastSelectionRect = rect;
-      
-      // 使用 showAligned 方法显示表格
-      const mode = this.settings.panelPosition;
-      if (mode === 'none') {
-        // 直接复制模式：转换为文本后复制
-        const alignedText = aligned.map(row => row.join('')).join('\n');
-        navigator.clipboard?.writeText(alignedText).catch((error) => {
-          console.error('直接复制失败:', error);
-        });
-      } else {
-        // 显示对齐的表格
-        this.panel.showAligned(aligned);
-        
-        // 检查 CSV 导出权限
-        if (await allow('csv-export')) {
-          // 记录 CSV 导出事件（需求 14.4, 14.7, 16.1）
-          await record('csv-export');
-          const csv = toCSV(table);
-          this.panel.enableCSVExport(csv);
-        }
-        
+    // 无条件执行 background 下发的 UI 指令
+    switch (uiAction) {
+      case 'SHOW_RESULT_PANEL':
+        this.panel.showResult(uiData);
         this.ignoreNextOutsideClick = true;
-      }
-      
-      // 消耗使用次数
-      await consumeUsage();
-    } else {
-      this.panel.hide();
-      this.lastSelectionRect = null;
+        break;
+
+      case 'SHOW_LIMIT_PANEL':
+        this.panel.showLimit(uiData);
+        break;
+
+      case 'SHOW_PRO_PANEL':
+        this.panel.showPro(uiData);
+        break;
+
+      default:
+        console.warn('Unknown UI action:', uiAction);
     }
   }
 

@@ -89,11 +89,6 @@
     }
   };
 
-  // src/content/usage/policy.ts
-  var FREE_POLICY = {
-    maxPerDay: 20
-  };
-
   // src/content/panel.ts
   var Panel = class {
     element = null;
@@ -101,101 +96,89 @@
     CSS_CLASS_PREFIX = "browser-selection-copy";
     dragState = null;
     /**
-     * 显示结果
-     */
-    show(text, options = {
-      position: { left: 50, top: 50 },
-      editable: true
-    }) {
-      this.currentText = text;
-      this.createElement(
-        options.position,
-        options.editable ?? true,
-        void 0,
-        // config 参数
-        false,
-        // forceCenter 参数
-        options.usageInfo
-        // 传递 usageInfo
-      );
-      this.adjustPositionForViewport();
-    }
-    /**
-     * 显示使用限制提示
-     */
-    showLimitReached(usageInfo) {
-      const maxPerDay = usageInfo?.max ?? FREE_POLICY.maxPerDay;
-      const current = usageInfo?.current ?? maxPerDay;
-      this.createElement(
-        { left: 50, top: 50 },
-        false,
-        {
-          type: "limit",
-          title: "\u4F7F\u7528\u9650\u5236",
-          icon: "\u{1F6AB}",
-          message: "\u4ECA\u65E5\u514D\u8D39\u6B21\u6570\u5DF2\u7528\u5B8C",
-          showUpgradeButton: true,
-          usageInfo: { current, max: maxPerDay }
-        },
-        true
-        // forceCenter: 强制居中显示
-      );
-    }
-    /**
-     * 显示对齐后的表格
+     * 显示结果面板
      * 
-     * @param table 对齐后的二维字符串数组
+     * 接收 background 生成的数据，纯渲染
      */
-    showAligned(table) {
-      const text = table.map((row) => row.join("")).join("\n");
-      this.show(text, {
-        position: { left: 50, top: 50 },
-        editable: true
-      });
-      if (this.element) {
+    showResult(uiData) {
+      this.hide();
+      this.element = document.createElement("div");
+      this.element.className = `${this.CSS_CLASS_PREFIX}-panel`;
+      const header = this.createHeader("\u{1F4CB}", "\u6587\u672C\u9884\u89C8");
+      const previewWrapper = document.createElement("div");
+      previewWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-preview-wrapper`;
+      const preview = document.createElement("textarea");
+      preview.className = `${this.CSS_CLASS_PREFIX}-panel-textarea`;
+      preview.readOnly = false;
+      if (uiData?.text) {
+        this.currentText = uiData.text;
+        preview.value = uiData.text;
+      } else if (uiData?.table) {
+        this.currentText = uiData.table.map((row) => row.join("")).join("\n");
+        preview.value = this.currentText;
         this.element.classList.add(`${this.CSS_CLASS_PREFIX}-table-mode`);
       }
+      preview.oninput = (e) => {
+        const target = e.target;
+        this.currentText = target.value;
+      };
+      previewWrapper.appendChild(preview);
+      const copyBtnWrapper = document.createElement("div");
+      copyBtnWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-copy-wrapper`;
+      const copyBtn = this.createCopyButton();
+      copyBtnWrapper.appendChild(copyBtn);
+      if (uiData?.csv) {
+        const csvBtn = this.createCSVButton(uiData.csv);
+        copyBtnWrapper.insertBefore(csvBtn, copyBtn);
+      }
+      this.element.appendChild(header);
+      this.element.appendChild(previewWrapper);
+      this.element.appendChild(copyBtnWrapper);
+      document.body.appendChild(this.element);
+      this.adjustPositionForViewport();
+      this.bindDragEvents(header);
     }
     /**
-     * 启用 CSV 导出
+     * 显示限制提示
      * 
-     * @param csv CSV 字符串
-     * @param onExport 导出时的回调函数（可选）
+     * 接收 background 生成的完整文案
      */
-    enableCSVExport(csv, onExport) {
-      if (!this.element) return;
-      const copyWrapper = this.element.querySelector(
-        `.${this.CSS_CLASS_PREFIX}-panel-copy-wrapper`
-      );
-      if (!copyWrapper) return;
-      const csvBtn = document.createElement("button");
-      csvBtn.className = `${this.CSS_CLASS_PREFIX}-panel-csv-btn`;
-      csvBtn.textContent = "\u{1F4CA} \u5BFC\u51FA CSV";
-      csvBtn.onclick = async () => {
-        this.downloadCSV(csv);
-        if (onExport) {
-          await onExport();
-        }
-      };
-      copyWrapper.insertBefore(csvBtn, copyWrapper.firstChild);
+    showLimit(uiData) {
+      this.hide();
+      this.element = document.createElement("div");
+      this.element.className = `${this.CSS_CLASS_PREFIX}-panel ${this.CSS_CLASS_PREFIX}-panel-force-center`;
+      const header = this.createHeader("\u{1F6AB}", "\u4F7F\u7528\u9650\u5236");
+      const messageWrapper = document.createElement("div");
+      messageWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-message-wrapper`;
+      const message = document.createElement("div");
+      message.className = `${this.CSS_CLASS_PREFIX}-panel-message`;
+      message.textContent = uiData?.message || "\u4ECA\u65E5\u514D\u8D39\u6B21\u6570\u5DF2\u7528\u5B8C";
+      messageWrapper.appendChild(message);
+      this.element.appendChild(header);
+      this.element.appendChild(messageWrapper);
+      document.body.appendChild(this.element);
+      this.bindDragEvents(header);
     }
     /**
      * 显示 Pro 升级提示
+     * 
+     * 接收 background 生成的完整文案
      */
-    showProRequired() {
-      this.createElement(
-        { left: 50, top: 50 },
-        false,
-        {
-          type: "pro-required",
-          title: "Pro \u529F\u80FD",
-          icon: "\u2B50",
-          message: "\u8868\u683C\u8BC6\u522B\u662F Pro \u529F\u80FD",
-          showUpgradeButton: true
-        },
-        true
-        // forceCenter: 强制居中显示
-      );
+    showPro(uiData) {
+      this.hide();
+      this.element = document.createElement("div");
+      this.element.className = `${this.CSS_CLASS_PREFIX}-panel ${this.CSS_CLASS_PREFIX}-panel-force-center`;
+      const header = this.createHeader("\u2B50", "Pro \u529F\u80FD");
+      const messageWrapper = document.createElement("div");
+      messageWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-message-wrapper`;
+      const message = document.createElement("div");
+      message.className = `${this.CSS_CLASS_PREFIX}-panel-message`;
+      message.textContent = uiData?.message || "\u8FD9\u662F Pro \u529F\u80FD";
+      messageWrapper.appendChild(message);
+      this.element.appendChild(header);
+      this.element.appendChild(messageWrapper);
+      document.body.appendChild(this.element);
+      this.bindDragEvents(header);
     }
     /**
      * 隐藏面板
@@ -216,117 +199,68 @@
       return this.element?.contains(target) ?? false;
     }
     /**
-     * 创建面板
+     * ============================================
+     * 私有辅助方法
+     * ============================================
      */
-    createElement(position, editable, config, forceCenter, usageInfo) {
-      this.hide();
-      this.element = document.createElement("div");
-      this.element.className = `${this.CSS_CLASS_PREFIX}-panel`;
-      if (forceCenter) {
-        this.element.classList.add(`${this.CSS_CLASS_PREFIX}-panel-force-center`);
-      } else {
-        this.element.style.top = `${position.top}px`;
-        this.element.style.left = `${position.left}px`;
-      }
+    /**
+     * 创建标题栏
+     */
+    createHeader(icon, title) {
       const header = document.createElement("div");
       header.className = `${this.CSS_CLASS_PREFIX}-panel-header`;
-      const title = document.createElement("span");
-      title.className = `${this.CSS_CLASS_PREFIX}-panel-title`;
-      const icon = document.createElement("span");
-      icon.className = `${this.CSS_CLASS_PREFIX}-panel-icon`;
-      icon.textContent = config?.icon ?? "\u{1F4CB}";
+      const titleSpan = document.createElement("span");
+      titleSpan.className = `${this.CSS_CLASS_PREFIX}-panel-title`;
+      const iconSpan = document.createElement("span");
+      iconSpan.className = `${this.CSS_CLASS_PREFIX}-panel-icon`;
+      iconSpan.textContent = icon;
       const titleText = document.createElement("span");
-      titleText.textContent = config?.title ?? "\u6587\u672C\u9884\u89C8";
-      title.appendChild(icon);
-      title.appendChild(titleText);
-      if (!config?.type && usageInfo) {
-        const usageInfoSpan = document.createElement("span");
-        usageInfoSpan.className = `${this.CSS_CLASS_PREFIX}-panel-usage-info`;
-        usageInfoSpan.textContent = `\u5269\u4F59 ${usageInfo.remaining} \u6B21`;
-        title.appendChild(usageInfoSpan);
-      }
+      titleText.textContent = title;
+      titleSpan.appendChild(iconSpan);
+      titleSpan.appendChild(titleText);
       const closeBtn = document.createElement("button");
       closeBtn.type = "button";
       closeBtn.className = `${this.CSS_CLASS_PREFIX}-panel-close`;
       closeBtn.textContent = "\xD7";
       closeBtn.onclick = () => this.hide();
-      header.appendChild(title);
+      header.appendChild(titleSpan);
       header.appendChild(closeBtn);
-      if (config?.type === "limit" || config?.type === "pro-required") {
-        const messageWrapper = document.createElement("div");
-        messageWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-message-wrapper`;
-        const message = document.createElement("div");
-        message.className = `${this.CSS_CLASS_PREFIX}-panel-message`;
-        message.textContent = config.message ?? "";
-        messageWrapper.appendChild(message);
-        if (config.type === "limit") {
-          const countInfo = document.createElement("div");
-          countInfo.className = `${this.CSS_CLASS_PREFIX}-panel-limit-count`;
-          if (config.usageInfo) {
-            countInfo.textContent = `(${config.usageInfo.current}/${config.usageInfo.max})`;
-          } else {
-            countInfo.textContent = `(${FREE_POLICY.maxPerDay}/${FREE_POLICY.maxPerDay})`;
-          }
-          const resetInfo = document.createElement("div");
-          resetInfo.className = `${this.CSS_CLASS_PREFIX}-panel-limit-secondary`;
-          resetInfo.textContent = "\u660E\u5929\u5C06\u81EA\u52A8\u91CD\u7F6E";
-          messageWrapper.appendChild(countInfo);
-          messageWrapper.appendChild(resetInfo);
-        }
-        this.element.appendChild(header);
-        this.element.appendChild(messageWrapper);
-        if (config.showUpgradeButton) {
-          const upgradeBtnWrapper = document.createElement("div");
-          upgradeBtnWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-upgrade-wrapper`;
-          const upgradeBtn = document.createElement("button");
-          upgradeBtn.className = `${this.CSS_CLASS_PREFIX}-panel-upgrade-btn`;
-          upgradeBtn.textContent = "\u5347\u7EA7 Pro\uFF08\u5360\u4F4D\uFF09";
-          upgradeBtn.onclick = () => {
-            console.log("\u5347\u7EA7 Pro \u529F\u80FD\u5C1A\u672A\u5B9E\u73B0");
-          };
-          upgradeBtnWrapper.appendChild(upgradeBtn);
-          this.element.appendChild(upgradeBtnWrapper);
-        }
-      } else {
-        const previewWrapper = document.createElement("div");
-        previewWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-preview-wrapper`;
-        const preview = document.createElement("textarea");
-        preview.className = `${this.CSS_CLASS_PREFIX}-panel-textarea`;
-        preview.readOnly = !editable;
-        preview.value = this.currentText;
-        preview.oninput = (e) => {
-          const target = e.target;
-          this.currentText = target.value;
-        };
-        previewWrapper.appendChild(preview);
-        const copyBtnWrapper = document.createElement("div");
-        copyBtnWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-copy-wrapper`;
-        const copyBtn = document.createElement("button");
-        copyBtn.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn`;
-        copyBtn.dataset.role = "copy";
-        const copyBtnContent = document.createElement("span");
-        copyBtnContent.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-content`;
-        const copyBtnIcon = document.createElement("span");
-        copyBtnIcon.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-icon`;
-        copyBtnIcon.textContent = "\u{1F4C4}";
-        const copyBtnText = document.createElement("span");
-        copyBtnText.textContent = "\u590D\u5236\u5230\u526A\u8D34\u677F";
-        copyBtnContent.appendChild(copyBtnIcon);
-        copyBtnContent.appendChild(copyBtnText);
-        copyBtn.appendChild(copyBtnContent);
-        copyBtn.onclick = () => {
-          this.copyToClipboard();
-          setTimeout(() => this.hide(), 1500);
-        };
-        copyBtnWrapper.appendChild(copyBtn);
-        this.element.appendChild(header);
-        this.element.appendChild(previewWrapper);
-        this.element.appendChild(copyBtnWrapper);
-      }
-      document.body.appendChild(this.element);
-      header.addEventListener("mousedown", (event) => this.startDrag(event));
-      document.addEventListener("mousemove", this.handleDrag);
-      document.addEventListener("mouseup", this.endDrag);
+      return header;
+    }
+    /**
+     * 创建复制按钮
+     */
+    createCopyButton() {
+      const copyBtn = document.createElement("button");
+      copyBtn.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn`;
+      copyBtn.dataset.role = "copy";
+      const copyBtnContent = document.createElement("span");
+      copyBtnContent.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-content`;
+      const copyBtnIcon = document.createElement("span");
+      copyBtnIcon.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-icon`;
+      copyBtnIcon.textContent = "\u{1F4C4}";
+      const copyBtnText = document.createElement("span");
+      copyBtnText.textContent = "\u590D\u5236\u5230\u526A\u8D34\u677F";
+      copyBtnContent.appendChild(copyBtnIcon);
+      copyBtnContent.appendChild(copyBtnText);
+      copyBtn.appendChild(copyBtnContent);
+      copyBtn.onclick = () => {
+        this.copyToClipboard();
+        setTimeout(() => this.hide(), 1500);
+      };
+      return copyBtn;
+    }
+    /**
+     * 创建 CSV 导出按钮
+     */
+    createCSVButton(csv) {
+      const csvBtn = document.createElement("button");
+      csvBtn.className = `${this.CSS_CLASS_PREFIX}-panel-csv-btn`;
+      csvBtn.textContent = "\u{1F4CA} \u5BFC\u51FA CSV";
+      csvBtn.onclick = () => {
+        this.downloadCSV(csv);
+      };
+      return csvBtn;
     }
     /**
      * 复制到剪贴板
@@ -342,8 +276,6 @@
     }
     /**
      * 下载 CSV 文件
-     * 
-     * @param csv CSV 字符串
      */
     downloadCSV(csv) {
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -399,6 +331,14 @@
       }
     }
     /**
+     * 绑定拖动事件
+     */
+    bindDragEvents(header) {
+      header.addEventListener("mousedown", (event) => this.startDrag(event));
+      document.addEventListener("mousemove", this.handleDrag);
+      document.addEventListener("mouseup", this.endDrag);
+    }
+    /**
      * 开始拖动
      */
     startDrag(event) {
@@ -434,7 +374,6 @@
     };
     /**
      * 调整面板位置以确保完整显示在视口内
-     * 优先保证底部和右侧可见
      */
     adjustPositionForViewport() {
       if (!this.element) return;
@@ -467,179 +406,7 @@
     }
   };
 
-  // src/content/usage/storage.ts
-  var STORAGE_KEYS = {
-    USAGE_COUNT: "usage_count",
-    // 保留用于兼容
-    LAST_USAGE_DATE: "last_usage_date",
-    // 保留用于兼容
-    USAGE_STATS: "usage_stats"
-    // 新增：事件统计
-  };
-  var memoryFallback = {
-    usageCount: 0,
-    lastUsageDate: "",
-    usageStats: {
-      selectCount: 0,
-      tableDetectCount: 0,
-      columnAlignCount: 0,
-      csvExportCount: 0,
-      lastDate: ""
-    }
-  };
-  async function getUsageCount() {
-    try {
-      const result = await chrome.storage.local.get([STORAGE_KEYS.USAGE_COUNT]);
-      return result[STORAGE_KEYS.USAGE_COUNT] || 0;
-    } catch (error) {
-      console.warn("Storage access failed, using memory fallback", error);
-      return memoryFallback.usageCount;
-    }
-  }
-  async function incrementUsage() {
-    try {
-      const count = await getUsageCount();
-      await chrome.storage.local.set({
-        [STORAGE_KEYS.USAGE_COUNT]: count + 1
-      });
-    } catch (error) {
-      console.warn("Failed to increment usage, using memory fallback", error);
-      memoryFallback.usageCount += 1;
-    }
-  }
-  async function resetIfNewDay() {
-    try {
-      const today = (/* @__PURE__ */ new Date()).toDateString();
-      const result = await chrome.storage.local.get([STORAGE_KEYS.LAST_USAGE_DATE]);
-      const lastDate = result[STORAGE_KEYS.LAST_USAGE_DATE];
-      if (!lastDate || lastDate !== today) {
-        await chrome.storage.local.set({
-          [STORAGE_KEYS.USAGE_COUNT]: 0,
-          [STORAGE_KEYS.LAST_USAGE_DATE]: today,
-          [STORAGE_KEYS.USAGE_STATS]: {
-            selectCount: 0,
-            tableDetectCount: 0,
-            columnAlignCount: 0,
-            csvExportCount: 0,
-            lastDate: today
-          }
-        });
-      }
-    } catch (error) {
-      console.warn("Date reset failed, using memory fallback", error);
-      const today = (/* @__PURE__ */ new Date()).toDateString();
-      if (memoryFallback.lastUsageDate !== today) {
-        memoryFallback.usageCount = 0;
-        memoryFallback.lastUsageDate = today;
-        memoryFallback.usageStats = {
-          selectCount: 0,
-          tableDetectCount: 0,
-          columnAlignCount: 0,
-          csvExportCount: 0,
-          lastDate: today
-        };
-      }
-    }
-  }
-  async function saveStats(stats) {
-    try {
-      await chrome.storage.local.set({
-        [STORAGE_KEYS.USAGE_STATS]: stats
-      });
-    } catch (error) {
-      console.warn("Failed to save usage stats, using memory fallback", error);
-      memoryFallback.usageStats = stats;
-    }
-  }
-  async function getStats() {
-    try {
-      const result = await chrome.storage.local.get([STORAGE_KEYS.USAGE_STATS]);
-      const stats = result[STORAGE_KEYS.USAGE_STATS];
-      if (!stats) {
-        return {
-          selectCount: 0,
-          tableDetectCount: 0,
-          columnAlignCount: 0,
-          csvExportCount: 0,
-          lastDate: (/* @__PURE__ */ new Date()).toDateString()
-        };
-      }
-      return stats;
-    } catch (error) {
-      console.warn("Failed to get usage stats, using memory fallback", error);
-      if (!memoryFallback.usageStats.lastDate) {
-        memoryFallback.usageStats = {
-          selectCount: 0,
-          tableDetectCount: 0,
-          columnAlignCount: 0,
-          csvExportCount: 0,
-          lastDate: (/* @__PURE__ */ new Date()).toDateString()
-        };
-      }
-      return memoryFallback.usageStats;
-    }
-  }
-
-  // src/content/usage/usage.ts
-  async function record(event) {
-    try {
-      await resetIfNewDay();
-      const stats = await getStats();
-      switch (event) {
-        case "select":
-          stats.selectCount++;
-          break;
-        case "table-detect":
-          stats.tableDetectCount++;
-          break;
-        case "column-align":
-          stats.columnAlignCount++;
-          break;
-        case "csv-export":
-          stats.csvExportCount++;
-          break;
-      }
-      await saveStats(stats);
-    } catch (error) {
-      console.warn("Failed to record usage event", event, error);
-    }
-  }
-  async function getRecentStats() {
-    try {
-      return await getStats();
-    } catch (error) {
-      console.warn("Failed to get usage stats", error);
-      return {
-        selectCount: 0,
-        tableDetectCount: 0,
-        columnAlignCount: 0,
-        csvExportCount: 0,
-        lastDate: (/* @__PURE__ */ new Date()).toDateString()
-      };
-    }
-  }
-  async function checkUsage() {
-    await resetIfNewDay();
-    const count = await getUsageCount();
-    const policy = FREE_POLICY;
-    if (count >= policy.maxPerDay) {
-      return {
-        allowed: false,
-        reason: "limit-reached",
-        remaining: 0
-      };
-    }
-    return {
-      allowed: true,
-      remaining: policy.maxPerDay - count
-    };
-  }
-  async function consumeUsage() {
-    await incrementUsage();
-    await record("select");
-  }
-
-  // src/content/extractor/collect.ts
+  // src/content/extractor.ts
   function collect(selectionRect) {
     const items = [];
     const visibilityCache = /* @__PURE__ */ new Map();
@@ -675,7 +442,10 @@
         if (intersects(elementRect, selectionRect)) {
           items.push({
             text: node.textContent || "",
-            rect: clientRect
+            x: clientRect.left,
+            y: clientRect.top,
+            width: clientRect.width,
+            height: clientRect.height
           });
           break;
         }
@@ -690,16 +460,14 @@
   function intersects(rect1, rect2) {
     return !(rect1.right < rect2.left || rect1.left > rect2.right || rect1.bottom < rect2.top || rect1.top > rect2.bottom);
   }
-
-  // src/content/extractor/layout.ts
   function layout(items, options) {
     if (items.length === 0) return [];
     const lines = [];
     for (const item of items) {
-      const itemTop = item.rect.top;
+      const itemTop = item.y;
       let foundLine = false;
       for (const line of lines) {
-        const lineTop = line[0].rect.top;
+        const lineTop = line[0].y;
         if (Math.abs(itemTop - lineTop) <= options.lineThresholdRatio) {
           line.push(item);
           foundLine = true;
@@ -711,33 +479,31 @@
       }
     }
     for (const line of lines) {
-      line.sort((a, b) => a.rect.left - b.rect.left);
+      line.sort((a, b) => a.x - b.x);
     }
-    lines.sort((a, b) => a[0].rect.top - b[0].rect.top);
+    lines.sort((a, b) => a[0].y - b[0].y);
     return lines;
   }
-
-  // src/content/extractor/format.ts
   function format(lines) {
     if (lines.length === 0) return "";
     try {
-      const maxLines = 10;
+      const maxLines = 1e4;
       const limitedLines = lines.slice(0, maxLines);
       const resultLines = [];
       for (const line of limitedLines) {
         if (line.length === 0) continue;
-        const maxElementsPerLine = 10;
+        const maxElementsPerLine = 1e3;
         const limitedLine = line.slice(0, maxElementsPerLine);
         const lineTexts = [];
         for (const item of limitedLine) {
           const text = item.text.trim();
-          if (!text || text.length > 1e3) continue;
+          if (!text || text.length > 1e4) continue;
           lineTexts.push(text);
         }
         if (lineTexts.length > 0) {
           try {
             const lineText = lineTexts.join(" ");
-            if (lineText.length < 1e4) {
+            if (lineText.length < 1e5) {
               resultLines.push(lineText);
             }
           } catch (e) {
@@ -758,281 +524,6 @@
     }
   }
 
-  // src/content/table/detect.ts
-  var COLUMN_THRESHOLD = 50;
-  function detectTable(lines) {
-    if (lines.length === 0 || lines.every((line) => line.length === 0)) {
-      return {
-        columns: 0,
-        rows: []
-      };
-    }
-    const xPositions = [];
-    for (const line of lines) {
-      for (const item of line) {
-        const centerX = item.rect.left + item.rect.width / 2;
-        xPositions.push(centerX);
-      }
-    }
-    if (xPositions.length === 0) {
-      return {
-        columns: 0,
-        rows: []
-      };
-    }
-    const clusters = clusterXPositions(xPositions);
-    if (clusters.length === 0) {
-      return {
-        columns: 0,
-        rows: []
-      };
-    }
-    const rows = [];
-    for (const line of lines) {
-      const row = [];
-      for (const item of line) {
-        const centerX = item.rect.left + item.rect.width / 2;
-        let closestCol = 0;
-        let minDistance = Math.abs(centerX - clusters[0]);
-        for (let i = 1; i < clusters.length; i++) {
-          const distance = Math.abs(centerX - clusters[i]);
-          if (distance < minDistance) {
-            minDistance = distance;
-            closestCol = i;
-          }
-        }
-        row.push({
-          text: item.text,
-          col: closestCol,
-          x: centerX
-        });
-      }
-      if (row.length > 0) {
-        rows.push(row);
-      }
-    }
-    return {
-      columns: clusters.length,
-      rows
-    };
-  }
-  function clusterXPositions(xPositions) {
-    if (xPositions.length === 0) {
-      return [];
-    }
-    const sorted = [...xPositions].sort((a, b) => a - b);
-    const clusters = [];
-    let clusterSum = sorted[0];
-    let clusterCount = 1;
-    for (let i = 1; i < sorted.length; i++) {
-      const gap = sorted[i] - sorted[i - 1];
-      if (gap <= COLUMN_THRESHOLD) {
-        clusterSum += sorted[i];
-        clusterCount++;
-      } else {
-        clusters.push(clusterSum / clusterCount);
-        clusterSum = sorted[i];
-        clusterCount = 1;
-      }
-    }
-    clusters.push(clusterSum / clusterCount);
-    return clusters;
-  }
-
-  // src/content/table/align.ts
-  function getDisplayWidth(text) {
-    let width = 0;
-    for (const char of text) {
-      width += char.charCodeAt(0) > 127 ? 2 : 1;
-    }
-    return width;
-  }
-  function alignTable(table) {
-    if (table.columns === 0 || table.rows.length === 0) {
-      return [];
-    }
-    const columnWidths = new Array(table.columns).fill(0);
-    for (const row of table.rows) {
-      for (const cell of row) {
-        const width = getDisplayWidth(cell.text);
-        if (width > columnWidths[cell.col]) {
-          columnWidths[cell.col] = width;
-        }
-      }
-    }
-    const aligned = [];
-    for (const row of table.rows) {
-      const sortedCells = [...row].sort((a, b) => a.col - b.col);
-      const alignedRow = [];
-      for (let col = 0; col < table.columns; col++) {
-        const cell = sortedCells.find((c) => c.col === col);
-        const text = cell?.text || "";
-        const width = getDisplayWidth(text);
-        const padding = columnWidths[col] - width;
-        alignedRow.push(text + " ".repeat(Math.max(0, padding + 2)));
-      }
-      aligned.push(alignedRow);
-    }
-    return aligned;
-  }
-
-  // src/content/table/csv.ts
-  function escapeCSVField(text) {
-    const needsQuotes = /[",\n\r]/.test(text);
-    if (needsQuotes) {
-      const escaped = text.replace(/"/g, '""');
-      return `"${escaped}"`;
-    }
-    return text;
-  }
-  function toCSV(table) {
-    if (table.columns === 0 || table.rows.length === 0) {
-      return "";
-    }
-    const lines = [];
-    for (const row of table.rows) {
-      const sortedCells = [...row].sort((a, b) => a.col - b.col);
-      const fields = [];
-      for (let col = 0; col < table.columns; col++) {
-        const cell = sortedCells.find((c) => c.col === col);
-        fields.push(escapeCSVField(cell?.text || ""));
-      }
-      lines.push(fields.join(","));
-    }
-    return lines.join("\n");
-  }
-
-  // src/content/pro/gate.ts
-  async function getProState() {
-    try {
-      const result = await chrome.storage.local.get(["pro_state"]);
-      return result.pro_state || {
-        isPro: false,
-        signature: "",
-        features: {
-          "table-detect": false,
-          "column-align": false,
-          "csv-export": false
-        }
-      };
-    } catch (error) {
-      console.error("Failed to get Pro state:", error);
-      return {
-        isPro: false,
-        signature: "",
-        features: {
-          "table-detect": false,
-          "column-align": false,
-          "csv-export": false
-        }
-      };
-    }
-  }
-  function verifySignature(state) {
-    try {
-      if (!state.isPro) {
-        return true;
-      }
-      if (!state.signature || state.signature.length === 0) {
-        console.warn("Invalid Pro signature: empty signature");
-        return false;
-      }
-      if (state.signature.length < 16) {
-        console.warn("Invalid Pro signature: signature too short");
-        return false;
-      }
-      return true;
-    } catch (error) {
-      console.error("Signature verification failed:", error);
-      return false;
-    }
-  }
-  function verifyCallPath() {
-    try {
-      const stack = new Error().stack || "";
-      const isTestEnv = stack.includes("pro-gate.test") || false || typeof jest !== "undefined";
-      if (isTestEnv) {
-        return true;
-      }
-      const isValidPath = stack.includes("content.ts") || stack.includes("content.js") || stack.includes("content/content");
-      if (!isValidPath) {
-        console.warn("Invalid call path detected");
-      }
-      return isValidPath;
-    } catch (error) {
-      console.error("Call path verification failed:", error);
-      return false;
-    }
-  }
-  function verifyUsagePattern(feature, stats) {
-    try {
-      const THRESHOLD = 1e3;
-      switch (feature) {
-        case "table-detect":
-          if (stats.tableDetectCount > THRESHOLD) {
-            console.warn(`Abnormal usage pattern detected for ${feature}: ${stats.tableDetectCount} times`);
-            return false;
-          }
-          break;
-        case "column-align":
-          if (stats.columnAlignCount > THRESHOLD) {
-            console.warn(`Abnormal usage pattern detected for ${feature}: ${stats.columnAlignCount} times`);
-            return false;
-          }
-          break;
-        case "csv-export":
-          if (stats.csvExportCount > THRESHOLD) {
-            console.warn(`Abnormal usage pattern detected for ${feature}: ${stats.csvExportCount} times`);
-            return false;
-          }
-          break;
-        default:
-          return true;
-      }
-      return true;
-    } catch (error) {
-      console.error("Usage pattern verification failed:", error);
-      return true;
-    }
-  }
-  async function allow(feature) {
-    const state = await getProState();
-    if (!verifySignature(state)) {
-      console.warn(`Pro feature '${feature}' denied: signature verification failed`);
-      return false;
-    }
-    if (!verifyCallPath()) {
-      console.warn(`Pro feature '${feature}' denied: invalid call path`);
-      return false;
-    }
-    if (!state.isPro) {
-      return false;
-    }
-    const featureEnabled = state.features?.[feature] === true;
-    if (!featureEnabled) {
-      console.warn(`Pro feature '${feature}' denied: feature not enabled`);
-      return false;
-    }
-    const usageStats = await getRecentStats();
-    if (!verifyUsagePattern(feature, usageStats)) {
-      console.warn(`Pro feature '${feature}' denied: abnormal usage pattern`);
-      return false;
-    }
-    return true;
-  }
-
-  // src/content/pro/strategy.ts
-  function resolvePipeline(mode) {
-    switch (mode) {
-      case "text":
-        return "free";
-      case "table":
-        return "pro";
-      default:
-        return "free";
-    }
-  }
-
   // src/content/content.ts
   var BrowserSelectionCopy = class _BrowserSelectionCopy {
     // 需要忽略的交互元素标签名
@@ -1044,14 +535,12 @@
     };
     selection;
     panel;
-    // 仅忽略紧随选择动作产生的首个 click
     ignoreNextOutsideClick = false;
     lastSelectionRect = null;
     settings = {
       enabled: false,
       panelPosition: "center"
     };
-    lastMouseUpPoint = null;
     handleMouseDownBound = this.handleMouseDown.bind(this);
     handleMouseMoveBound = this.handleMouseMove.bind(this);
     handleMouseUpBound = this.handleMouseUp.bind(this);
@@ -1066,7 +555,7 @@
       this.bindEvents();
     }
     /**
-     * 绑定鼠标事件
+     * 绑定事件
      */
     bindEvents() {
       document.addEventListener("mousedown", this.handleMouseDownBound);
@@ -1090,16 +579,10 @@
      */
     handleMouseDown(event) {
       if (!this.settings.enabled) return;
-      if (event.button !== 0) {
-        return;
-      }
-      if (this.panel.contains(event.target)) {
-        return;
-      }
+      if (event.button !== 0) return;
+      if (this.panel.contains(event.target)) return;
       const target = event.target;
-      if (_BrowserSelectionCopy.IGNORED_TAGS.includes(target.tagName)) {
-        return;
-      }
+      if (_BrowserSelectionCopy.IGNORED_TAGS.includes(target.tagName)) return;
       this.selection.start(event.clientX, event.clientY);
       event.preventDefault();
       event.stopPropagation();
@@ -1119,35 +602,14 @@
      */
     async handleMouseUp(event) {
       if (!this.settings.enabled) return;
-      if (!this.selection.getIsSelecting()) {
-        return;
-      }
+      if (!this.selection.getIsSelecting()) return;
       const rect = this.selection.finish();
-      this.lastMouseUpPoint = { x: event.clientX, y: event.clientY };
       if (rect && this.selection.isValid(rect)) {
-        await record("select");
-        const usage = await checkUsage();
-        if (!usage.allowed) {
-          this.panel.showLimitReached();
-          return;
-        }
         const items = collect(rect);
         const lines = layout(items, _BrowserSelectionCopy.DEFAULT_LAYOUT_OPTIONS);
-        const mode = this.getUserSelectedMode();
-        const pipelineType = resolvePipeline(mode);
-        if (pipelineType === "pro") {
-          await this.handleProPipeline(lines, rect);
-        } else {
-          const text = format(lines);
-          if (text.trim()) {
-            this.lastSelectionRect = rect;
-            await this.handleShowResult(text);
-            await consumeUsage();
-          } else {
-            this.panel.hide();
-            this.lastSelectionRect = null;
-          }
-        }
+        const text = format(lines);
+        const result = await this.requestAction("text-extract", text);
+        this.executeUIAction(result);
       }
       event.preventDefault();
       event.stopPropagation();
@@ -1234,127 +696,47 @@
       }
     }
     /**
-     * 根据配置展示结果或直接复制
+     * 向 background 请求执行操作
      */
-    async handleShowResult(text) {
-      const mode = this.settings.panelPosition;
-      if (mode === "none") {
-        navigator.clipboard?.writeText(text).catch((error) => {
-          console.error("\u76F4\u63A5\u590D\u5236\u5931\u8D25:", error);
-        });
-        return;
-      }
-      const position = this.calcPanelPosition(mode);
-      const usage = await checkUsage();
-      const options = {
-        position,
-        editable: true
+    async requestAction(action, data) {
+      const message = {
+        type: "REQUEST_ACTION",
+        payload: { action, data }
       };
-      if (usage.remaining !== void 0) {
-        options.usageInfo = {
-          remaining: usage.remaining,
-          max: FREE_POLICY.maxPerDay
-        };
-      }
-      this.panel.show(text, options);
-      this.ignoreNextOutsideClick = true;
-    }
-    /**
-     * 计算面板位置
-     */
-    calcPanelPosition(mode) {
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const panelWidth = 320;
-      const panelHeight = 320;
-      if (mode === "center") {
+      try {
+        const response = await chrome.runtime.sendMessage(message);
+        return response;
+      } catch (error) {
+        console.error("Failed to request action:", error);
         return {
-          left: Math.max(10, (viewportWidth - panelWidth) / 2),
-          top: Math.max(10, (viewportHeight - panelHeight) / 2)
+          status: "blocked",
+          uiAction: "SHOW_RESULT_PANEL",
+          uiData: {
+            message: "\u64CD\u4F5C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5"
+          }
         };
       }
-      const anchor = this.lastMouseUpPoint || { x: viewportWidth / 2, y: viewportHeight / 2 };
-      return {
-        left: anchor.x + 16,
-        top: anchor.y + 16
-      };
     }
     /**
-     * 获取用户选择的模式
+     * 执行 UI 动作
      * 
-     * 默认为 text 模式，用户可以通过 UI 切换
-     * 当前简化实现：从 storage 读取
-     * 
-     * @returns 内容模式
+     * 关键：content 不判断 status，只执行 uiAction
      */
-    getUserSelectedMode() {
-      return "text";
-    }
-    /**
-     * 处理 Pro Pipeline
-     * 
-     * 执行表格检测、列对齐和 CSV 导出的完整流程
-     * 每个步骤都有独立的权限检查
-     * 
-     * @param lines 视觉行数组
-     * @param rect 选择区域
-     */
-    async handleProPipeline(lines, rect) {
-      if (!await allow("table-detect")) {
-        this.panel.showProRequired();
-        return;
-      }
-      await record("table-detect");
-      const table = detectTable(lines);
-      if (table.columns === 0 || table.rows.length === 0) {
-        const text = format(lines);
-        if (text.trim()) {
-          this.lastSelectionRect = rect;
-          await this.handleShowResult(text);
-          await consumeUsage();
-        } else {
-          this.panel.hide();
-          this.lastSelectionRect = null;
-        }
-        return;
-      }
-      let aligned = [];
-      if (await allow("column-align")) {
-        await record("column-align");
-        aligned = alignTable(table);
-      } else {
-        const text = format(lines);
-        if (text.trim()) {
-          this.lastSelectionRect = rect;
-          await this.handleShowResult(text);
-          await consumeUsage();
-        } else {
-          this.panel.hide();
-          this.lastSelectionRect = null;
-        }
-        return;
-      }
-      if (aligned.length > 0) {
-        this.lastSelectionRect = rect;
-        const mode = this.settings.panelPosition;
-        if (mode === "none") {
-          const alignedText = aligned.map((row) => row.join("")).join("\n");
-          navigator.clipboard?.writeText(alignedText).catch((error) => {
-            console.error("\u76F4\u63A5\u590D\u5236\u5931\u8D25:", error);
-          });
-        } else {
-          this.panel.showAligned(aligned);
-          if (await allow("csv-export")) {
-            await record("csv-export");
-            const csv = toCSV(table);
-            this.panel.enableCSVExport(csv);
-          }
+    executeUIAction(result) {
+      const { uiAction, uiData } = result;
+      switch (uiAction) {
+        case "SHOW_RESULT_PANEL":
+          this.panel.showResult(uiData);
           this.ignoreNextOutsideClick = true;
-        }
-        await consumeUsage();
-      } else {
-        this.panel.hide();
-        this.lastSelectionRect = null;
+          break;
+        case "SHOW_LIMIT_PANEL":
+          this.panel.showLimit(uiData);
+          break;
+        case "SHOW_PRO_PANEL":
+          this.panel.showPro(uiData);
+          break;
+        default:
+          console.warn("Unknown UI action:", uiAction);
       }
     }
     /**

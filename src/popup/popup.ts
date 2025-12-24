@@ -1,4 +1,6 @@
-import type { PanelPosition, PluginSettings } from '../types';
+import type { PluginSettings } from '../shared/types';
+
+type PanelPosition = PluginSettings['panelPosition'];
 
 const DEFAULTS: PluginSettings = {
   enabled: false,
