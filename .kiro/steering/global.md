@@ -5,13 +5,11 @@ inclusion: always
 # 全局开发规则
 
 ## 语言和注释规范
+- Always reply in Chinese
 - 所有代码注释必须使用中文
-- 问题回答和解释使用中文
-- 变量名和函数名使用英文，但注释说明使用中文
 
 ## 测试规则
 - Jest 直接使用 `npm test`，不需要 --run 参数
-- 测试脚本命令 `*.test.ts`，*为单词级命名规则
 
 ## 报告文件
 - 所有报告文件放到 `./docs/report` 目录下

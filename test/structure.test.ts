@@ -1,6 +1,6 @@
 // 项目结构验证测试
 
-import { BrowserSelectionCopy } from '../src/content/content';
+import { BrowserSelectionCopy } from '../src/content';
 import { SelectionRect, TextItem } from '../src/shared/types';
 
 describe('项目结构测试', () => {

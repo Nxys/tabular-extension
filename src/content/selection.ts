@@ -1,4 +1,5 @@
 import type { SelectionRect } from '../shared/types';
+import { CSS_CLASS_PREFIX, MIN_SELECTION_SIZE } from '../shared/constants';
 
 /**
  * 选择框组件
@@ -9,7 +10,6 @@ export class Selection {
   private startX = 0;
   private startY = 0;
   private isSelecting = false;
-  private readonly CSS_CLASS_PREFIX = 'browser-selection-copy';
 
   /**
    * 开始选择
@@ -67,7 +67,7 @@ export class Selection {
   isValid(rect: SelectionRect): boolean {
     const width = rect.right - rect.left;
     const height = rect.bottom - rect.top;
-    return width > 5 && height > 5;
+    return width > MIN_SELECTION_SIZE && height > MIN_SELECTION_SIZE;
   }
 
   /**
@@ -93,7 +93,7 @@ export class Selection {
    */
   private createElement(): void {
     this.element = document.createElement('div');
-    this.element.className = `${this.CSS_CLASS_PREFIX}-box`;
+    this.element.className = `${CSS_CLASS_PREFIX}-box`;
     
     // 只设置动态位置和尺寸，其他样式由 CSS 控制
     Object.assign(this.element.style, {

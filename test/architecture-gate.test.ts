@@ -14,7 +14,7 @@ import * as fs from 'fs';
 describe('架构守门测试', () => {
   describe('属性 1：架构约束完整性', () => {
     const contentFiles = [
-      'src/content/content.ts',
+      'src/content/index.ts',
       'src/content/panel.ts',
       'src/content/extractor.ts',
       'src/content/selection.ts'
@@ -99,7 +99,7 @@ describe('架构守门测试', () => {
     });
 
     test('Content 层不得根据 status 进行二次判断', () => {
-      const contentFile = 'src/content/content.ts';
+      const contentFile = 'src/content/index.ts';
       const content = fs.readFileSync(contentFile, 'utf-8');
       
       // 检查是否有根据 status 的条件判断
@@ -116,7 +116,7 @@ describe('架构守门测试', () => {
 
   describe('属性 7：Storage 访问隔离', () => {
     const contentFiles = [
-      'src/content/content.ts',
+      'src/content/index.ts',
       'src/content/panel.ts',
       'src/content/extractor.ts',
       'src/content/selection.ts'
@@ -217,7 +217,7 @@ describe('架构守门测试', () => {
 
     test('Content 目录结构正确', () => {
       const requiredFiles = [
-        'src/content/content.ts',
+        'src/content/index.ts',
         'src/content/panel.ts',
         'src/content/extractor.ts',
         'src/content/selection.ts',

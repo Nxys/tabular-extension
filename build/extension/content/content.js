@@ -524,7 +524,7 @@
     }
   }
 
-  // src/content/content.ts
+  // src/content/index.ts
   var BrowserSelectionCopy = class _BrowserSelectionCopy {
     // 需要忽略的交互元素标签名
     static IGNORED_TAGS = ["INPUT", "TEXTAREA", "SELECT", "BUTTON"];

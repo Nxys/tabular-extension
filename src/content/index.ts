@@ -20,23 +20,14 @@ import type {
   RequestActionMessage, 
   ActionResultMessage, 
   PluginSettings,
-  SelectionRect,
-  LayoutOptions 
+  SelectionRect
 } from '../shared/types';
+import { IGNORED_TAGS, DEFAULT_LAYOUT_OPTIONS } from '../shared/constants';
 
 /**
  * 浏览器框选复制插件 - 内容脚本
  */
 class BrowserSelectionCopy {
-  // 需要忽略的交互元素标签名
-  private static readonly IGNORED_TAGS = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'];
-
-  // 默认布局选项
-  private static readonly DEFAULT_LAYOUT_OPTIONS: LayoutOptions = {
-    lineThresholdRatio: 5,
-    minHorizontalGap: 10
-  };
-
   private selection: Selection;
   private panel: Panel;
   private ignoreNextOutsideClick = false;
@@ -96,7 +87,7 @@ class BrowserSelectionCopy {
 
     // 忽略在交互元素上的点击
     const target = event.target as Element;
-    if (BrowserSelectionCopy.IGNORED_TAGS.includes(target.tagName)) return;
+    if (IGNORED_TAGS.includes(target.tagName)) return;
 
     this.selection.start(event.clientX, event.clientY);
     event.preventDefault();
@@ -126,7 +117,7 @@ class BrowserSelectionCopy {
     if (rect && this.selection.isValid(rect)) {
       // 1. 执行数据提取（核心资产，保留在 content）
       const items = collect(rect);
-      const lines = layout(items, BrowserSelectionCopy.DEFAULT_LAYOUT_OPTIONS);
+      const lines = layout(items, DEFAULT_LAYOUT_OPTIONS);
       const text = format(lines);
 
       // 2. 发送 REQUEST_ACTION 到 background

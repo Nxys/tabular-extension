@@ -1,3 +1,5 @@
+import { CSS_CLASS_PREFIX } from '../shared/constants';
+
 /**
  * 面板调度（创建 / 销毁 - 合并版）
  * 
@@ -16,7 +18,6 @@
 export class Panel {
   private element: HTMLDivElement | null = null;
   private currentText = '';
-  private readonly CSS_CLASS_PREFIX = 'browser-selection-copy';
   private dragState:
     | { startX: number; startY: number; originLeft: number; originTop: number }
     | null = null;
@@ -31,17 +32,17 @@ export class Panel {
     
     // 创建面板
     this.element = document.createElement('div');
-    this.element.className = `${this.CSS_CLASS_PREFIX}-panel`;
+    this.element.className = `${CSS_CLASS_PREFIX}-panel`;
     
     // 标题栏
     const header = this.createHeader('📋', '文本预览');
     
     // 内容区域
     const previewWrapper = document.createElement('div');
-    previewWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-preview-wrapper`;
+    previewWrapper.className = `${CSS_CLASS_PREFIX}-panel-preview-wrapper`;
 
     const preview = document.createElement('textarea');
-    preview.className = `${this.CSS_CLASS_PREFIX}-panel-textarea`;
+    preview.className = `${CSS_CLASS_PREFIX}-panel-textarea`;
     preview.readOnly = false;
     
     // 渲染内容
@@ -51,7 +52,7 @@ export class Panel {
     } else if (uiData?.table) {
       this.currentText = uiData.table.map(row => row.join('')).join('\n');
       preview.value = this.currentText;
-      this.element.classList.add(`${this.CSS_CLASS_PREFIX}-table-mode`);
+      this.element.classList.add(`${CSS_CLASS_PREFIX}-table-mode`);
     }
     
     preview.oninput = (e) => {
@@ -63,7 +64,7 @@ export class Panel {
 
     // 复制按钮容器
     const copyBtnWrapper = document.createElement('div');
-    copyBtnWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-copy-wrapper`;
+    copyBtnWrapper.className = `${CSS_CLASS_PREFIX}-panel-copy-wrapper`;
 
     // 复制按钮
     const copyBtn = this.createCopyButton();
@@ -95,17 +96,17 @@ export class Panel {
     
     // 创建面板
     this.element = document.createElement('div');
-    this.element.className = `${this.CSS_CLASS_PREFIX}-panel ${this.CSS_CLASS_PREFIX}-panel-force-center`;
+    this.element.className = `${CSS_CLASS_PREFIX}-panel ${CSS_CLASS_PREFIX}-panel-force-center`;
     
     // 标题栏
     const header = this.createHeader('🚫', '使用限制');
     
     // 消息内容
     const messageWrapper = document.createElement('div');
-    messageWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-message-wrapper`;
+    messageWrapper.className = `${CSS_CLASS_PREFIX}-panel-message-wrapper`;
 
     const message = document.createElement('div');
-    message.className = `${this.CSS_CLASS_PREFIX}-panel-message`;
+    message.className = `${CSS_CLASS_PREFIX}-panel-message`;
     message.textContent = uiData?.message || '今日免费次数已用完';
 
     messageWrapper.appendChild(message);
@@ -128,17 +129,17 @@ export class Panel {
     
     // 创建面板
     this.element = document.createElement('div');
-    this.element.className = `${this.CSS_CLASS_PREFIX}-panel ${this.CSS_CLASS_PREFIX}-panel-force-center`;
+    this.element.className = `${CSS_CLASS_PREFIX}-panel ${CSS_CLASS_PREFIX}-panel-force-center`;
     
     // 标题栏
     const header = this.createHeader('⭐', 'Pro 功能');
     
     // 消息内容
     const messageWrapper = document.createElement('div');
-    messageWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-message-wrapper`;
+    messageWrapper.className = `${CSS_CLASS_PREFIX}-panel-message-wrapper`;
 
     const message = document.createElement('div');
-    message.className = `${this.CSS_CLASS_PREFIX}-panel-message`;
+    message.className = `${CSS_CLASS_PREFIX}-panel-message`;
     message.textContent = uiData?.message || '这是 Pro 功能';
 
     messageWrapper.appendChild(message);
@@ -182,13 +183,13 @@ export class Panel {
    */
   private createHeader(icon: string, title: string): HTMLDivElement {
     const header = document.createElement('div');
-    header.className = `${this.CSS_CLASS_PREFIX}-panel-header`;
+    header.className = `${CSS_CLASS_PREFIX}-panel-header`;
 
     const titleSpan = document.createElement('span');
-    titleSpan.className = `${this.CSS_CLASS_PREFIX}-panel-title`;
+    titleSpan.className = `${CSS_CLASS_PREFIX}-panel-title`;
     
     const iconSpan = document.createElement('span');
-    iconSpan.className = `${this.CSS_CLASS_PREFIX}-panel-icon`;
+    iconSpan.className = `${CSS_CLASS_PREFIX}-panel-icon`;
     iconSpan.textContent = icon;
     
     const titleText = document.createElement('span');
@@ -199,7 +200,7 @@ export class Panel {
 
     const closeBtn = document.createElement('button');
     closeBtn.type = 'button';
-    closeBtn.className = `${this.CSS_CLASS_PREFIX}-panel-close`;
+    closeBtn.className = `${CSS_CLASS_PREFIX}-panel-close`;
     closeBtn.textContent = '×';
     closeBtn.onclick = () => this.hide();
 
@@ -214,14 +215,14 @@ export class Panel {
    */
   private createCopyButton(): HTMLButtonElement {
     const copyBtn = document.createElement('button');
-    copyBtn.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn`;
+    copyBtn.className = `${CSS_CLASS_PREFIX}-panel-copy-btn`;
     copyBtn.dataset.role = 'copy';
     
     const copyBtnContent = document.createElement('span');
-    copyBtnContent.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-content`;
+    copyBtnContent.className = `${CSS_CLASS_PREFIX}-panel-copy-btn-content`;
     
     const copyBtnIcon = document.createElement('span');
-    copyBtnIcon.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-icon`;
+    copyBtnIcon.className = `${CSS_CLASS_PREFIX}-panel-copy-btn-icon`;
     copyBtnIcon.textContent = '📄';
     
     const copyBtnText = document.createElement('span');
@@ -244,7 +245,7 @@ export class Panel {
    */
   private createCSVButton(csv: string): HTMLButtonElement {
     const csvBtn = document.createElement('button');
-    csvBtn.className = `${this.CSS_CLASS_PREFIX}-panel-csv-btn`;
+    csvBtn.className = `${CSS_CLASS_PREFIX}-panel-csv-btn`;
     csvBtn.textContent = '📊 导出 CSV';
     csvBtn.onclick = () => {
       this.downloadCSV(csv);
@@ -288,8 +289,8 @@ export class Panel {
     const btn = this.element?.querySelector<HTMLButtonElement>('button[data-role="copy"]');
     if (btn) {
       const originalHTML = btn.innerHTML;
-      const iconSpan = btn.querySelector(`.${this.CSS_CLASS_PREFIX}-panel-copy-btn-icon`);
-      const textSpan = btn.querySelector(`.${this.CSS_CLASS_PREFIX}-panel-copy-btn-content span:last-child`);
+      const iconSpan = btn.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn-icon`);
+      const textSpan = btn.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn-content span:last-child`);
       
       if (iconSpan && textSpan) {
         iconSpan.textContent = '✓';
@@ -314,8 +315,8 @@ export class Panel {
     const btn = this.element?.querySelector<HTMLButtonElement>('button[data-role="copy"]');
     if (btn) {
       const originalHTML = btn.innerHTML;
-      const iconSpan = btn.querySelector(`.${this.CSS_CLASS_PREFIX}-panel-copy-btn-icon`);
-      const textSpan = btn.querySelector(`.${this.CSS_CLASS_PREFIX}-panel-copy-btn-content span:last-child`);
+      const iconSpan = btn.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn-icon`);
+      const textSpan = btn.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn-content span:last-child`);
       
       if (iconSpan && textSpan) {
         iconSpan.textContent = '✗';

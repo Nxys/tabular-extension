@@ -18,7 +18,7 @@ src/
 │  └─ storage.ts                    # chrome.storage 统一封装
 │
 ├─ content/                         # ❌ 无业务、无状态
-│  ├─ content.ts                    # Content 入口（事件监听 / 消息）
+│  ├─ index.ts                      # Content 入口（事件监听 / 消息）
 │  ├─ content.css                   # Content 样式：框选样式、面板样式
 │  ├─ selection.ts                  # 框选逻辑
 │  ├─ extractor.ts                  # 页面数据提取（核心资产）
@@ -35,15 +35,24 @@ src/
 │  └─ popup.ts                      # 设置变更 + 状态查询
 │
 ├─ shared/                          # 🛡️ 协议护城河
-│  └─ types.ts                      # 跨层类型定义、枚举
-│                                   # - 消息协议
-│                                   # - Action 枚举
-│                                   # - UI Action 枚举
-│                                   # - 其他跨层类型
+│  ├─ types.ts                      # 跨层类型定义、枚举
+│  │                                # - 消息协议
+│  │                                # - Action 枚举
+│  │                                # - UI Action 枚举
+│  │                                # - 其他跨层类型
+│  └─ constants.ts                  # 跨层常量定义
+│                                   # - 跨模块共享的常量
+│                                   # - 配置常量
 │
 └─ images/                          # 🟦 插件图标
    └─ icon.html
 ```
+
+## 整体设计原则
+
+1. **职责分离**：Background 层负责所有业务逻辑和状态管理，Content 层只负责页面交互和 UI 渲染，Shared 层只包含类型定义和协议
+2. **单向依赖**：Background 和 Content 都依赖 Shared，但 Background 和 Content 之间禁止相互依赖
+3. **消息驱动**：层与层之间通过消息通信，使用明确的协议格式，避免直接调用
 
 ## 架构原则
 
@@ -81,13 +90,33 @@ src/
 - 消息协议定义（REQUEST_ACTION、ACTION_RESULT）
 - 枚举类型定义（ActionType、UIAction、ActionStatus）
 - 跨层纯类型定义
-- 所有类型定义集中在 types.ts 中
+- 跨模块共享的常量定义
+- 类型定义集中在 types.ts 中
+- 常量定义集中在 constants.ts 中
 
 **禁止**：
 - 不得包含业务逻辑
 - 不得包含状态管理
 - 不得包含 usage、pro、policy、strategy 相关定义
 - 不得暴露业务概念（freeCount、limit、planType）到 content 层
+- constants.ts 只存储真正跨模块的常量，业务常量应放在对应的业务模块中
+
+### Popup 层（独立壳层）
+
+**职责**：
+- 提供快速配置入口
+- 设置变更（enabled、panelPosition）
+- 状态查询（只读）
+
+**禁止**：
+- 不得包含业务逻辑
+- 不得直接修改 storage（通过 settings.ts）
+
+## 样式与 UI 设计约定
+
+1. **样式集中管理**：所有 Content 层的样式集中在 `content.css` 中，包括框选样式和面板样式
+2. **UI 决策权在 Background**：Content 层不得根据业务状态自行决定展示哪种 UI，只能无条件执行 Background 下发的 uiAction
+3. **文案由 Background 生成**：所有业务相关文案（如 "剩余 X 次"）由 Background 生成并通过 uiData.message 传递给 Content
 
 ## 文件职责说明
 
@@ -123,7 +152,7 @@ src/
 
 ### Content 层文件
 
-**content.ts**：
+**index.ts**：
 - Content 入口
 - 事件监听（mousedown / mousemove / mouseup）
 - 消息发送（REQUEST_ACTION）
@@ -154,11 +183,16 @@ src/
 
 ### Shared 层文件
 
-**types.ts**（合并版）：
+**types.ts**：
 - 消息协议（RequestActionMessage、ActionResultMessage）
 - Action 枚举（ActionType）
 - UI Action 枚举（UIAction、ActionStatus）
 - 其他跨层类型（SelectionRect、PluginSettings 等）
+
+**constants.ts**：
+- 跨模块共享的常量
+- 配置常量（如默认值、限制值等）
+- 注意：业务常量应定义在对应的业务模块中（如 usage.ts 中的 maxPerDay）
 
 ## 消息通信协议
 
@@ -193,6 +227,28 @@ src/
 }
 ```
 
+## 通信与状态设计
+
+### 消息流向
+
+1. **用户交互 → Content**：用户在页面上进行框选操作
+2. **Content → Background**：Content 发送 REQUEST_ACTION 消息，携带 action 类型和数据
+3. **Background 处理**：Background 执行业务逻辑判断、状态检查、策略决策
+4. **Background → Content**：Background 返回 ACTION_RESULT 消息，携带 status、uiAction 和 uiData
+5. **Content 渲染**：Content 根据 uiAction 无条件渲染对应的 UI
+
+### 状态分级
+
+1. **全局状态（Background）**：usage、pro、settings 等业务状态，只能在 Background 层读写
+2. **UI 状态（Content）**：选择框位置、面板显示状态等 UI 状态，只能在 Content 层管理
+3. **共享协议（Shared）**：消息格式、枚举类型等跨层协议，定义在 Shared 层
+
+### 状态同步
+
+- Background 通过 chrome.storage.local 持久化状态
+- Content 不得直接读取 chrome.storage.local 中的业务数据
+- Content 需要业务状态时，必须通过消息向 Background 请求
+
 ## 关键约束
 
 ### UI 决策权
@@ -223,6 +279,7 @@ src/
 
 - 测试文件：与源文件同名，后缀 `.test.ts`，放在 `test/` 目录
 - 类型定义：集中在 `shared/types.ts`
+- 常量定义：跨模块常量集中在 `shared/constants.ts`，业务常量放在对应的业务模块中
 - 样式文件：`content.css`
 
 ## 依赖关系
@@ -243,3 +300,101 @@ content/    ✗ background/  (禁止)
 - **Shared 层**：100%（纯类型定义）
 - **属性测试**：最少 100 次迭代
 - **架构守门测试**：强制执行，禁止跳过
+
+## 工程与构建层共识
+
+### 构建工具
+
+- 使用 TypeScript 进行类型检查
+- 使用 ESLint 进行代码规范检查
+- 使用 Jest 进行单元测试和属性测试
+
+### 测试规范
+
+- 测试文件与源文件同名，后缀 `.test.ts`，放在 `test/` 目录
+- 单元测试覆盖核心功能逻辑
+- 属性测试验证通用正确性属性
+- 架构守门测试验证依赖关系和文件结构
+
+### 代码规范
+
+- 所有代码和注释使用中文
+- 使用 TypeScript 严格模式
+- 禁止使用 any 类型（除非必要）
+- 所有导出的函数和类型必须有注释
+
+### 目录规范
+
+- 源码放在 `src/` 目录
+- 测试放在 `test/` 目录
+- 文档放在 `docs/` 目录
+- 构建产物放在 `build/` 目录
+
+## 被明确否定的设计方向
+
+### 1. Content 层包含业务逻辑
+
+**否定原因**：
+- 违反职责分离原则
+- 导致业务逻辑分散，难以维护
+- 增加测试复杂度
+
+**正确做法**：
+- 所有业务逻辑集中在 Background 层
+- Content 层只负责页面交互和 UI 渲染
+
+### 2. Content 层直接访问 storage
+
+**否定原因**：
+- 破坏状态管理的单一来源
+- 导致状态不一致
+- 增加调试难度
+
+**正确做法**：
+- Content 层通过消息向 Background 请求数据
+- Background 层统一管理 storage 访问
+
+### 3. Shared 层包含业务逻辑或状态
+
+**否定原因**：
+- 违反协议层的纯粹性
+- 导致跨层耦合
+- 增加维护成本
+
+**正确做法**：
+- Shared 层只包含类型定义和协议
+- 业务逻辑和状态管理都在 Background 层
+
+### 4. Content 层根据 status 自行决定 UI
+
+**否定原因**：
+- 违反 UI 决策权在 Background 的原则
+- 导致 UI 逻辑分散
+- 增加测试复杂度
+
+**正确做法**：
+- Background 通过 uiAction 明确指定要展示的 UI
+- Content 层无条件执行 uiAction
+
+### 5. 在多个文件中定义类型
+
+**否定原因**：
+- 导致类型定义分散
+- 增加维护成本
+- 容易出现类型不一致
+
+**正确做法**：
+- 所有跨层类型定义集中在 `shared/types.ts`
+- 模块内部类型可以在模块内定义
+
+### 6. 滥用 constants.ts 存储业务常量
+
+**否定原因**：
+- 业务常量应该与业务逻辑放在一起
+- 避免创建"垃圾桶"文件
+- 提高代码可读性
+
+**正确做法**：
+- 业务常量定义在对应的业务模块中（如 usage.ts 中的 maxPerDay）
+- constants.ts 只存储真正跨模块共享的常量（如配置默认值、UI 常量等）
+- 如果常量只在一个模块中使用，就应该定义在该模块内部

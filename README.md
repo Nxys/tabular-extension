@@ -27,33 +27,57 @@
 ```
 browser-selection-copy/
 ├── src/                  # TypeScript 源代码
-│   ├── background/      # Background 层（唯一业务与状态源）
-│   │   ├── index.ts    # Background 入口 + 消息分发
-│   │   ├── usage.ts    # 使用次数 + 策略（合并版）
-│   │   ├── pro.ts      # Pro 判断（合并版）
-│   │   ├── settings.ts # 插件设置
-│   │   └── storage.ts  # chrome.storage 统一封装
-│   ├── content/         # Content 层（无业务、无状态）
-│   │   ├── content.ts  # Content 入口（事件监听 / 消息）
-│   │   ├── content.css # Content 样式
-│   │   ├── selection.ts # 框选逻辑
-│   │   ├── extractor.ts # 页面数据提取（合并版）
-│   │   └── panel.ts    # 面板调度（合并版）
-│   ├── popup/           # Popup 层（独立壳层）
+│   ├── manifest.json     # 扩展配置
+│   │
+│   ├── background/       # ✅ 唯一业务与状态源
+│   │   ├── index.ts      # Background 入口 + 消息分发
+│   │   ├── usage.ts      # 使用次数 + 策略（合并版）
+│   │   ├── pro.ts        # Pro 判断（合并版，未实现也可占位）
+│   │   ├── settings.ts   # 插件设置（开关 / 面板位置）
+│   │   └── storage.ts    # chrome.storage 统一封装
+│   │
+│   ├── content/          # ❌ 无业务、无状态
+│   │   ├── index.ts      # Content 入口（事件监听 / 消息）
+│   │   ├── content.css   # Content 样式：框选样式、面板样式
+│   │   ├── selection.ts  # 框选逻辑
+│   │   ├── extractor.ts  # 页面数据提取（核心资产）
+│   │   │                 # - DOM 信息采集
+│   │   │                 # - 排版结构分析
+│   │   │                 # - 数据格式化
+│   │   └── panel.ts      # 面板调度（创建 / 销毁）
+│   │                     # - 成功结果 UI
+│   │                     # - 免费用尽 UI
+│   │                     # - 升级 Pro UI
+│   │
+│   ├── popup/            # 🟨 独立壳层（只读状态）
 │   │   ├── popup.html
-│   │   └── popup.ts    # 设置变更 + 状态查询
-│   ├── shared/          # Shared 层（协议护城河）
-│   │   └── types.ts    # 跨层类型定义、枚举、消息协议
-│   ├── images/          # 图标资源
-│   └── manifest.json    # 扩展配置
-├── test/                # 测试文件（50 个测试用例）
-├── build/               # 构建输出
-└── docs/                # 项目文档
+│   │   └── popup.ts      # 设置变更 + 状态查询
+│   │
+│   ├── shared/           # 🛡️ 协议护城河
+│   │   ├── types.ts      # 跨层类型定义、枚举
+│   │   │                 # - 消息协议
+│   │   │                 # - Action 枚举
+│   │   │                 # - UI Action 枚举
+│   │   │                 # - 其他跨层类型
+│   │   └── constants.ts  # 跨层常量定义
+│   │
+│   └── images/           # 🟦 插件图标
+│       └── icon.html
+│
+├── test/                 # 测试文件（50 个测试用例）
+├── build/                # 构建输出
+└── docs/                 # 项目文档
 ```
 
 详细的项目结构说明请参考 [docs/STRUCTURE.md](./docs/STRUCTURE.md)
 
 ## 核心架构
+
+### 整体设计原则
+
+1. **职责分离**：Background 层负责所有业务逻辑和状态管理，Content 层只负责页面交互和 UI 渲染，Shared 层只包含类型定义和协议
+2. **单向依赖**：Background 和 Content 都依赖 Shared，但 Background 和 Content 之间禁止相互依赖
+3. **消息驱动**：层与层之间通过消息通信，使用明确的协议格式，避免直接调用
 
 ### 架构原则
 
@@ -62,17 +86,27 @@ browser-selection-copy/
 - 所有状态管理（usage、pro、storage）
 - 所有策略决策（policy、strategy）
 - 消息路由和 Action 处理
+- **禁止**：不得将业务逻辑暴露给 content 层，不得让 content 层直接访问 storage
 
 **Content 层（无业务、无状态）**
 - 页面感知（selection、DOM 操作）
 - 数据提取（extractor - 核心资产）
 - 发送 REQUEST_ACTION 消息
 - 根据 uiAction 渲染 UI（无条件执行）
+- **禁止**：不得包含任何业务逻辑判断，不得读取 usage、pro、policy、strategy，不得直接访问 chrome.storage.local 读取业务数据，不得根据 status 进行二次判断，不得拼装业务相关文案，不得 import background 下的任何文件
+
+**Popup 层（独立壳层）**
+- 提供快速配置入口
+- 设置变更（enabled、panelPosition）
+- 状态查询（只读）
+- **禁止**：不得包含业务逻辑，不得直接修改 storage（通过 settings.ts）
 
 **Shared 层（协议护城河）**
 - 消息协议定义（REQUEST_ACTION、ACTION_RESULT）
 - 枚举类型定义（ActionType、UIAction、ActionStatus）
 - 跨层纯类型定义
+- 所有类型定义集中在 types.ts 中
+- **禁止**：不得包含业务逻辑，不得包含状态管理，不得包含 usage、pro、policy、strategy 相关定义，不得暴露业务概念到 content 层
 
 ### 消息通信协议
 
@@ -105,35 +139,112 @@ browser-selection-copy/
 }
 ```
 
+### 关键约束
+
+**UI 决策权**
+- Content 不得根据 status 自行决定展示哪种 UI
+- Content 只能无条件执行 background 下发的 uiAction
+- uiAction 是枚举值，不是布尔或文案
+
+**Usage 消耗时机**
+- usage 的 consume / record 只能在 action 成功执行后（status === 'ok'）
+- 当 status 为 'limited' 或 'blocked' 时，不得消耗或记录 usage
+- checkUsage 是前置判断，consumeUsage 是成功后的副作用
+
+**异常处理**
+- 所有异常路径必须返回合法的 ACTION_RESULT
+- 禁止返回 undefined 或非协议对象
+- 兜底格式：`{ status: 'blocked', uiAction: 'SHOW_RESULT_PANEL', uiData: { message: '通用错误提示' } }`
+
+**Content 冻结点**
+- 架构重构完成后，content 层进入冻结状态
+- 禁止在 content 层新增任何业务逻辑、判断或文案拼装
+- 后续功能扩展只能通过 background 完成
+
 ## 核心组件
 
 ### Background 层
 
-**index.ts**：Background 入口，消息监听和分发，Action 请求处理，统一异常兜底
+**index.ts**
+- Background 入口
+- 消息监听和分发
+- Action 请求处理
+- 统一异常兜底
 
-**usage.ts**：使用次数管理（check / consume / record），免费策略定义（maxPerDay 等），跨天重置逻辑，使用统计数据
+**usage.ts（合并版）**
+- 使用次数管理（check / consume / record）
+- 免费策略定义（maxPerDay 等）
+- 跨天重置逻辑
+- 使用统计数据
 
-**pro.ts**：Pro 权限判断（allow / verify），功能权限映射，签名验证，使用模式检测
+**pro.ts（合并版）**
+- Pro 权限判断（allow / verify）
+- 功能权限映射
+- 签名验证
+- 使用模式检测
 
-**settings.ts**：插件设置管理，开关状态（enabled），面板位置（panelPosition）
+**settings.ts**
+- 插件设置管理
+- 开关状态（enabled）
+- 面板位置（panelPosition）
 
-**storage.ts**：chrome.storage.local 统一封装，提供 get / set / remove 等方法，内存降级存储
+**storage.ts**
+- chrome.storage.local 统一封装
+- 提供 get / set / remove 等方法
+- 内存降级存储
 
 ### Content 层
 
-**content.ts**：Content 入口，事件监听（mousedown / mousemove / mouseup），消息发送（REQUEST_ACTION），UI Action 执行（根据 uiAction 调用 panel）
+**index.ts**
+- Content 入口
+- 事件监听（mousedown / mousemove / mouseup）
+- 消息发送（REQUEST_ACTION）
+- UI Action 执行（根据 uiAction 调用 panel）
 
-**selection.ts**：框选逻辑，选择区域计算，选择框渲染
+**selection.ts**
+- 框选逻辑
+- 选择区域计算
+- 选择框渲染
 
-**extractor.ts**：DOM 信息采集（collect），排版结构分析（layout），数据格式化（format），表格检测、对齐、CSV 导出
+**extractor.ts（合并版）**
+- DOM 信息采集（collect）
+- 排版结构分析（layout）
+- 数据格式化（format）
+- 表格检测、对齐、CSV 导出
 
-**panel.ts**：面板创建和销毁，成功结果 UI（showResult），免费用尽 UI（showLimit），升级 Pro UI（showPro），面板拖动、定位等交互
+**panel.ts（合并版）**
+- 面板创建和销毁
+- 成功结果 UI（showResult）
+- 免费用尽 UI（showLimit）
+- 升级 Pro UI（showPro）
+- 面板拖动、定位等交互
 
-**content.css**：框选样式，面板样式，所有 content 层的 CSS
+**content.css**
+- 框选样式
+- 面板样式
+- 所有 content 层的 CSS
+
+### Popup 层
+
+**popup.html**
+- 弹出窗口 HTML 结构
+
+**popup.ts**
+- 设置变更
+- 状态查询（只读）
+- 通过 settings.ts 修改设置
 
 ### Shared 层
 
-**types.ts**：消息协议（RequestActionMessage、ActionResultMessage），Action 枚举（ActionType），UI Action 枚举（UIAction、ActionStatus），其他跨层类型（SelectionRect、PluginSettings 等）
+**types.ts（合并版）**
+- 消息协议（RequestActionMessage、ActionResultMessage）
+- Action 枚举（ActionType）
+- UI Action 枚举（UIAction、ActionStatus）
+- 其他跨层类型（SelectionRect、PluginSettings 等）
+
+**constants.ts**
+- 跨层常量定义
+- 共享的配置常量
 
 ## 开发命令
 
@@ -199,11 +310,41 @@ npm run zip
 
 ## 开发规范
 
+### 代码规范
 - 所有代码注释使用中文
 - 变量名和函数名使用英文
 - 遵循 TypeScript 严格模式
-- 测试覆盖率：39 个测试用例全部通过
-- 测试类型：单元测试、属性测试、集成测试、结构测试
+- 禁止使用 any 类型（除非必要）
+- 所有导出的函数和类型必须有注释
+
+### 架构约束
+- **依赖关系**：Background 和 Content 都依赖 Shared，但 Background 和 Content 之间禁止相互依赖
+- **文件命名**：测试文件与源文件同名，后缀 `.test.ts`，放在 `test/` 目录
+- **类型定义**：所有跨层类型定义集中在 `shared/types.ts`
+- **常量定义**：跨层常量定义在 `shared/constants.ts`，业务常量定义在对应的业务模块中（如 usage.ts 中的 maxPerDay）
+- **样式管理**：所有 Content 层的样式集中在 `content.css` 中
+
+### 样式与 UI 设计约定
+1. **样式集中管理**：所有 Content 层的样式集中在 `content.css` 中，包括框选样式和面板样式
+2. **UI 决策权在 Background**：Content 层不得根据业务状态自行决定展示哪种 UI，只能无条件执行 Background 下发的 uiAction
+3. **文案由 Background 生成**：所有业务相关文案（如 "剩余 X 次"）由 Background 生成并通过 uiData.message 传递给 Content
+
+### 测试规范
+- 测试覆盖率：50 个测试用例
+- 测试类型：单元测试、属性测试、集成测试、架构守门测试
+- 架构守门测试：强制执行，禁止跳过
+- 属性测试：最少 100 次迭代
+- Background 层：单元测试覆盖率 90%+
+- Content 层：单元测试覆盖率 85%+
+- Shared 层：100%（纯类型定义）
+
+### 被明确否定的设计方向
+1. **Content 层包含业务逻辑**：违反职责分离原则，导致业务逻辑分散
+2. **Content 层直接访问 storage**：破坏状态管理的单一来源，导致状态不一致
+3. **Shared 层包含业务逻辑或状态**：违反协议层的纯粹性，导致跨层耦合
+4. **Content 层根据 status 自行决定 UI**：违反 UI 决策权在 Background 的原则
+5. **在多个文件中定义类型**：导致类型定义分散，增加维护成本
+6. **在 shared/constants.ts 中存储业务常量**：业务常量应该与业务逻辑放在一起，shared/constants.ts 只存储真正跨层的常量
 
 ## 测试说明
 

@@ -12,7 +12,7 @@
     "clean": "rm -rf build/dist",
     "build:popup": "esbuild src/popup/popup.ts --bundle --format=esm --outfile=build/dist/popup/popup.js",
     "build:background": "esbuild src/background/index.ts --bundle --format=esm --outfile=build/dist/background.js",
-    "build:content": "esbuild src/content/content.ts --bundle --format=iife --outfile=build/dist/content/content.js",
+    "build:content": "esbuild src/content/index.ts --bundle --format=iife --outfile=build/dist/content/content.js",
     "build": "npm run clean && npm run build:popup && npm run build:background && npm run build:content",
     "icon": "node build/icon.cjs",
     "extension": "npm run build && npm run icon && node build/extension.cjs",
