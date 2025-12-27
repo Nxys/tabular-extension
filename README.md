@@ -64,7 +64,6 @@ browser-selection-copy/
 │   └── images/           # 🟦 插件图标
 │       └── icon.html
 │
-├── test/                 # 测试文件（50 个测试用例）
 ├── build/                # 构建输出
 └── docs/                 # 项目文档
 ```

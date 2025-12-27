@@ -1,12 +1,20 @@
 "use strict";
 (() => {
+  // src/shared/constants.ts
+  var CSS_CLASS_PREFIX = "browser-selection-copy";
+  var IGNORED_TAGS = ["INPUT", "TEXTAREA", "SELECT", "BUTTON"];
+  var DEFAULT_LAYOUT_OPTIONS = {
+    lineThresholdRatio: 5,
+    minHorizontalGap: 10
+  };
+  var MIN_SELECTION_SIZE = 5;
+
   // src/content/selection.ts
   var Selection = class {
     element = null;
     startX = 0;
     startY = 0;
     isSelecting = false;
-    CSS_CLASS_PREFIX = "browser-selection-copy";
     /**
      * 开始选择
      */
@@ -55,7 +63,7 @@
     isValid(rect) {
       const width = rect.right - rect.left;
       const height = rect.bottom - rect.top;
-      return width > 5 && height > 5;
+      return width > MIN_SELECTION_SIZE && height > MIN_SELECTION_SIZE;
     }
     /**
      * 获取选择状态
@@ -78,7 +86,7 @@
      */
     createElement() {
       this.element = document.createElement("div");
-      this.element.className = `${this.CSS_CLASS_PREFIX}-box`;
+      this.element.className = `${CSS_CLASS_PREFIX}-box`;
       Object.assign(this.element.style, {
         left: `${this.startX}px`,
         top: `${this.startY}px`,
@@ -93,7 +101,6 @@
   var Panel = class {
     element = null;
     currentText = "";
-    CSS_CLASS_PREFIX = "browser-selection-copy";
     dragState = null;
     /**
      * 显示结果面板
@@ -103,12 +110,12 @@
     showResult(uiData) {
       this.hide();
       this.element = document.createElement("div");
-      this.element.className = `${this.CSS_CLASS_PREFIX}-panel`;
+      this.element.className = `${CSS_CLASS_PREFIX}-panel`;
       const header = this.createHeader("\u{1F4CB}", "\u6587\u672C\u9884\u89C8");
       const previewWrapper = document.createElement("div");
-      previewWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-preview-wrapper`;
+      previewWrapper.className = `${CSS_CLASS_PREFIX}-panel-preview-wrapper`;
       const preview = document.createElement("textarea");
-      preview.className = `${this.CSS_CLASS_PREFIX}-panel-textarea`;
+      preview.className = `${CSS_CLASS_PREFIX}-panel-textarea`;
       preview.readOnly = false;
       if (uiData?.text) {
         this.currentText = uiData.text;
@@ -116,7 +123,7 @@
       } else if (uiData?.table) {
         this.currentText = uiData.table.map((row) => row.join("")).join("\n");
         preview.value = this.currentText;
-        this.element.classList.add(`${this.CSS_CLASS_PREFIX}-table-mode`);
+        this.element.classList.add(`${CSS_CLASS_PREFIX}-table-mode`);
       }
       preview.oninput = (e) => {
         const target = e.target;
@@ -124,7 +131,7 @@
       };
       previewWrapper.appendChild(preview);
       const copyBtnWrapper = document.createElement("div");
-      copyBtnWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-copy-wrapper`;
+      copyBtnWrapper.className = `${CSS_CLASS_PREFIX}-panel-copy-wrapper`;
       const copyBtn = this.createCopyButton();
       copyBtnWrapper.appendChild(copyBtn);
       if (uiData?.csv) {
@@ -146,12 +153,12 @@
     showLimit(uiData) {
       this.hide();
       this.element = document.createElement("div");
-      this.element.className = `${this.CSS_CLASS_PREFIX}-panel ${this.CSS_CLASS_PREFIX}-panel-force-center`;
+      this.element.className = `${CSS_CLASS_PREFIX}-panel ${CSS_CLASS_PREFIX}-panel-force-center`;
       const header = this.createHeader("\u{1F6AB}", "\u4F7F\u7528\u9650\u5236");
       const messageWrapper = document.createElement("div");
-      messageWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-message-wrapper`;
+      messageWrapper.className = `${CSS_CLASS_PREFIX}-panel-message-wrapper`;
       const message = document.createElement("div");
-      message.className = `${this.CSS_CLASS_PREFIX}-panel-message`;
+      message.className = `${CSS_CLASS_PREFIX}-panel-message`;
       message.textContent = uiData?.message || "\u4ECA\u65E5\u514D\u8D39\u6B21\u6570\u5DF2\u7528\u5B8C";
       messageWrapper.appendChild(message);
       this.element.appendChild(header);
@@ -167,12 +174,12 @@
     showPro(uiData) {
       this.hide();
       this.element = document.createElement("div");
-      this.element.className = `${this.CSS_CLASS_PREFIX}-panel ${this.CSS_CLASS_PREFIX}-panel-force-center`;
+      this.element.className = `${CSS_CLASS_PREFIX}-panel ${CSS_CLASS_PREFIX}-panel-force-center`;
       const header = this.createHeader("\u2B50", "Pro \u529F\u80FD");
       const messageWrapper = document.createElement("div");
-      messageWrapper.className = `${this.CSS_CLASS_PREFIX}-panel-message-wrapper`;
+      messageWrapper.className = `${CSS_CLASS_PREFIX}-panel-message-wrapper`;
       const message = document.createElement("div");
-      message.className = `${this.CSS_CLASS_PREFIX}-panel-message`;
+      message.className = `${CSS_CLASS_PREFIX}-panel-message`;
       message.textContent = uiData?.message || "\u8FD9\u662F Pro \u529F\u80FD";
       messageWrapper.appendChild(message);
       this.element.appendChild(header);
@@ -208,11 +215,11 @@
      */
     createHeader(icon, title) {
       const header = document.createElement("div");
-      header.className = `${this.CSS_CLASS_PREFIX}-panel-header`;
+      header.className = `${CSS_CLASS_PREFIX}-panel-header`;
       const titleSpan = document.createElement("span");
-      titleSpan.className = `${this.CSS_CLASS_PREFIX}-panel-title`;
+      titleSpan.className = `${CSS_CLASS_PREFIX}-panel-title`;
       const iconSpan = document.createElement("span");
-      iconSpan.className = `${this.CSS_CLASS_PREFIX}-panel-icon`;
+      iconSpan.className = `${CSS_CLASS_PREFIX}-panel-icon`;
       iconSpan.textContent = icon;
       const titleText = document.createElement("span");
       titleText.textContent = title;
@@ -220,7 +227,7 @@
       titleSpan.appendChild(titleText);
       const closeBtn = document.createElement("button");
       closeBtn.type = "button";
-      closeBtn.className = `${this.CSS_CLASS_PREFIX}-panel-close`;
+      closeBtn.className = `${CSS_CLASS_PREFIX}-panel-close`;
       closeBtn.textContent = "\xD7";
       closeBtn.onclick = () => this.hide();
       header.appendChild(titleSpan);
@@ -232,12 +239,12 @@
      */
     createCopyButton() {
       const copyBtn = document.createElement("button");
-      copyBtn.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn`;
+      copyBtn.className = `${CSS_CLASS_PREFIX}-panel-copy-btn`;
       copyBtn.dataset.role = "copy";
       const copyBtnContent = document.createElement("span");
-      copyBtnContent.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-content`;
+      copyBtnContent.className = `${CSS_CLASS_PREFIX}-panel-copy-btn-content`;
       const copyBtnIcon = document.createElement("span");
-      copyBtnIcon.className = `${this.CSS_CLASS_PREFIX}-panel-copy-btn-icon`;
+      copyBtnIcon.className = `${CSS_CLASS_PREFIX}-panel-copy-btn-icon`;
       copyBtnIcon.textContent = "\u{1F4C4}";
       const copyBtnText = document.createElement("span");
       copyBtnText.textContent = "\u590D\u5236\u5230\u526A\u8D34\u677F";
@@ -255,7 +262,7 @@
      */
     createCSVButton(csv) {
       const csvBtn = document.createElement("button");
-      csvBtn.className = `${this.CSS_CLASS_PREFIX}-panel-csv-btn`;
+      csvBtn.className = `${CSS_CLASS_PREFIX}-panel-csv-btn`;
       csvBtn.textContent = "\u{1F4CA} \u5BFC\u51FA CSV";
       csvBtn.onclick = () => {
         this.downloadCSV(csv);
@@ -293,8 +300,8 @@
       const btn = this.element?.querySelector('button[data-role="copy"]');
       if (btn) {
         const originalHTML = btn.innerHTML;
-        const iconSpan = btn.querySelector(`.${this.CSS_CLASS_PREFIX}-panel-copy-btn-icon`);
-        const textSpan = btn.querySelector(`.${this.CSS_CLASS_PREFIX}-panel-copy-btn-content span:last-child`);
+        const iconSpan = btn.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn-icon`);
+        const textSpan = btn.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn-content span:last-child`);
         if (iconSpan && textSpan) {
           iconSpan.textContent = "\u2713";
           textSpan.textContent = "\u5DF2\u590D\u5236";
@@ -315,8 +322,8 @@
       const btn = this.element?.querySelector('button[data-role="copy"]');
       if (btn) {
         const originalHTML = btn.innerHTML;
-        const iconSpan = btn.querySelector(`.${this.CSS_CLASS_PREFIX}-panel-copy-btn-icon`);
-        const textSpan = btn.querySelector(`.${this.CSS_CLASS_PREFIX}-panel-copy-btn-content span:last-child`);
+        const iconSpan = btn.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn-icon`);
+        const textSpan = btn.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn-content span:last-child`);
         if (iconSpan && textSpan) {
           iconSpan.textContent = "\u2717";
           textSpan.textContent = "\u590D\u5236\u5931\u8D25";
@@ -525,14 +532,7 @@
   }
 
   // src/content/index.ts
-  var BrowserSelectionCopy = class _BrowserSelectionCopy {
-    // 需要忽略的交互元素标签名
-    static IGNORED_TAGS = ["INPUT", "TEXTAREA", "SELECT", "BUTTON"];
-    // 默认布局选项
-    static DEFAULT_LAYOUT_OPTIONS = {
-      lineThresholdRatio: 5,
-      minHorizontalGap: 10
-    };
+  var BrowserSelectionCopy = class {
     selection;
     panel;
     ignoreNextOutsideClick = false;
@@ -582,7 +582,7 @@
       if (event.button !== 0) return;
       if (this.panel.contains(event.target)) return;
       const target = event.target;
-      if (_BrowserSelectionCopy.IGNORED_TAGS.includes(target.tagName)) return;
+      if (IGNORED_TAGS.includes(target.tagName)) return;
       this.selection.start(event.clientX, event.clientY);
       event.preventDefault();
       event.stopPropagation();
@@ -606,7 +606,7 @@
       const rect = this.selection.finish();
       if (rect && this.selection.isValid(rect)) {
         const items = collect(rect);
-        const lines = layout(items, _BrowserSelectionCopy.DEFAULT_LAYOUT_OPTIONS);
+        const lines = layout(items, DEFAULT_LAYOUT_OPTIONS);
         const text = format(lines);
         const result = await this.requestAction("text-extract", text);
         this.executeUIAction(result);

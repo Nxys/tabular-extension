@@ -65,9 +65,12 @@ class BrowserSelectionCopy {
       this.messageListener = (message, _sender, sendResponse) => {
         const payload = message as { type?: string; payload?: Partial<PluginSettings> };
         if (payload?.type === 'updateSettings' && payload.payload) {
-          this.applySettings(payload.payload);
-          sendResponse?.({ ok: true });
+          this.applySettings(payload.payload).then(() => {
+            sendResponse?.({ ok: true });
+          });
+          return true; // 表示异步响应
         }
+        return false; // 不处理的消息
       };
       chrome.runtime.onMessage.addListener(this.messageListener as (message: any, sender: any, sendResponse: (response?: any) => void) => void);
     }

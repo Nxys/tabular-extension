@@ -23,7 +23,7 @@ import { getSettings, updateSettings } from './settings';
  */
 chrome.runtime.onMessage.addListener((
   message: ExtensionMessage,
-  sender: chrome.runtime.MessageSender,
+  _sender: chrome.runtime.MessageSender,
   sendResponse: (response: unknown) => void
 ) => {
   // 异步处理消息
