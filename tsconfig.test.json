@@ -11,7 +11,6 @@
     "baseUrl": "."
   },
   "include": [
-    "test/**/*",
     "src/**/*"
   ]
 }

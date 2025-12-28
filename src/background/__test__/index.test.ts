@@ -622,10 +622,11 @@ describe('index.ts - 消息处理逻辑', () => {
         }
       });
       
-      const csvData = 'a,b\nc,d';
+      const tableData = [['a', 'b'], ['c', 'd']];
+      const expectedCSV = 'a,b\nc,d';
       const payload = {
         action: 'csv-export' as const,
-        data: csvData
+        data: tableData
       };
 
       // Act
@@ -634,8 +635,8 @@ describe('index.ts - 消息处理逻辑', () => {
       // Assert
       expect(result.status).toBe('ok');
       expect(result.uiAction).toBe('SHOW_RESULT_PANEL');
-      expect(result.data).toBe(csvData);
-      expect(result.uiData?.csv).toBe(csvData);
+      expect(result.data).toEqual(tableData);
+      expect(result.uiData?.csv).toBe(expectedCSV);
     });
   });
 });
