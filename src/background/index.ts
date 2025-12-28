@@ -54,8 +54,9 @@ chrome.runtime.onMessage.addListener((
 
 /**
  * 处理 Action 请求
+ * 导出用于测试
  */
-async function handleActionRequest(
+export async function handleActionRequest(
   payload: RequestActionMessage['payload']
 ): Promise<ActionResultMessage['payload']> {
   const { action, data } = payload;
@@ -203,12 +204,16 @@ async function handleCSVExport(data: unknown): Promise<ActionResultMessage['payl
     };
   }
   
+  // 将表格数据转换为 CSV 格式
+  const table = data as string[][];
+  const csv = tableToCSV(table);
+  
   const result: ActionResultMessage['payload'] = {
     status: 'ok',
     uiAction: 'SHOW_RESULT_PANEL',
     data,
     uiData: {
-      csv: data as string
+      csv
     }
   };
   
@@ -216,6 +221,34 @@ async function handleCSVExport(data: unknown): Promise<ActionResultMessage['payl
   await record('csv-export');
   
   return result;
+}
+
+/**
+ * 将表格数据转换为 CSV 格式
+ * @param table 表格数据
+ * @returns CSV 字符串
+ */
+function tableToCSV(table: string[][]): string {
+  if (!Array.isArray(table) || table.length === 0) {
+    return '';
+  }
+  
+  return table.map(row => {
+    return row.map(cell => {
+      // 转换为字符串
+      const cellStr = String(cell);
+      
+      // 检查是否需要转义（包含逗号、引号或换行符）
+      if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+        // 转义引号（双引号变成两个双引号）
+        const escaped = cellStr.replace(/"/g, '""');
+        // 用引号包裹
+        return `"${escaped}"`;
+      }
+      
+      return cellStr;
+    }).join(',');
+  }).join('\n');
 }
 
 // 快捷键处理

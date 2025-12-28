@@ -3,9 +3,10 @@
  * 测试文本提取、布局分析、格式化和表格功能
  */
 
-import { collect, layout, format, detectTable, alignTable, toCSV, escapeCSVField } from '../extractor';
+import { collect, layout, format, detectTable, alignTable, toCSV, escapeCSVField, extract } from '../extractor';
 import type { TextItem, LayoutOptions, SelectionRect } from '../../shared/types';
 import { createDOMRect, mockGetClientRects, mockComputedStyle } from '../../__test__/mocks/dom';
+import * as fc from 'fast-check';
 
 describe('extractor.ts - collect()', () => {
   beforeEach(() => {
@@ -1055,5 +1056,480 @@ describe('extractor.ts - 表格功能', () => {
       // Assert
       expect(result).toBe('A1,B1,\nA2,B2,C2');
     });
+  });
+});
+
+
+describe('extractor.ts - 边界情况', () => {
+  beforeEach(() => {
+    // 清理 DOM
+    document.body.innerHTML = '';
+  });
+
+  describe('空选区处理', () => {
+    it('应该返回空字符串当选择区域宽度为 0 且不与元素相交时', () => {
+      // Arrange
+      const div = document.createElement('div');
+      div.textContent = 'Test Content';
+      document.body.appendChild(div);
+
+      const rect = createDOMRect(10, 10, 100, 20);
+      mockGetClientRects(div, [rect]);
+      mockComputedStyle(div, {
+        display: 'block',
+        visibility: 'visible',
+        opacity: '1'
+      } as CSSStyleDeclaration);
+
+      // 选择区域宽度为 0，且在元素外部
+      const selectionRect: SelectionRect = {
+        left: 200,
+        top: 0,
+        right: 200, // right === left，在元素右侧
+        bottom: 100
+      };
+
+      // Act
+      const result = extract(selectionRect);
+
+      // Assert
+      expect(result).toBe('');
+    });
+
+    it('应该返回空字符串当选择区域高度为 0 且不与元素相交时', () => {
+      // Arrange
+      const div = document.createElement('div');
+      div.textContent = 'Test Content';
+      document.body.appendChild(div);
+
+      const rect = createDOMRect(10, 10, 100, 20);
+      mockGetClientRects(div, [rect]);
+      mockComputedStyle(div, {
+        display: 'block',
+        visibility: 'visible',
+        opacity: '1'
+      } as CSSStyleDeclaration);
+
+      // 选择区域高度为 0，且在元素外部
+      const selectionRect: SelectionRect = {
+        left: 0,
+        top: 200,
+        right: 100,
+        bottom: 200 // bottom === top，在元素下方
+      };
+
+      // Act
+      const result = extract(selectionRect);
+
+      // Assert
+      expect(result).toBe('');
+    });
+
+    it('应该返回空字符串当选择区域面积为 0 且不与元素相交时', () => {
+      // Arrange
+      const div = document.createElement('div');
+      div.textContent = 'Test Content';
+      document.body.appendChild(div);
+
+      const rect = createDOMRect(10, 10, 100, 20);
+      mockGetClientRects(div, [rect]);
+      mockComputedStyle(div, {
+        display: 'block',
+        visibility: 'visible',
+        opacity: '1'
+      } as CSSStyleDeclaration);
+
+      // 选择区域为一个点，在元素外部
+      const selectionRect: SelectionRect = {
+        left: 200,
+        top: 200,
+        right: 200,
+        bottom: 200
+      };
+
+      // Act
+      const result = extract(selectionRect);
+
+      // Assert
+      expect(result).toBe('');
+    });
+  });
+
+  describe('极小选区处理', () => {
+    it('应该正确处理 1x1 像素的选择区域', () => {
+      // Arrange
+      const div = document.createElement('div');
+      div.textContent = 'Test';
+      document.body.appendChild(div);
+
+      // 元素位置包含 1x1 选区
+      const rect = createDOMRect(10, 10, 100, 20);
+      mockGetClientRects(div, [rect]);
+      mockComputedStyle(div, {
+        display: 'block',
+        visibility: 'visible',
+        opacity: '1'
+      } as CSSStyleDeclaration);
+
+      // 1x1 像素选区，位于元素内部
+      const selectionRect: SelectionRect = {
+        left: 15,
+        top: 15,
+        right: 16,
+        bottom: 16
+      };
+
+      // Act
+      const result = extract(selectionRect);
+
+      // Assert
+      // 应该能提取到文本（因为选区与元素相交）
+      expect(result).toBe('Test');
+    });
+
+    it('应该正确处理非常小的选择区域（5x5 像素）', () => {
+      // Arrange
+      const div = document.createElement('div');
+      div.textContent = 'Small Area';
+      document.body.appendChild(div);
+
+      const rect = createDOMRect(10, 10, 100, 20);
+      mockGetClientRects(div, [rect]);
+      mockComputedStyle(div, {
+        display: 'block',
+        visibility: 'visible',
+        opacity: '1'
+      } as CSSStyleDeclaration);
+
+      // 5x5 像素选区
+      const selectionRect: SelectionRect = {
+        left: 15,
+        top: 15,
+        right: 20,
+        bottom: 20
+      };
+
+      // Act
+      const result = extract(selectionRect);
+
+      // Assert
+      expect(result).toBe('Small Area');
+    });
+
+    it('应该返回空字符串当极小选区不与任何元素相交时', () => {
+      // Arrange
+      const div = document.createElement('div');
+      div.textContent = 'Test';
+      document.body.appendChild(div);
+
+      const rect = createDOMRect(10, 10, 100, 20);
+      mockGetClientRects(div, [rect]);
+      mockComputedStyle(div, {
+        display: 'block',
+        visibility: 'visible',
+        opacity: '1'
+      } as CSSStyleDeclaration);
+
+      // 1x1 像素选区，位于元素外部
+      const selectionRect: SelectionRect = {
+        left: 200,
+        top: 200,
+        right: 201,
+        bottom: 201
+      };
+
+      // Act
+      const result = extract(selectionRect);
+
+      // Assert
+      expect(result).toBe('');
+    });
+  });
+
+  describe('超长文本处理', () => {
+    it('应该正确处理单个超长文本（10000 字符边界）', () => {
+      // Arrange
+      // 创建恰好 10000 字符的文本
+      const longText = 'A'.repeat(10000);
+      const div = document.createElement('div');
+      div.textContent = longText;
+      document.body.appendChild(div);
+
+      const rect = createDOMRect(10, 10, 100, 20);
+      mockGetClientRects(div, [rect]);
+      mockComputedStyle(div, {
+        display: 'block',
+        visibility: 'visible',
+        opacity: '1'
+      } as CSSStyleDeclaration);
+
+      const selectionRect: SelectionRect = {
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 200
+      };
+
+      // Act
+      const result = extract(selectionRect);
+
+      // Assert
+      // 应该能提取到完整文本（10000 字符是边界值，应该被接受）
+      expect(result).toBe(longText);
+      expect(result.length).toBe(10000);
+    });
+
+    it('应该跳过超过 10000 字符的文本', () => {
+      // Arrange
+      // 创建超过 10000 字符的文本
+      const tooLongText = 'A'.repeat(10001);
+      const normalText = 'Normal';
+      
+      const div1 = document.createElement('div');
+      div1.textContent = tooLongText;
+      const div2 = document.createElement('div');
+      div2.textContent = normalText;
+      
+      document.body.appendChild(div1);
+      document.body.appendChild(div2);
+
+      const rect1 = createDOMRect(10, 10, 100, 20);
+      const rect2 = createDOMRect(10, 40, 100, 20);
+      
+      mockGetClientRects(div1, [rect1]);
+      mockGetClientRects(div2, [rect2]);
+      
+      mockComputedStyle(div1, {
+        display: 'block',
+        visibility: 'visible',
+        opacity: '1'
+      } as CSSStyleDeclaration);
+      mockComputedStyle(div2, {
+        display: 'block',
+        visibility: 'visible',
+        opacity: '1'
+      } as CSSStyleDeclaration);
+
+      const selectionRect: SelectionRect = {
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 200
+      };
+
+      // Act
+      const result = extract(selectionRect);
+
+      // Assert
+      // 应该只提取正常文本，跳过超长文本
+      expect(result).toBe('Normal');
+    });
+
+    it('应该正确处理多个长文本（总长度限制）', () => {
+      // Arrange
+      // 创建多个长文本，每个 5000 字符
+      const text1 = 'A'.repeat(5000);
+      const text2 = 'B'.repeat(5000);
+      const text3 = 'C'.repeat(5000);
+      
+      const div1 = document.createElement('div');
+      div1.textContent = text1;
+      const div2 = document.createElement('div');
+      div2.textContent = text2;
+      const div3 = document.createElement('div');
+      div3.textContent = text3;
+      
+      document.body.appendChild(div1);
+      document.body.appendChild(div2);
+      document.body.appendChild(div3);
+
+      const rect1 = createDOMRect(10, 10, 100, 20);
+      const rect2 = createDOMRect(10, 40, 100, 20);
+      const rect3 = createDOMRect(10, 70, 100, 20);
+      
+      mockGetClientRects(div1, [rect1]);
+      mockGetClientRects(div2, [rect2]);
+      mockGetClientRects(div3, [rect3]);
+      
+      mockComputedStyle(div1, {
+        display: 'block',
+        visibility: 'visible',
+        opacity: '1'
+      } as CSSStyleDeclaration);
+      mockComputedStyle(div2, {
+        display: 'block',
+        visibility: 'visible',
+        opacity: '1'
+      } as CSSStyleDeclaration);
+      mockComputedStyle(div3, {
+        display: 'block',
+        visibility: 'visible',
+        opacity: '1'
+      } as CSSStyleDeclaration);
+
+      const selectionRect: SelectionRect = {
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 200
+      };
+
+      // Act
+      const result = extract(selectionRect);
+
+      // Assert
+      // 应该提取所有文本，用换行符连接
+      expect(result).toBe(`${text1}\n${text2}\n${text3}`);
+      expect(result.length).toBe(15002); // 3 * 5000 + 2 个换行符
+    });
+
+    it('应该处理包含超长行的情况（单行 100000 字符限制）', () => {
+      // Arrange
+      // 创建多个文本项在同一行，总长度接近 100000 字符
+      const items: { div: HTMLDivElement; text: string }[] = [];
+      
+      // 创建 20 个文本项，每个 4000 字符，同一行
+      for (let i = 0; i < 20; i++) {
+        const text = String.fromCharCode(65 + i).repeat(4000); // A, B, C, ...
+        const div = document.createElement('div');
+        div.textContent = text;
+        document.body.appendChild(div);
+        
+        const rect = createDOMRect(10 + i * 50, 10, 40, 20); // 同一行
+        mockGetClientRects(div, [rect]);
+        mockComputedStyle(div, {
+          display: 'block',
+          visibility: 'visible',
+          opacity: '1'
+        } as CSSStyleDeclaration);
+        
+        items.push({ div, text });
+      }
+
+      const selectionRect: SelectionRect = {
+        left: 0,
+        top: 0,
+        right: 2000,
+        bottom: 200
+      };
+
+      // Act
+      const result = extract(selectionRect);
+
+      // Assert
+      // 应该提取所有文本，用空格连接（因为在同一行）
+      // 总长度应该小于 100000（因为有限制）
+      expect(result.length).toBeGreaterThan(0);
+      expect(result.length).toBeLessThan(100000);
+    });
+
+    it('应该处理大量行的情况（10000 行限制）', () => {
+      // Arrange
+      // 创建超过 10000 行
+      const totalLines = 10500;
+      
+      for (let i = 0; i < totalLines; i++) {
+        const div = document.createElement('div');
+        div.textContent = `Line ${i}`;
+        document.body.appendChild(div);
+        
+        const rect = createDOMRect(10, 10 + i * 30, 100, 20);
+        mockGetClientRects(div, [rect]);
+        mockComputedStyle(div, {
+          display: 'block',
+          visibility: 'visible',
+          opacity: '1'
+        } as CSSStyleDeclaration);
+      }
+
+      const selectionRect: SelectionRect = {
+        left: 0,
+        top: 0,
+        right: 200,
+        bottom: 500000 // 足够大以包含所有行
+      };
+
+      // Act
+      const result = extract(selectionRect);
+
+      // Assert
+      // 应该只提取前 10000 行
+      const lines = result.split('\n');
+      expect(lines.length).toBeLessThanOrEqual(10000);
+    });
+  });
+});
+
+
+describe('extractor.ts - 属性测试', () => {
+  /**
+   * 属性测试：文本提取幂等性
+   * Feature: unit-testing, Property 3: 文本提取幂等性
+   * 验证：需求 4.5
+   * 
+   * 对于任意的选择区域 rect，多次调用 extract(rect) 应该返回相同的文本结果
+   * （假设 DOM 结构不变）。
+   */
+  it('多次提取同一选择区域应该返回相同结果', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        // 生成选择区域：确保 right > left 且 bottom > top
+        fc.record({
+          left: fc.integer({ min: 0, max: 500 }),
+          top: fc.integer({ min: 0, max: 500 }),
+          width: fc.integer({ min: 50, max: 500 }),
+          height: fc.integer({ min: 50, max: 500 })
+        }).map(({ left, top, width, height }) => ({
+          left,
+          top,
+          right: left + width,
+          bottom: top + height
+        })),
+        // 生成随机数量的文本元素（0-20 个）
+        fc.array(
+          fc.record({
+            text: fc.string({ minLength: 1, maxLength: 50 }),
+            x: fc.integer({ min: 0, max: 1000 }),
+            y: fc.integer({ min: 0, max: 1000 }),
+            width: fc.integer({ min: 10, max: 200 }),
+            height: fc.integer({ min: 10, max: 50 })
+          }),
+          { minLength: 0, maxLength: 20 }
+        ),
+        async (selectionRect, textItems) => {
+          // Arrange - 清理 DOM
+          document.body.innerHTML = '';
+          
+          // 创建 DOM 元素
+          for (const item of textItems) {
+            const div = document.createElement('div');
+            div.textContent = item.text;
+            document.body.appendChild(div);
+            
+            // Mock 元素位置
+            const rect = createDOMRect(item.x, item.y, item.width, item.height);
+            mockGetClientRects(div, [rect]);
+            mockComputedStyle(div, {
+              display: 'block',
+              visibility: 'visible',
+              opacity: '1'
+            } as CSSStyleDeclaration);
+          }
+          
+          // Act - 多次提取同一选择区域
+          const result1 = extract(selectionRect);
+          const result2 = extract(selectionRect);
+          const result3 = extract(selectionRect);
+          
+          // Assert - 所有结果应该相同（幂等性）
+          expect(result1).toBe(result2);
+          expect(result2).toBe(result3);
+          
+          // Cleanup
+          document.body.innerHTML = '';
+        }
+      ),
+      { numRuns: 100 } // 配置 100 次迭代
+    );
   });
 });

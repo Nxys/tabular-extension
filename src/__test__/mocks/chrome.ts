@@ -43,6 +43,9 @@ const storageData = new Map<string, unknown>();
 // Runtime 监听器列表
 const runtimeListeners: Function[] = [];
 
+// Commands 监听器列表
+const commandsListeners: Function[] = [];
+
 // Mock tabs 数据
 let mockTabs: chrome.tabs.Tab[] = [];
 
@@ -181,10 +184,18 @@ export function createChromeMock(): typeof chrome {
     tabs: tabsMock as any,
     commands: {
       onCommand: {
-        addListener: jest.fn(),
-        removeListener: jest.fn(),
+        addListener: (callback: Function) => {
+          commandsListeners.push(callback);
+        },
+        removeListener: (callback: Function) => {
+          const index = commandsListeners.indexOf(callback);
+          if (index > -1) {
+            commandsListeners.splice(index, 1);
+          }
+        },
         hasListener: jest.fn(),
-        hasListeners: jest.fn()
+        hasListeners: jest.fn(),
+        listeners: commandsListeners
       }
     } as any
   } as unknown as typeof chrome;
@@ -197,6 +208,7 @@ export function createChromeMock(): typeof chrome {
 export function resetChromeMock(): void {
   storageData.clear();
   runtimeListeners.length = 0;
+  commandsListeners.length = 0;
   mockTabs = [];
   mockRuntimeResponse = null;
   mockTabsResponse = null;

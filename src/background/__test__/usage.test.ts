@@ -211,6 +211,110 @@ describe('usage.ts', () => {
     });
   });
 
+  describe('错误处理', () => {
+    it('应该在 record() 失败时不影响主流程', async () => {
+      // Arrange
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      // 设置初始状态
+      await setToStorage('usage_count', 5);
+      await setToStorage('last_usage_date', new Date().toDateString());
+      
+      // Mock getFromStorage 在获取 usage_stats 时抛出错误
+      const getFromStorageSpy = jest.spyOn(require('../storage'), 'getFromStorage');
+      // @ts-ignore - Mock 实现
+      getFromStorageSpy.mockImplementation(async (key: string, defaultValue: any) => {
+        if (key === 'usage_stats') {
+          throw new Error('Storage failed');
+        }
+        // 其他键正常返回
+        return require('../storage').getFromStorage(key, defaultValue);
+      });
+      
+      // Act - 记录事件失败
+      await record('select');
+      
+      // Assert - 主流程不受影响
+      // 1. record() 不抛出异常，错误被记录
+      expect(consoleWarnSpy).toHaveBeenCalled();
+      
+      // 2. 使用次数检查仍然正常工作
+      getFromStorageSpy.mockRestore();
+      const state = await checkUsage();
+      expect(state.allowed).toBe(true);
+      expect(state.remaining).toBe(15);
+      
+      // 3. 消耗使用次数仍然正常工作
+      await consumeUsage();
+      const count = await getFromStorage('usage_count', 0);
+      expect(count).toBe(6);
+      
+      // Cleanup
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('应该在 record() 失败后仍能继续记录其他事件', async () => {
+      // Arrange
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const setSpy = jest.spyOn(chrome.storage.local, 'set');
+      
+      await setToStorage('last_usage_date', new Date().toDateString());
+      
+      // 第一次调用失败
+      // @ts-ignore - Mock 错误场景
+      setSpy.mockRejectedValueOnce(new Error('Storage failed'));
+      
+      // Act
+      await record('select'); // 失败
+      
+      // 恢复 mock 以便后续调用成功
+      setSpy.mockRestore();
+      
+      await record('table-detect'); // 成功
+      
+      // Assert
+      expect(consoleWarnSpy).toHaveBeenCalled();
+      
+      const stats = await getFromStorage<UsageStats | null>('usage_stats', null);
+      expect(stats).toBeDefined();
+      expect(stats!.tableDetectCount).toBe(1);
+      
+      // Cleanup
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('应该在 record() 失败时记录错误信息', async () => {
+      // Arrange
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      // Mock setToStorage 在设置 usage_stats 时失败
+      const setToStorageSpy = jest.spyOn(require('../storage'), 'setToStorage');
+      const testError = new Error('Test storage error');
+      
+      // @ts-ignore - Mock 实现
+      setToStorageSpy.mockImplementation(async (key: string, value: any) => {
+        if (key === 'usage_stats') {
+          throw testError;
+        }
+        return require('../storage').setToStorage(key, value);
+      });
+      
+      // Act
+      await record('csv-export');
+      
+      // Assert - 验证错误信息被记录
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Failed to record usage event',
+        'csv-export',
+        testError
+      );
+      
+      // Cleanup
+      consoleWarnSpy.mockRestore();
+      setToStorageSpy.mockRestore();
+    });
+  });
+
   describe('跨天重置', () => {
     it('应该在新的一天重置使用次数', async () => {
       // Arrange - 第一天
@@ -280,6 +384,54 @@ describe('usage.ts', () => {
       // Assert
       expect(state.allowed).toBe(true);
       expect(state.remaining).toBe(20);
+    });
+  });
+
+  describe('属性测试', () => {
+    /**
+     * 属性测试：使用次数单调性
+     * Feature: unit-testing, Property 1: 使用次数单调性
+     * 验证：需求 4.3
+     * 
+     * 对于任意的操作序列（不包含跨天重置），使用次数应该单调递增，
+     * 即每次调用 consumeUsage() 后，使用次数应该比之前增加 1。
+     */
+    it('使用次数应该单调递增', async () => {
+      const fc = require('fast-check');
+      
+      await fc.assert(
+        fc.asyncProperty(
+          // 生成操作序列：1 到 50 次 consumeUsage 调用
+          fc.integer({ min: 1, max: 50 }),
+          async (numOperations: number) => {
+            // Arrange - 设置初始状态（同一天）
+            const today = new Date('2024-01-01').toDateString();
+            await setToStorage('usage_count', 0);
+            await setToStorage('last_usage_date', today);
+            
+            // Act - 执行操作序列并记录每次的使用次数
+            const counts: number[] = [];
+            for (let i = 0; i < numOperations; i++) {
+              await consumeUsage();
+              const count = await getFromStorage('usage_count', 0);
+              counts.push(count);
+            }
+            
+            // Assert - 验证单调性
+            // 1. 每次使用次数应该比前一次多 1
+            for (let i = 1; i < counts.length; i++) {
+              expect(counts[i]).toBe(counts[i - 1] + 1);
+            }
+            
+            // 2. 最终使用次数应该等于操作次数
+            expect(counts[counts.length - 1]).toBe(numOperations);
+            
+            // 3. 第一次使用次数应该是 1
+            expect(counts[0]).toBe(1);
+          }
+        ),
+        { numRuns: 100 }
+      );
     });
   });
 });
