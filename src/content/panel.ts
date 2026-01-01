@@ -1,4 +1,5 @@
 import { CSS_CLASS_PREFIX } from '../shared/constants';
+import type { PanelPosition } from '../shared/types';
 
 /**
  * 面板调度（创建 / 销毁 - 合并版）
@@ -21,13 +22,27 @@ export class Panel {
   private dragState:
     | { startX: number; startY: number; originLeft: number; originTop: number }
     | null = null;
+  private mousePosition: { x: number; y: number } = { x: 0, y: 0 };
+
+  /**
+   * 更新鼠标位置（用于跟随鼠标定位）
+   */
+  updateMousePosition(x: number, y: number): void {
+    this.mousePosition = { x, y };
+  }
 
   /**
    * 显示结果面板
    * 
    * 接收 background 生成的数据，纯渲染
    */
-  showResult(uiData?: { text?: string; table?: string[][]; csv?: string }): void {
+  showResult(uiData?: { text?: string; table?: string[][]; csv?: string }, panelPosition: PanelPosition = 'center'): void {
+    // 直接复制模式：不显示面板，直接复制到剪贴板
+    if (panelPosition === 'none') {
+      this.copyDirectly(uiData);
+      return;
+    }
+
     this.hide();
     
     // 创建面板
@@ -82,7 +97,7 @@ export class Panel {
     this.element.appendChild(copyBtnWrapper);
 
     document.body.appendChild(this.element);
-    this.adjustPositionForViewport();
+    this.positionPanel(panelPosition);
     this.bindDragEvents(header);
   }
 
@@ -90,6 +105,7 @@ export class Panel {
    * 显示限制提示
    * 
    * 接收 background 生成的完整文案
+   * 注意：限制提示始终页面居中显示
    */
   showLimit(uiData?: { message?: string }): void {
     this.hide();
@@ -123,6 +139,7 @@ export class Panel {
    * 显示 Pro 升级提示
    * 
    * 接收 background 生成的完整文案
+   * 注意：Pro 提示始终页面居中显示
    */
   showPro(uiData?: { message?: string }): void {
     this.hide();
@@ -216,7 +233,6 @@ export class Panel {
   private createCopyButton(): HTMLButtonElement {
     const copyBtn = document.createElement('button');
     copyBtn.className = `${CSS_CLASS_PREFIX}-panel-copy-btn`;
-    copyBtn.dataset.role = 'copy';
     
     const copyBtnContent = document.createElement('span');
     copyBtnContent.className = `${CSS_CLASS_PREFIX}-panel-copy-btn-content`;
@@ -234,7 +250,6 @@ export class Panel {
     
     copyBtn.onclick = () => {
       this.copyToClipboard();
-      setTimeout(() => this.hide(), 1500);
     };
 
     return copyBtn;
@@ -260,10 +275,11 @@ export class Panel {
   private async copyToClipboard(): Promise<void> {
     try {
       await navigator.clipboard.writeText(this.currentText);
-      this.showCopySuccess();
+      this.showToast('✓ 已复制');
+      this.hide();
     } catch (error) {
       console.error('复制失败:', error);
-      this.showCopyError();
+      this.showToast('✗ 复制失败');
     }
   }
 
@@ -280,58 +296,6 @@ export class Panel {
     link.click();
     
     URL.revokeObjectURL(url);
-  }
-
-  /**
-   * 显示复制成功
-   */
-  private showCopySuccess(): void {
-    const btn = this.element?.querySelector<HTMLButtonElement>('button[data-role="copy"]');
-    if (btn) {
-      const originalHTML = btn.innerHTML;
-      const iconSpan = btn.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn-icon`);
-      const textSpan = btn.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn-content span:last-child`);
-      
-      if (iconSpan && textSpan) {
-        iconSpan.textContent = '✓';
-        textSpan.textContent = '已复制';
-      }
-      
-      btn.classList.add('success');
-      
-      setTimeout(() => {
-        if (btn) {
-          btn.innerHTML = originalHTML;
-          btn.classList.remove('success');
-        }
-      }, 1500);
-    }
-  }
-
-  /**
-   * 显示复制错误
-   */
-  private showCopyError(): void {
-    const btn = this.element?.querySelector<HTMLButtonElement>('button[data-role="copy"]');
-    if (btn) {
-      const originalHTML = btn.innerHTML;
-      const iconSpan = btn.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn-icon`);
-      const textSpan = btn.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn-content span:last-child`);
-      
-      if (iconSpan && textSpan) {
-        iconSpan.textContent = '✗';
-        textSpan.textContent = '复制失败';
-      }
-      
-      btn.classList.add('error');
-      
-      setTimeout(() => {
-        if (btn) {
-          btn.innerHTML = originalHTML;
-          btn.classList.remove('error');
-        }
-      }, 1500);
-    }
   }
 
   /**
@@ -384,47 +348,86 @@ export class Panel {
   };
 
   /**
-   * 调整面板位置以确保完整显示在视口内
+   * 根据设置定位面板
    */
-  private adjustPositionForViewport(): void {
+  private positionPanel(panelPosition: PanelPosition): void {
     if (!this.element) return;
 
     const rect = this.element.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    let left = rect.left;
-    let top = rect.top;
-    let adjusted = false;
+    let left: number;
+    let top: number;
 
-    // 检查右侧边界
-    if (rect.right > viewportWidth) {
-      left = viewportWidth - rect.width;
-      adjusted = true;
+    switch (panelPosition) {
+      case 'center':
+        // 页面居中
+        left = (viewportWidth - rect.width) / 2;
+        top = (viewportHeight - rect.height) / 2;
+        break;
+
+      case 'mouse':
+        // 跟随鼠标，偏移一点避免遮挡
+        left = this.mousePosition.x + 10;
+        top = this.mousePosition.y + 10;
+        break;
+
+      case 'none':
+        // 直接复制模式，不显示面板（但这里仍需定位，以防万一）
+        left = 20;
+        top = 20;
+        break;
+
+      default:
+        // 默认居中
+        left = (viewportWidth - rect.width) / 2;
+        top = (viewportHeight - rect.height) / 2;
     }
 
-    // 检查底部边界
-    if (rect.bottom > viewportHeight) {
-      top = viewportHeight - rect.height;
-      adjusted = true;
-    }
+    // 确保面板完整显示在视口内
+    left = Math.max(0, Math.min(left, viewportWidth - rect.width));
+    top = Math.max(0, Math.min(top, viewportHeight - rect.height));
 
-    // 检查左侧边界
-    if (left < 0) {
-      left = 0;
-      adjusted = true;
-    }
+    this.element.style.left = `${left}px`;
+    this.element.style.top = `${top}px`;
+  }
 
-    // 检查顶部边界
-    if (top < 0) {
-      top = 0;
-      adjusted = true;
+  /**
+   * 直接复制到剪贴板（不显示面板）
+   */
+  private async copyDirectly(uiData?: { text?: string; table?: string[][]; csv?: string }): Promise<void> {
+    let textToCopy = '';
+    
+    if (uiData?.text) {
+      textToCopy = uiData.text;
+    } else if (uiData?.table) {
+      textToCopy = uiData.table.map(row => row.join('')).join('\n');
     }
+    
+    if (textToCopy) {
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        this.showToast('✓ 已复制');
+      } catch (error) {
+        console.error('复制失败:', error);
+        this.showToast('✗ 复制失败');
+      }
+    }
+  }
 
-    // 应用新位置
-    if (adjusted) {
-      this.element.style.left = `${left}px`;
-      this.element.style.top = `${top}px`;
-    }
+  /**
+   * 显示 Toast 提示（统一风格，跟随浏览器主题）
+   */
+  private showToast(message: string): void {
+    const toast = document.createElement('div');
+    toast.className = `${CSS_CLASS_PREFIX}-toast`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    // 1.5 秒后自动消失
+    setTimeout(() => {
+      toast.remove();
+    }, 1500);
   }
 }

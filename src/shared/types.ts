@@ -99,11 +99,16 @@ export interface SelectionRect {
 }
 
 /**
+ * 面板位置类型
+ */
+export type PanelPosition = 'center' | 'mouse' | 'none';
+
+/**
  * 插件设置
  */
 export interface PluginSettings {
   enabled: boolean;
-  panelPosition: 'center' | 'mouse' | 'none';
+  panelPosition: PanelPosition;
 }
 
 /**

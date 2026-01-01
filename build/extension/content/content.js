@@ -102,12 +102,23 @@
     element = null;
     currentText = "";
     dragState = null;
+    mousePosition = { x: 0, y: 0 };
+    /**
+     * 更新鼠标位置（用于跟随鼠标定位）
+     */
+    updateMousePosition(x, y) {
+      this.mousePosition = { x, y };
+    }
     /**
      * 显示结果面板
      * 
      * 接收 background 生成的数据，纯渲染
      */
-    showResult(uiData) {
+    showResult(uiData, panelPosition = "center") {
+      if (panelPosition === "none") {
+        this.copyDirectly(uiData);
+        return;
+      }
       this.hide();
       this.element = document.createElement("div");
       this.element.className = `${CSS_CLASS_PREFIX}-panel`;
@@ -142,13 +153,14 @@
       this.element.appendChild(previewWrapper);
       this.element.appendChild(copyBtnWrapper);
       document.body.appendChild(this.element);
-      this.adjustPositionForViewport();
+      this.positionPanel(panelPosition);
       this.bindDragEvents(header);
     }
     /**
      * 显示限制提示
      * 
      * 接收 background 生成的完整文案
+     * 注意：限制提示始终页面居中显示
      */
     showLimit(uiData) {
       this.hide();
@@ -170,6 +182,7 @@
      * 显示 Pro 升级提示
      * 
      * 接收 background 生成的完整文案
+     * 注意：Pro 提示始终页面居中显示
      */
     showPro(uiData) {
       this.hide();
@@ -240,7 +253,6 @@
     createCopyButton() {
       const copyBtn = document.createElement("button");
       copyBtn.className = `${CSS_CLASS_PREFIX}-panel-copy-btn`;
-      copyBtn.dataset.role = "copy";
       const copyBtnContent = document.createElement("span");
       copyBtnContent.className = `${CSS_CLASS_PREFIX}-panel-copy-btn-content`;
       const copyBtnIcon = document.createElement("span");
@@ -253,7 +265,6 @@
       copyBtn.appendChild(copyBtnContent);
       copyBtn.onclick = () => {
         this.copyToClipboard();
-        setTimeout(() => this.hide(), 1500);
       };
       return copyBtn;
     }
@@ -275,10 +286,11 @@
     async copyToClipboard() {
       try {
         await navigator.clipboard.writeText(this.currentText);
-        this.showCopySuccess();
+        this.showToast("\u2713 \u5DF2\u590D\u5236");
+        this.hide();
       } catch (error) {
         console.error("\u590D\u5236\u5931\u8D25:", error);
-        this.showCopyError();
+        this.showToast("\u2717 \u590D\u5236\u5931\u8D25");
       }
     }
     /**
@@ -292,50 +304,6 @@
       link.download = `table-${Date.now()}.csv`;
       link.click();
       URL.revokeObjectURL(url);
-    }
-    /**
-     * 显示复制成功
-     */
-    showCopySuccess() {
-      const btn = this.element?.querySelector('button[data-role="copy"]');
-      if (btn) {
-        const originalHTML = btn.innerHTML;
-        const iconSpan = btn.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn-icon`);
-        const textSpan = btn.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn-content span:last-child`);
-        if (iconSpan && textSpan) {
-          iconSpan.textContent = "\u2713";
-          textSpan.textContent = "\u5DF2\u590D\u5236";
-        }
-        btn.classList.add("success");
-        setTimeout(() => {
-          if (btn) {
-            btn.innerHTML = originalHTML;
-            btn.classList.remove("success");
-          }
-        }, 1500);
-      }
-    }
-    /**
-     * 显示复制错误
-     */
-    showCopyError() {
-      const btn = this.element?.querySelector('button[data-role="copy"]');
-      if (btn) {
-        const originalHTML = btn.innerHTML;
-        const iconSpan = btn.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn-icon`);
-        const textSpan = btn.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn-content span:last-child`);
-        if (iconSpan && textSpan) {
-          iconSpan.textContent = "\u2717";
-          textSpan.textContent = "\u590D\u5236\u5931\u8D25";
-        }
-        btn.classList.add("error");
-        setTimeout(() => {
-          if (btn) {
-            btn.innerHTML = originalHTML;
-            btn.classList.remove("error");
-          }
-        }, 1500);
-      }
     }
     /**
      * 绑定拖动事件
@@ -380,36 +348,68 @@
       this.dragState = null;
     };
     /**
-     * 调整面板位置以确保完整显示在视口内
+     * 根据设置定位面板
      */
-    adjustPositionForViewport() {
+    positionPanel(panelPosition) {
       if (!this.element) return;
       const rect = this.element.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      let left = rect.left;
-      let top = rect.top;
-      let adjusted = false;
-      if (rect.right > viewportWidth) {
-        left = viewportWidth - rect.width;
-        adjusted = true;
+      let left;
+      let top;
+      switch (panelPosition) {
+        case "center":
+          left = (viewportWidth - rect.width) / 2;
+          top = (viewportHeight - rect.height) / 2;
+          break;
+        case "mouse":
+          left = this.mousePosition.x + 10;
+          top = this.mousePosition.y + 10;
+          break;
+        case "none":
+          left = 20;
+          top = 20;
+          break;
+        default:
+          left = (viewportWidth - rect.width) / 2;
+          top = (viewportHeight - rect.height) / 2;
       }
-      if (rect.bottom > viewportHeight) {
-        top = viewportHeight - rect.height;
-        adjusted = true;
+      left = Math.max(0, Math.min(left, viewportWidth - rect.width));
+      top = Math.max(0, Math.min(top, viewportHeight - rect.height));
+      this.element.style.left = `${left}px`;
+      this.element.style.top = `${top}px`;
+    }
+    /**
+     * 直接复制到剪贴板（不显示面板）
+     */
+    async copyDirectly(uiData) {
+      let textToCopy = "";
+      if (uiData?.text) {
+        textToCopy = uiData.text;
+      } else if (uiData?.table) {
+        textToCopy = uiData.table.map((row) => row.join("")).join("\n");
       }
-      if (left < 0) {
-        left = 0;
-        adjusted = true;
+      if (textToCopy) {
+        try {
+          await navigator.clipboard.writeText(textToCopy);
+          this.showToast("\u2713 \u5DF2\u590D\u5236");
+        } catch (error) {
+          console.error("\u590D\u5236\u5931\u8D25:", error);
+          this.showToast("\u2717 \u590D\u5236\u5931\u8D25");
+        }
       }
-      if (top < 0) {
-        top = 0;
-        adjusted = true;
-      }
-      if (adjusted) {
-        this.element.style.left = `${left}px`;
-        this.element.style.top = `${top}px`;
-      }
+    }
+    /**
+     * 显示 Toast 提示（统一风格，跟随浏览器主题）
+     */
+    showToast(message) {
+      const toast = document.createElement("div");
+      toast.className = `${CSS_CLASS_PREFIX}-toast`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 1500);
     }
   };
 
@@ -567,9 +567,12 @@
         this.messageListener = (message, _sender, sendResponse) => {
           const payload = message;
           if (payload?.type === "updateSettings" && payload.payload) {
-            this.applySettings(payload.payload);
-            sendResponse?.({ ok: true });
+            this.applySettings(payload.payload).then(() => {
+              sendResponse?.({ ok: true });
+            });
+            return true;
           }
+          return false;
         };
         chrome.runtime.onMessage.addListener(this.messageListener);
       }
@@ -591,6 +594,7 @@
      * 鼠标移动事件
      */
     handleMouseMove(event) {
+      this.panel.updateMousePosition(event.clientX, event.clientY);
       if (!this.settings.enabled) return;
       if (!this.selection.getIsSelecting()) return;
       this.selection.update(event.clientX, event.clientY);
@@ -608,8 +612,12 @@
         const items = collect(rect);
         const lines = layout(items, DEFAULT_LAYOUT_OPTIONS);
         const text = format(lines);
-        const result = await this.requestAction("text-extract", text);
-        this.executeUIAction(result);
+        try {
+          const result = await this.requestAction("text-extract", text);
+          this.executeUIAction(result);
+        } catch (error) {
+          console.error("Communication with background failed:", error);
+        }
       }
       event.preventDefault();
       event.stopPropagation();
@@ -708,13 +716,7 @@
         return response;
       } catch (error) {
         console.error("Failed to request action:", error);
-        return {
-          status: "blocked",
-          uiAction: "SHOW_RESULT_PANEL",
-          uiData: {
-            message: "\u64CD\u4F5C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5"
-          }
-        };
+        throw error;
       }
     }
     /**
@@ -726,7 +728,7 @@
       const { uiAction, uiData } = result;
       switch (uiAction) {
         case "SHOW_RESULT_PANEL":
-          this.panel.showResult(uiData);
+          this.panel.showResult(uiData, this.settings.panelPosition);
           this.ignoreNextOutsideClick = true;
           break;
         case "SHOW_LIMIT_PANEL":

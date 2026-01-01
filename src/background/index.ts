@@ -26,37 +26,41 @@ chrome.runtime.onMessage.addListener((
   _sender: chrome.runtime.MessageSender,
   sendResponse: (response: unknown) => void
 ) => {
-  // 异步处理消息
-  (async () => {
-    try {
-      if (message.type === 'REQUEST_ACTION') {
-        const result = await handleActionRequest(message.payload);
-        sendResponse(result);
-      } else {
-        sendResponse({ error: 'Unknown message type' });
-      }
-    } catch (error) {
-      console.error('Message handling error:', error);
-      // 统一异常兜底返回
-      sendResponse({
-        status: 'blocked',
-        uiAction: 'SHOW_RESULT_PANEL',
-        uiData: {
-          message: '操作失败，请重试'
-        }
-      });
-    }
-  })();
+  // 处理消息并发送响应
+  handleMessage(message).then(sendResponse);
   
   // 返回 true 表示异步响应
   return true;
 });
 
 /**
+ * 处理消息
+ */
+async function handleMessage(message: ExtensionMessage): Promise<unknown> {
+  try {
+    if (message.type === 'REQUEST_ACTION') {
+      return await handleActionRequest(message.payload);
+    } else {
+      return { error: 'Unknown message type' };
+    }
+  } catch (error) {
+    console.error('Message handling error:', error);
+    // 统一异常兜底返回
+    return {
+      status: 'blocked',
+      uiAction: 'SHOW_RESULT_PANEL',
+      uiData: {
+        message: '操作失败，请重试'
+      }
+    };
+  }
+}
+
+/**
  * 处理 Action 请求
  * 导出用于测试
  */
-export async function handleActionRequest(
+async function handleActionRequest(
   payload: RequestActionMessage['payload']
 ): Promise<ActionResultMessage['payload']> {
   const { action, data } = payload;

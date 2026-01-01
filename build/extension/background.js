@@ -134,28 +134,28 @@ async function updateSettings(partial) {
 }
 
 // src/background/index.ts
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  (async () => {
-    try {
-      if (message.type === "REQUEST_ACTION") {
-        const result = await handleActionRequest(message.payload);
-        sendResponse(result);
-      } else {
-        sendResponse({ error: "Unknown message type" });
-      }
-    } catch (error) {
-      console.error("Message handling error:", error);
-      sendResponse({
-        status: "blocked",
-        uiAction: "SHOW_RESULT_PANEL",
-        uiData: {
-          message: "\u64CD\u4F5C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5"
-        }
-      });
-    }
-  })();
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  handleMessage(message).then(sendResponse);
   return true;
 });
+async function handleMessage(message) {
+  try {
+    if (message.type === "REQUEST_ACTION") {
+      return await handleActionRequest(message.payload);
+    } else {
+      return { error: "Unknown message type" };
+    }
+  } catch (error) {
+    console.error("Message handling error:", error);
+    return {
+      status: "blocked",
+      uiAction: "SHOW_RESULT_PANEL",
+      uiData: {
+        message: "\u64CD\u4F5C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5"
+      }
+    };
+  }
+}
 async function handleActionRequest(payload) {
   const { action, data } = payload;
   try {
@@ -261,16 +261,33 @@ async function handleCSVExport(data) {
       }
     };
   }
+  const table = data;
+  const csv = tableToCSV(table);
   const result = {
     status: "ok",
     uiAction: "SHOW_RESULT_PANEL",
     data,
     uiData: {
-      csv: data
+      csv
     }
   };
   await record("csv-export");
   return result;
+}
+function tableToCSV(table) {
+  if (!Array.isArray(table) || table.length === 0) {
+    return "";
+  }
+  return table.map((row) => {
+    return row.map((cell) => {
+      const cellStr = String(cell);
+      if (cellStr.includes(",") || cellStr.includes('"') || cellStr.includes("\n")) {
+        const escaped = cellStr.replace(/"/g, '""');
+        return `"${escaped}"`;
+      }
+      return cellStr;
+    }).join(",");
+  }).join("\n");
 }
 chrome.commands.onCommand.addListener(async (command) => {
   if (command === "selection-switch") {

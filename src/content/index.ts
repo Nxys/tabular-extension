@@ -101,6 +101,9 @@ class BrowserSelectionCopy {
    * 鼠标移动事件
    */
   private handleMouseMove(event: MouseEvent): void {
+    // 始终更新鼠标位置（用于跟随鼠标定位）
+    this.panel.updateMousePosition(event.clientX, event.clientY);
+
     if (!this.settings.enabled) return;
     if (!this.selection.getIsSelecting()) return;
     this.selection.update(event.clientX, event.clientY);
@@ -124,10 +127,14 @@ class BrowserSelectionCopy {
       const text = format(lines);
 
       // 2. 发送 REQUEST_ACTION 到 background
-      const result = await this.requestAction('text-extract', text);
-
-      // 3. 根据 uiAction 执行 UI 渲染（无条件执行）
-      this.executeUIAction(result);
+      try {
+        const result = await this.requestAction('text-extract', text);
+        // 3. 根据 uiAction 执行 UI 渲染（无条件执行）
+        this.executeUIAction(result);
+      } catch (error) {
+        // 通信失败时静默处理，避免影响用户体验
+        console.error('Communication with background failed:', error);
+      }
     }
 
     event.preventDefault();
@@ -250,14 +257,7 @@ class BrowserSelectionCopy {
       return response as ActionResultMessage['payload'];
     } catch (error) {
       console.error('Failed to request action:', error);
-      // 降级处理
-      return {
-        status: 'blocked',
-        uiAction: 'SHOW_RESULT_PANEL',
-        uiData: {
-          message: '操作失败，请重试'
-        }
-      };
+      throw error;
     }
   }
 
@@ -272,7 +272,7 @@ class BrowserSelectionCopy {
     // 无条件执行 background 下发的 UI 指令
     switch (uiAction) {
       case 'SHOW_RESULT_PANEL':
-        this.panel.showResult(uiData);
+        this.panel.showResult(uiData, this.settings.panelPosition);
         this.ignoreNextOutsideClick = true;
         break;
 

@@ -239,15 +239,6 @@
   line-height: 1 !important;
 }
 
-/* ==================== 复制状态样式 ==================== */
-.browser-selection-copy-panel-copy-btn.success {
-  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
-}
-
-.browser-selection-copy-panel-copy-btn.error {
-  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
-}
-
 /* ==================== 表格模式样式 ==================== */
 /* 表格模式下使用等宽字体，确保列对齐 */
 .browser-selection-copy-table-mode .browser-selection-copy-panel-textarea {
@@ -392,3 +383,49 @@
     box-shadow: 0 6px 16px rgba(255, 215, 0, 0.45) !important;
   }
 }
+
+/* ==================== Toast 提示样式 ==================== */
+.browser-selection-copy-toast {
+  position: fixed !important;
+  left: 50% !important;
+  top: 20px !important;
+  transform: translateX(-50%) !important;
+  padding: 12px 24px !important;
+  background: rgba(0, 0, 0, 0.8) !important;
+  color: white !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  z-index: 2147483647 !important;
+  pointer-events: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  animation: bsc-toast-fade-in-out 1.5s ease-in-out !important;
+}
+
+@keyframes bsc-toast-fade-in-out {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  10% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  90% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+}
+
+/* 深色模式下的 Toast */
+@media (prefers-color-scheme: dark) {
+  .browser-selection-copy-toast {
+    background: rgba(255, 255, 255, 0.9) !important;
+    color: #1a1a1a !important;
+  }
+}
+
