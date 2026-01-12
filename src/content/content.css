@@ -203,12 +203,12 @@
 .browser-selection-copy-panel-copy-wrapper {
   padding: 0 16px 16px 16px !important;
   display: flex !important;
-  justify-content: center !important;
+  gap: 8px !important;
   margin: 0 !important;
 }
 
 .browser-selection-copy-panel-copy-btn {
-  width: 100% !important;
+  flex: 1 !important;
   padding: 12px !important;
   background: var(--bsc-copy-btn-gradient) !important;
   color: white !important;
@@ -426,6 +426,321 @@
   .browser-selection-copy-toast {
     background: rgba(255, 255, 255, 0.9) !important;
     color: #1a1a1a !important;
+  }
+}
+
+/* ==================== 行数限制提示样式 ==================== */
+.browser-selection-copy-panel-limit-hint {
+  padding: 8px 12px !important;
+  margin-bottom: 12px !important;
+  background: rgba(255, 193, 7, 0.1) !important;
+  border: 1px solid rgba(255, 193, 7, 0.3) !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  color: var(--bsc-text) !important;
+  line-height: 1.5 !important;
+  text-align: center !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .browser-selection-copy-panel-limit-hint {
+    background: rgba(255, 193, 7, 0.15) !important;
+    border-color: rgba(255, 193, 7, 0.4) !important;
+  }
+}
+
+/* ==================== 高级清洗按钮样式 ==================== */
+.browser-selection-copy-panel-advanced-clean-btn {
+  flex: 1 !important;
+  padding: 10px 12px !important;
+  margin-right: 8px !important;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(240, 147, 251, 0.25) !important;
+}
+
+.browser-selection-copy-panel-advanced-clean-btn:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(240, 147, 251, 0.35) !important;
+}
+
+.browser-selection-copy-panel-advanced-clean-btn:active {
+  transform: translateY(0) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .browser-selection-copy-panel-advanced-clean-btn {
+    box-shadow: 0 4px 12px rgba(240, 147, 251, 0.3) !important;
+  }
+  
+  .browser-selection-copy-panel-advanced-clean-btn:hover {
+    box-shadow: 0 6px 16px rgba(240, 147, 251, 0.4) !important;
+  }
+}
+
+/* ==================== 导出按钮样式 ==================== */
+.browser-selection-copy-panel-export-btn {
+  flex: 1 !important;
+  padding: 10px 12px !important;
+  margin-right: 8px !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25) !important;
+}
+
+.browser-selection-copy-panel-export-btn:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.35) !important;
+}
+
+.browser-selection-copy-panel-export-btn:active {
+  transform: translateY(0) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .browser-selection-copy-panel-export-btn {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+  }
+  
+  .browser-selection-copy-panel-export-btn:hover {
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4) !important;
+  }
+}
+
+/* ==================== 弹窗遮罩层样式 ==================== */
+.browser-selection-copy-dialog-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  z-index: 2147483648 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+/* ==================== 弹窗样式 ==================== */
+.browser-selection-copy-dialog {
+  background: var(--bsc-panel-bg) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2) !important;
+  padding: 24px !important;
+  min-width: 320px !important;
+  max-width: 480px !important;
+  max-height: 80vh !important;
+  overflow-y: auto !important;
+}
+
+.browser-selection-copy-dialog-title {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: var(--bsc-text) !important;
+  margin-bottom: 20px !important;
+  text-align: center !important;
+}
+
+/* ==================== 清洗规则选择样式 ==================== */
+.browser-selection-copy-dialog-rules {
+  margin-bottom: 20px !important;
+}
+
+.browser-selection-copy-dialog-rule-item {
+  display: flex !important;
+  align-items: center !important;
+  padding: 10px !important;
+  margin-bottom: 8px !important;
+  background: var(--bsc-preview-bg) !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.browser-selection-copy-dialog-rule-item:hover {
+  background: var(--bsc-textarea-bg) !important;
+}
+
+.browser-selection-copy-dialog-checkbox {
+  margin-right: 12px !important;
+  width: 18px !important;
+  height: 18px !important;
+  cursor: pointer !important;
+}
+
+.browser-selection-copy-dialog-separator-item {
+  margin-top: 16px !important;
+  padding: 12px !important;
+  background: var(--bsc-preview-bg) !important;
+  border-radius: 8px !important;
+}
+
+.browser-selection-copy-dialog-separator-item label {
+  display: block !important;
+  font-size: 13px !important;
+  color: var(--bsc-text) !important;
+  margin-bottom: 8px !important;
+  font-weight: 500 !important;
+}
+
+.browser-selection-copy-dialog-separator-input {
+  width: 100% !important;
+  padding: 8px 12px !important;
+  border: 2px solid var(--bsc-dashed-border) !important;
+  border-radius: 6px !important;
+  background: var(--bsc-textarea-bg) !important;
+  color: var(--bsc-text) !important;
+  font-size: 14px !important;
+  outline: none !important;
+  transition: border-color 0.2s ease !important;
+}
+
+.browser-selection-copy-dialog-separator-input:focus {
+  border-color: var(--bsc-focus-border) !important;
+}
+
+/* ==================== 导出格式选择样式 ==================== */
+.browser-selection-copy-dialog-formats {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  margin-bottom: 20px !important;
+}
+
+.browser-selection-copy-dialog-format-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  padding: 16px !important;
+  background: var(--bsc-preview-bg) !important;
+  border: 2px solid var(--bsc-dashed-border) !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: var(--bsc-text) !important;
+  transition: all 0.2s ease !important;
+}
+
+.browser-selection-copy-dialog-format-btn:hover {
+  background: var(--bsc-textarea-bg) !important;
+  border-color: var(--bsc-focus-border) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15) !important;
+}
+
+.browser-selection-copy-dialog-format-btn:active {
+  transform: translateY(0) !important;
+}
+
+.browser-selection-copy-dialog-format-icon {
+  font-size: 24px !important;
+}
+
+/* ==================== 弹窗按钮样式 ==================== */
+.browser-selection-copy-dialog-buttons {
+  display: flex !important;
+  gap: 12px !important;
+  margin-top: 20px !important;
+}
+
+.browser-selection-copy-dialog-btn-cancel {
+  flex: 1 !important;
+  padding: 12px !important;
+  background: var(--bsc-preview-bg) !important;
+  border: 2px solid var(--bsc-dashed-border) !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--bsc-text) !important;
+  transition: all 0.2s ease !important;
+}
+
+.browser-selection-copy-dialog-btn-cancel:hover {
+  background: var(--bsc-textarea-bg) !important;
+  border-color: var(--bsc-focus-border) !important;
+}
+
+.browser-selection-copy-dialog-btn-confirm {
+  flex: 2 !important;
+  padding: 12px !important;
+  background: var(--bsc-copy-btn-gradient) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: white !important;
+  transition: all 0.2s ease !important;
+  box-shadow: var(--bsc-copy-btn-shadow) !important;
+}
+
+.browser-selection-copy-dialog-btn-confirm:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: var(--bsc-copy-btn-hover-shadow) !important;
+}
+
+.browser-selection-copy-dialog-btn-confirm:active {
+  transform: translateY(0) !important;
+}
+
+/* ==================== 表格导出按钮样式 ==================== */
+.table-export-button {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 10000 !important;
+  padding: 4px 8px !important;
+  font-size: 14px !important;
+  border: 1px solid #ccc !important;
+  border-radius: 4px !important;
+  background-color: #fff !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.2s ease !important;
+  opacity: 0.8 !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+}
+
+.table-export-button:hover {
+  opacity: 1 !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+  background-color: #f8f9fa !important;
+}
+
+.table-export-button:active {
+  transform: scale(0.98) !important;
+}
+
+/* 深色模式下的表格导出按钮 */
+@media (prefers-color-scheme: dark) {
+  .table-export-button {
+    background-color: rgba(40, 40, 45, 0.95) !important;
+    border-color: rgba(102, 126, 234, 0.4) !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+  }
+  
+  .table-export-button:hover {
+    background-color: rgba(50, 50, 55, 0.95) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4) !important;
   }
 }
 

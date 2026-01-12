@@ -79,19 +79,14 @@ export async function simulateUserAction(
  * @param state 要设置的状态
  */
 export async function setupTestState(state: {
-  usageCount?: number;
-  usageDate?: string;
+  usageCount?: number;  // 已废弃：新模型不再使用统一的 usage_count
+  usageDate?: string;   // 已废弃：新模型不再使用日期重置
   hasPro?: boolean;
   settings?: Partial<PluginSettings>;
 }): Promise<void> {
-  // 设置使用次数（使用正确的存储键）
-  if (state.usageCount !== undefined || state.usageDate !== undefined) {
-    const today = state.usageDate || new Date().toDateString();
-    await chrome.storage.local.set({
-      usage_count: state.usageCount || 0,
-      last_usage_date: today,
-    });
-  }
+  // 注意：usageCount 和 usageDate 参数已废弃
+  // 新的双轨制模型不再使用统一的 usage_count
+  // 基础能力无次数限制，高级能力使用独立的试用状态管理
   
   // 设置 Pro 权限（使用正确的存储键和格式）
   if (state.hasPro !== undefined) {
@@ -130,8 +125,8 @@ export async function cleanupTestState(): Promise<void> {
   
   // 重置为默认状态（使用正确的存储键）
   await chrome.storage.local.set({
-    usage_count: 0,
-    last_usage_date: new Date().toDateString(),
+    // 注意：不再设置 usage_count 和 last_usage_date
+    // 新模型使用无语义状态管理
     pro_state: {
       isPro: false,
       signature: '',

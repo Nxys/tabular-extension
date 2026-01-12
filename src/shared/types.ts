@@ -42,7 +42,13 @@ export interface ActionResultMessage {
       text?: string;
       table?: string[][];
       csv?: string;
-      message?: string;  // 由 background 生成的完整文案
+      message?: string;           // 由 background 生成的完整文案
+      rowLimit?: number;          // 行数限制
+      totalRows?: number;         // 总行数
+      isLimited?: boolean;        // 是否被限制
+      trialRemaining?: number;    // 剩余试用次数
+      cleaningRules?: CleaningRules;  // 清洗规则
+      exportFormats?: ExportFormat[]; // 可用导出格式
     };
   };
 }
@@ -67,15 +73,45 @@ export type ActionType =
   | 'text-extract'      // 文本提取
   | 'table-detect'      // 表格检测
   | 'column-align'      // 列对齐
-  | 'csv-export';       // CSV 导出
+  | 'csv-export'        // CSV 导出
+  | 'advanced-clean'    // 高级清洗
+  | 'table-export'      // 表格导出
+  | 'check-trial';      // 检查试用次数
+
+/**
+ * 高级能力类型
+ */
+export type AdvancedFeature = 
+  | 'advanced-cleaning'    // 高级清洗
+  | 'table-detection'      // 表格识别
+  | 'one-click-export';    // 一键导出
+
+/**
+ * 导出格式
+ */
+export type ExportFormat = 'csv' | 'excel';
+
+/**
+ * 清洗规则
+ */
+export interface CleaningRules {
+  removeEmptyLines: boolean;      // 去空行
+  mergeMultipleLines: boolean;    // 合并多行
+  customSeparator?: string;       // 自定义分隔符
+  mergeToSingleLine: boolean;     // 合并为一行
+  removeDuplicates: boolean;      // 去重
+}
 
 /**
  * UI 动作枚举
  */
 export type UIAction =
-  | 'SHOW_RESULT_PANEL'    // 显示结果面板
-  | 'SHOW_LIMIT_PANEL'     // 显示限制提示
-  | 'SHOW_PRO_PANEL';      // 显示 Pro 升级提示
+  | 'SHOW_RESULT_PANEL'       // 显示结果面板
+  | 'SHOW_LIMIT_PANEL'        // 显示限制提示
+  | 'SHOW_PRO_PANEL'          // 显示 Pro 升级提示
+  | 'SHOW_CLEANING_DIALOG'    // 显示清洗规则选择
+  | 'SHOW_EXPORT_DIALOG'      // 显示导出格式选择
+  | 'SHOW_TRIAL_EXHAUSTED';   // 显示试用次数用尽
 
 /**
  * 操作状态

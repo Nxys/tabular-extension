@@ -284,6 +284,10 @@ class BrowserSelectionCopy {
         this.panel.showPro(uiData);
         break;
 
+      case 'SHOW_TRIAL_EXHAUSTED':
+        this.panel.showTrialExhausted(uiData);
+        break;
+
       default:
         console.warn('Unknown UI action:', uiAction);
     }

@@ -40,7 +40,6 @@ describe('Pro 权限检查集成测试', () => {
     test('有 Pro 权限时表格检测应该正常执行', async () => {
       // Arrange: 设置有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: true,
       });
       
@@ -61,7 +60,6 @@ describe('Pro 权限检查集成测试', () => {
     test('有 Pro 权限时列对齐应该正常执行', async () => {
       // Arrange: 设置有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: true,
       });
       
@@ -82,7 +80,6 @@ describe('Pro 权限检查集成测试', () => {
     test('有 Pro 权限时 CSV 导出应该正常执行', async () => {
       // Arrange: 设置有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: true,
       });
       
@@ -103,7 +100,6 @@ describe('Pro 权限检查集成测试', () => {
     test('所有 Pro 功能在有权限时都应该返回 ok 状态', async () => {
       // Arrange: 设置有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: true,
       });
       
@@ -120,7 +116,6 @@ describe('Pro 权限检查集成测试', () => {
     test('有 Pro 权限时应该返回实际的功能结果', async () => {
       // Arrange: 设置有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: true,
       });
       
@@ -140,7 +135,6 @@ describe('Pro 权限检查集成测试', () => {
     test('有 Pro 权限时应该显示结果面板而不是 Pro 面板', async () => {
       // Arrange: 设置有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: true,
       });
       
@@ -159,7 +153,6 @@ describe('Pro 权限检查集成测试', () => {
     test('没有 Pro 权限时表格检测应该被阻止', async () => {
       // Arrange: 设置没有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: false,
       });
       
@@ -177,7 +170,6 @@ describe('Pro 权限检查集成测试', () => {
     test('没有 Pro 权限时列对齐应该被阻止', async () => {
       // Arrange: 设置没有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: false,
       });
       
@@ -195,7 +187,6 @@ describe('Pro 权限检查集成测试', () => {
     test('没有 Pro 权限时 CSV 导出应该被阻止', async () => {
       // Arrange: 设置没有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: false,
       });
       
@@ -213,7 +204,6 @@ describe('Pro 权限检查集成测试', () => {
     test('所有 Pro 功能在没有权限时都应该返回 blocked 状态', async () => {
       // Arrange: 设置没有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: false,
       });
       
@@ -230,7 +220,6 @@ describe('Pro 权限检查集成测试', () => {
     test('没有 Pro 权限时应该显示 Pro 提示消息', async () => {
       // Arrange: 设置没有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: false,
       });
       
@@ -247,7 +236,6 @@ describe('Pro 权限检查集成测试', () => {
     test('没有 Pro 权限时不应该返回功能结果', async () => {
       // Arrange: 设置没有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: false,
       });
       
@@ -266,7 +254,6 @@ describe('Pro 权限检查集成测试', () => {
     test('从无权限变为有权限后应该立即生效', async () => {
       // Arrange: 初始状态为没有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: false,
       });
       
@@ -281,7 +268,6 @@ describe('Pro 权限检查集成测试', () => {
       
       // Act: 更新权限状态为有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: true,
       });
       
@@ -297,7 +283,6 @@ describe('Pro 权限检查集成测试', () => {
     test('从有权限变为无权限后应该立即生效', async () => {
       // Arrange: 初始状态为有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: true,
       });
       
@@ -312,7 +297,6 @@ describe('Pro 权限检查集成测试', () => {
       
       // Act: 更新权限状态为没有 Pro 权限
       await setupTestState({
-        usageCount: 1, // 保持使用次数
         hasPro: false,
       });
       
@@ -327,7 +311,6 @@ describe('Pro 权限检查集成测试', () => {
     test('权限变化应该影响所有 Pro 功能', async () => {
       // Arrange: 初始状态为没有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: false,
       });
       
@@ -341,7 +324,6 @@ describe('Pro 权限检查集成测试', () => {
       
       // Act: 更新为有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: true,
       });
       
@@ -355,7 +337,6 @@ describe('Pro 权限检查集成测试', () => {
     test('权限变化不应该影响使用次数统计', async () => {
       // Arrange: 初始状态为有 Pro 权限，使用次数为 5
       await setupTestState({
-        usageCount: 5,
         hasPro: true,
       });
       
@@ -370,7 +351,6 @@ describe('Pro 权限检查集成测试', () => {
       
       // Act: 更新权限状态为无权限
       await setupTestState({
-        usageCount: 6, // 保持使用次数
         hasPro: false,
       });
       
@@ -390,7 +370,6 @@ describe('Pro 权限检查集成测试', () => {
       for (let i = 0; i < 3; i++) {
         // Act: 设置为有权限
         await setupTestState({
-          usageCount: 0,
           hasPro: true,
         });
         
@@ -401,7 +380,6 @@ describe('Pro 权限检查集成测试', () => {
         
         // Act: 设置为无权限
         await setupTestState({
-          usageCount: 1,
           hasPro: false,
         });
         
@@ -415,7 +393,6 @@ describe('Pro 权限检查集成测试', () => {
     test('权限变化应该在下一次操作时立即反映', async () => {
       // Arrange: 初始状态为有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: true,
       });
       
@@ -427,7 +404,6 @@ describe('Pro 权限检查集成测试', () => {
       
       // Act: 立即更新权限状态
       await setupTestState({
-        usageCount: 1,
         hasPro: false,
       });
       
@@ -444,7 +420,6 @@ describe('Pro 权限检查集成测试', () => {
     test('使用次数限制应该优先于 Pro 权限检查', async () => {
       // Arrange: 设置使用次数达到上限且没有 Pro 权限
       await setupTestState({
-        usageCount: 20,
         hasPro: false,
       });
       
@@ -462,7 +437,6 @@ describe('Pro 权限检查集成测试', () => {
     test('即使有 Pro 权限，达到使用限制时也应该显示限制提示', async () => {
       // Arrange: 设置使用次数达到上限但有 Pro 权限
       await setupTestState({
-        usageCount: 20,
         hasPro: true,
       });
       
@@ -479,7 +453,6 @@ describe('Pro 权限检查集成测试', () => {
     test('所有 Pro 功能都应该遵循相同的优先级规则', async () => {
       // Arrange: 设置使用次数达到上限且没有 Pro 权限
       await setupTestState({
-        usageCount: 20,
         hasPro: false,
       });
       
@@ -496,7 +469,6 @@ describe('Pro 权限检查集成测试', () => {
     test('未达到限制且没有 Pro 权限时应该显示 Pro 提示', async () => {
       // Arrange: 设置使用次数未达上限但没有 Pro 权限
       await setupTestState({
-        usageCount: 5,
         hasPro: false,
       });
       
@@ -513,7 +485,6 @@ describe('Pro 权限检查集成测试', () => {
     test('未达到限制且有 Pro 权限时应该正常执行', async () => {
       // Arrange: 设置使用次数未达上限且有 Pro 权限
       await setupTestState({
-        usageCount: 5,
         hasPro: true,
       });
       
@@ -532,7 +503,6 @@ describe('Pro 权限检查集成测试', () => {
     test('不同 Pro 功能应该使用相同的权限检查逻辑', async () => {
       // Arrange: 设置没有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: false,
       });
       
@@ -555,7 +525,6 @@ describe('Pro 权限检查集成测试', () => {
     test('Pro 权限检查应该在业务逻辑执行前进行', async () => {
       // Arrange: 设置没有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: false,
       });
       
@@ -576,7 +545,6 @@ describe('Pro 权限检查集成测试', () => {
     test('Pro 权限检查应该在使用次数检查之后进行', async () => {
       // Arrange: 设置使用次数达到上限且没有 Pro 权限
       await setupTestState({
-        usageCount: 20,
         hasPro: false,
       });
       
@@ -601,7 +569,6 @@ describe('Pro 权限检查集成测试', () => {
       
       // Act: 模拟完整的用户交互流程
       const response = await simulateUserAction('table-detect', testTable, {
-        usageCount: 0,
         hasPro: true,
       });
       
@@ -616,30 +583,26 @@ describe('Pro 权限检查集成测试', () => {
       const testTable = [['测试']];
       
       // 场景 1: 有权限，正常执行
-      await setupTestState({ usageCount: 0, hasPro: true });
+      await setupTestState({ hasPro: true });
       const response1 = await sendRequestAction('table-detect', testTable);
       expect(response1.status).toBe('ok');
       
       // 场景 2: 权限被撤销，操作被阻止
-      await setupTestState({ usageCount: 1, hasPro: false });
+      await setupTestState({ hasPro: false });
       const response2 = await sendRequestAction('table-detect', testTable);
       expect(response2.status).toBe('blocked');
       
       // 场景 3: 权限恢复，正常执行
-      await setupTestState({ usageCount: 1, hasPro: true });
+      await setupTestState({ hasPro: true });
       const response3 = await sendRequestAction('table-detect', testTable);
       expect(response3.status).toBe('ok');
       
-      // 场景 4: 达到使用限制，即使有权限也被阻止
-      await setupTestState({ usageCount: 20, hasPro: true });
-      const response4 = await sendRequestAction('table-detect', testTable);
-      expect(response4.status).toBe('limited');
+      // 注意：场景 4 已移除，因为新模型中基础能力不再有每日次数限制
     });
     
     test('应该在不同 Pro 功能间保持权限状态一致', async () => {
       // Arrange: 设置有 Pro 权限
       await setupTestState({
-        usageCount: 0,
         hasPro: true,
       });
       
@@ -657,7 +620,6 @@ describe('Pro 权限检查集成测试', () => {
       
       // Act: 撤销 Pro 权限
       await setupTestState({
-        usageCount: 3,
         hasPro: false,
       });
       

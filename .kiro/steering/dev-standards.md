@@ -14,7 +14,7 @@ inclusion: always
 - 遵循 ESLint
 
 ## 测试
-- 命令：`npm test`
+- 命令：`npm test`，无需`--run`参数
 - 覆盖率：Background ≥90%，Content ≥85%
 - 路径：`src/模块/__test__/文件名.test.ts`
 - 不自动添加测试（除非用户要求）

@@ -36,7 +36,15 @@ export class Panel {
    * 
    * 接收 background 生成的数据，纯渲染
    */
-  showResult(uiData?: { text?: string; table?: string[][]; csv?: string }, panelPosition: PanelPosition = 'center'): void {
+  showResult(uiData?: { 
+    text?: string; 
+    table?: string[][]; 
+    csv?: string;
+    rowLimit?: number;
+    totalRows?: number;
+    isLimited?: boolean;
+    trialRemaining?: number;
+  }, panelPosition: PanelPosition = 'center'): void {
     // 直接复制模式：不显示面板，直接复制到剪贴板
     if (panelPosition === 'none') {
       this.copyDirectly(uiData);
@@ -55,6 +63,12 @@ export class Panel {
     // 内容区域
     const previewWrapper = document.createElement('div');
     previewWrapper.className = `${CSS_CLASS_PREFIX}-panel-preview-wrapper`;
+
+    // 行数限制提示（如果被限制）
+    if (uiData?.isLimited && uiData?.rowLimit && uiData?.totalRows) {
+      const limitHint = this.createLimitHint(uiData.rowLimit, uiData.totalRows);
+      previewWrapper.appendChild(limitHint);
+    }
 
     const preview = document.createElement('textarea');
     preview.className = `${CSS_CLASS_PREFIX}-panel-textarea`;
@@ -77,24 +91,26 @@ export class Panel {
 
     previewWrapper.appendChild(preview);
 
-    // 复制按钮容器
-    const copyBtnWrapper = document.createElement('div');
-    copyBtnWrapper.className = `${CSS_CLASS_PREFIX}-panel-copy-wrapper`;
+    // 按钮容器
+    const btnWrapper = document.createElement('div');
+    btnWrapper.className = `${CSS_CLASS_PREFIX}-panel-copy-wrapper`;
+
+    // 高级清洗按钮
+    const advancedCleanBtn = this.createAdvancedCleanButton();
+    btnWrapper.appendChild(advancedCleanBtn);
+
+    // 导出按钮
+    const exportBtn = this.createExportButton();
+    btnWrapper.appendChild(exportBtn);
 
     // 复制按钮
     const copyBtn = this.createCopyButton();
-    copyBtnWrapper.appendChild(copyBtn);
-
-    // 如果有 CSV，添加导出按钮
-    if (uiData?.csv) {
-      const csvBtn = this.createCSVButton(uiData.csv);
-      copyBtnWrapper.insertBefore(csvBtn, copyBtn);
-    }
+    btnWrapper.appendChild(copyBtn);
 
     // 组装面板
     this.element.appendChild(header);
     this.element.appendChild(previewWrapper);
-    this.element.appendChild(copyBtnWrapper);
+    this.element.appendChild(btnWrapper);
 
     document.body.appendChild(this.element);
     this.positionPanel(panelPosition);
@@ -158,6 +174,42 @@ export class Panel {
     const message = document.createElement('div');
     message.className = `${CSS_CLASS_PREFIX}-panel-message`;
     message.textContent = uiData?.message || '这是 Pro 功能';
+
+    messageWrapper.appendChild(message);
+
+    // 组装面板
+    this.element.appendChild(header);
+    this.element.appendChild(messageWrapper);
+
+    document.body.appendChild(this.element);
+    this.bindDragEvents(header);
+  }
+
+  /**
+   * 显示试用次数用尽提示
+   * 
+   * 接收 background 生成的完整文案（包含权益说明）
+   * 注意：试用次数用尽提示始终页面居中显示
+   */
+  showTrialExhausted(uiData?: { message?: string; trialRemaining?: number }): void {
+    this.hide();
+    
+    // 创建面板
+    this.element = document.createElement('div');
+    this.element.className = `${CSS_CLASS_PREFIX}-panel ${CSS_CLASS_PREFIX}-panel-force-center`;
+    
+    // 标题栏
+    const header = this.createHeader('🔒', '试用次数已用完');
+    
+    // 消息内容
+    const messageWrapper = document.createElement('div');
+    messageWrapper.className = `${CSS_CLASS_PREFIX}-panel-message-wrapper`;
+
+    const message = document.createElement('div');
+    message.className = `${CSS_CLASS_PREFIX}-panel-message`;
+    // 保留换行符格式
+    message.style.whiteSpace = 'pre-line';
+    message.textContent = uiData?.message || '试用次数已用完，升级 Pro 解锁无限使用';
 
     messageWrapper.appendChild(message);
 
@@ -256,17 +308,39 @@ export class Panel {
   }
 
   /**
-   * 创建 CSV 导出按钮
+   * 创建行数限制提示
    */
-  private createCSVButton(csv: string): HTMLButtonElement {
-    const csvBtn = document.createElement('button');
-    csvBtn.className = `${CSS_CLASS_PREFIX}-panel-csv-btn`;
-    csvBtn.textContent = '📊 导出 CSV';
-    csvBtn.onclick = () => {
-      this.downloadCSV(csv);
+  private createLimitHint(rowLimit: number, totalRows: number): HTMLDivElement {
+    const hint = document.createElement('div');
+    hint.className = `${CSS_CLASS_PREFIX}-panel-limit-hint`;
+    hint.textContent = `仅展示前 ${rowLimit} 行（共 ${totalRows} 行），升级 Pro 解锁完整数据`;
+    return hint;
+  }
+
+  /**
+   * 创建高级清洗按钮
+   */
+  private createAdvancedCleanButton(): HTMLButtonElement {
+    const btn = document.createElement('button');
+    btn.className = `${CSS_CLASS_PREFIX}-panel-advanced-clean-btn`;
+    btn.textContent = '🧹 高级清洗（Pro）';
+    btn.onclick = () => {
+      this.showCleaningDialog();
     };
-    
-    return csvBtn;
+    return btn;
+  }
+
+  /**
+   * 创建导出按钮
+   */
+  private createExportButton(): HTMLButtonElement {
+    const btn = document.createElement('button');
+    btn.className = `${CSS_CLASS_PREFIX}-panel-export-btn`;
+    btn.textContent = '📤 导出';
+    btn.onclick = () => {
+      this.showExportDialog();
+    };
+    return btn;
   }
 
   /**
@@ -281,21 +355,6 @@ export class Panel {
       console.error('复制失败:', error);
       this.showToast('✗ 复制失败');
     }
-  }
-
-  /**
-   * 下载 CSV 文件
-   */
-  private downloadCSV(csv: string): void {
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `table-${Date.now()}.csv`;
-    link.click();
-    
-    URL.revokeObjectURL(url);
   }
 
   /**
@@ -429,5 +488,206 @@ export class Panel {
     setTimeout(() => {
       toast.remove();
     }, 1500);
+  }
+
+  /**
+   * 显示清洗规则选择弹窗
+   */
+  private showCleaningDialog(): void {
+    // 创建遮罩层
+    const overlay = document.createElement('div');
+    overlay.className = `${CSS_CLASS_PREFIX}-dialog-overlay`;
+    
+    // 创建弹窗
+    const dialog = document.createElement('div');
+    dialog.className = `${CSS_CLASS_PREFIX}-dialog`;
+    
+    // 标题
+    const title = document.createElement('div');
+    title.className = `${CSS_CLASS_PREFIX}-dialog-title`;
+    title.textContent = '高级清洗规则';
+    
+    // 规则选项容器
+    const rulesContainer = document.createElement('div');
+    rulesContainer.className = `${CSS_CLASS_PREFIX}-dialog-rules`;
+    
+    // 规则选项
+    const rules = [
+      { id: 'removeEmptyLines', label: '去除空行' },
+      { id: 'mergeMultipleLines', label: '合并多行' },
+      { id: 'mergeToSingleLine', label: '合并为一行' },
+      { id: 'removeDuplicates', label: '去除重复行' }
+    ];
+    
+    const checkboxes: Record<string, HTMLInputElement> = {};
+    
+    rules.forEach(rule => {
+      const ruleItem = document.createElement('label');
+      ruleItem.className = `${CSS_CLASS_PREFIX}-dialog-rule-item`;
+      
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = rule.id;
+      checkbox.className = `${CSS_CLASS_PREFIX}-dialog-checkbox`;
+      checkboxes[rule.id] = checkbox;
+      
+      const labelText = document.createElement('span');
+      labelText.textContent = rule.label;
+      
+      ruleItem.appendChild(checkbox);
+      ruleItem.appendChild(labelText);
+      rulesContainer.appendChild(ruleItem);
+    });
+    
+    // 自定义分隔符选项
+    const separatorItem = document.createElement('div');
+    separatorItem.className = `${CSS_CLASS_PREFIX}-dialog-separator-item`;
+    
+    const separatorLabel = document.createElement('label');
+    separatorLabel.textContent = '自定义分隔符：';
+    
+    const separatorInput = document.createElement('input');
+    separatorInput.type = 'text';
+    separatorInput.className = `${CSS_CLASS_PREFIX}-dialog-separator-input`;
+    separatorInput.placeholder = '例如：, 或 | 或 空格';
+    
+    separatorItem.appendChild(separatorLabel);
+    separatorItem.appendChild(separatorInput);
+    rulesContainer.appendChild(separatorItem);
+    
+    // 按钮容器
+    const btnContainer = document.createElement('div');
+    btnContainer.className = `${CSS_CLASS_PREFIX}-dialog-buttons`;
+    
+    // 取消按钮
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = `${CSS_CLASS_PREFIX}-dialog-btn-cancel`;
+    cancelBtn.textContent = '取消';
+    cancelBtn.onclick = () => {
+      overlay.remove();
+    };
+    
+    // 确认按钮
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = `${CSS_CLASS_PREFIX}-dialog-btn-confirm`;
+    confirmBtn.textContent = '应用清洗';
+    confirmBtn.onclick = () => {
+      // 收集选中的规则
+      const selectedRules = {
+        removeEmptyLines: checkboxes.removeEmptyLines.checked,
+        mergeMultipleLines: checkboxes.mergeMultipleLines.checked,
+        mergeToSingleLine: checkboxes.mergeToSingleLine.checked,
+        removeDuplicates: checkboxes.removeDuplicates.checked,
+        customSeparator: separatorInput.value || undefined
+      };
+      
+      // 发送消息到 background
+      chrome.runtime.sendMessage({
+        type: 'REQUEST_ACTION',
+        payload: {
+          action: 'advanced-clean',
+          data: {
+            text: this.currentText,
+            rules: selectedRules
+          }
+        }
+      });
+      
+      overlay.remove();
+      this.hide();
+    };
+    
+    btnContainer.appendChild(cancelBtn);
+    btnContainer.appendChild(confirmBtn);
+    
+    // 组装弹窗
+    dialog.appendChild(title);
+    dialog.appendChild(rulesContainer);
+    dialog.appendChild(btnContainer);
+    overlay.appendChild(dialog);
+    
+    // 点击遮罩层关闭
+    overlay.onclick = (e) => {
+      if (e.target === overlay) {
+        overlay.remove();
+      }
+    };
+    
+    document.body.appendChild(overlay);
+  }
+
+  /**
+   * 显示导出格式选择弹窗
+   */
+  private showExportDialog(): void {
+    // 创建遮罩层
+    const overlay = document.createElement('div');
+    overlay.className = `${CSS_CLASS_PREFIX}-dialog-overlay`;
+    
+    // 创建弹窗
+    const dialog = document.createElement('div');
+    dialog.className = `${CSS_CLASS_PREFIX}-dialog`;
+    
+    // 标题
+    const title = document.createElement('div');
+    title.className = `${CSS_CLASS_PREFIX}-dialog-title`;
+    title.textContent = '选择导出格式';
+    
+    // 格式选项容器
+    const formatsContainer = document.createElement('div');
+    formatsContainer.className = `${CSS_CLASS_PREFIX}-dialog-formats`;
+    
+    // 格式选项
+    const formats = [
+      { id: 'csv', label: 'CSV 格式', icon: '📊' },
+      { id: 'excel', label: 'Excel 格式', icon: '📈' }
+    ];
+    
+    formats.forEach(format => {
+      const formatBtn = document.createElement('button');
+      formatBtn.className = `${CSS_CLASS_PREFIX}-dialog-format-btn`;
+      formatBtn.innerHTML = `<span class="${CSS_CLASS_PREFIX}-dialog-format-icon">${format.icon}</span><span>${format.label}</span>`;
+      formatBtn.onclick = () => {
+        // 发送消息到 background
+        chrome.runtime.sendMessage({
+          type: 'REQUEST_ACTION',
+          payload: {
+            action: 'table-export',
+            data: {
+              text: this.currentText,
+              format: format.id
+            }
+          }
+        });
+        
+        overlay.remove();
+        this.hide();
+      };
+      
+      formatsContainer.appendChild(formatBtn);
+    });
+    
+    // 取消按钮
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = `${CSS_CLASS_PREFIX}-dialog-btn-cancel`;
+    cancelBtn.textContent = '取消';
+    cancelBtn.onclick = () => {
+      overlay.remove();
+    };
+    
+    // 组装弹窗
+    dialog.appendChild(title);
+    dialog.appendChild(formatsContainer);
+    dialog.appendChild(cancelBtn);
+    overlay.appendChild(dialog);
+    
+    // 点击遮罩层关闭
+    overlay.onclick = (e) => {
+      if (e.target === overlay) {
+        overlay.remove();
+      }
+    };
+    
+    document.body.appendChild(overlay);
   }
 }

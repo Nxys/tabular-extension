@@ -46,25 +46,25 @@ describe('集成测试基础设施', () => {
   describe('辅助函数库', () => {
     test('setupTestState 应该正确设置测试状态', async () => {
       await setupTestState({
-        usageCount: 5,
+        usageCount: 5,  // 已废弃，但保留参数兼容性
         hasPro: true,
       });
       
-      const storage = await chrome.storage.local.get(['usage_count', 'pro_state']);
-      expect(storage.usage_count).toBe(5);
+      const storage = await chrome.storage.local.get(['pro_state']);
+      // 注意：不再检查 usage_count，因为新模型不使用它
       expect(storage.pro_state.isPro).toBe(true);
     });
     
     test('cleanupTestState 应该清理测试环境', async () => {
       await setupTestState({
-        usageCount: 5,
+        usageCount: 5,  // 已废弃，但保留参数兼容性
         hasPro: true,
       });
       
       await cleanupTestState();
       
-      const storage = await chrome.storage.local.get(['usage_count', 'pro_state']);
-      expect(storage.usage_count).toBe(0);
+      const storage = await chrome.storage.local.get(['pro_state']);
+      // 注意：不再检查 usage_count，因为新模型不使用它
       expect(storage.pro_state.isPro).toBe(false);
     });
     
