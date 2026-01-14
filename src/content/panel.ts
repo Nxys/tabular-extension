@@ -23,12 +23,20 @@ export class Panel {
     | { startX: number; startY: number; originLeft: number; originTop: number }
     | null = null;
   private mousePosition: { x: number; y: number } = { x: 0, y: 0 };
+  private onActionRequest?: (action: string, data: unknown) => void;
 
   /**
    * 更新鼠标位置（用于跟随鼠标定位）
    */
   updateMousePosition(x: number, y: number): void {
     this.mousePosition = { x, y };
+  }
+
+  /**
+   * 设置操作请求回调
+   */
+  setActionRequestCallback(callback: (action: string, data: unknown) => void): void {
+    this.onActionRequest = callback;
   }
 
   /**
@@ -43,6 +51,7 @@ export class Panel {
     rowLimit?: number;
     totalRows?: number;
     isLimited?: boolean;
+    limitMessage?: string;  // 由 Background 生成的限制提示文案
     trialRemaining?: number;
   }, panelPosition: PanelPosition = 'center'): void {
     // 直接复制模式：不显示面板，直接复制到剪贴板
@@ -64,9 +73,9 @@ export class Panel {
     const previewWrapper = document.createElement('div');
     previewWrapper.className = `${CSS_CLASS_PREFIX}-panel-preview-wrapper`;
 
-    // 行数限制提示（如果被限制）
-    if (uiData?.isLimited && uiData?.rowLimit && uiData?.totalRows) {
-      const limitHint = this.createLimitHint(uiData.rowLimit, uiData.totalRows);
+    // 行数限制提示（如果被限制且有提示文案）
+    if (uiData?.isLimited && uiData?.limitMessage) {
+      const limitHint = this.createLimitHint(uiData.limitMessage);
       previewWrapper.appendChild(limitHint);
     }
 
@@ -309,11 +318,12 @@ export class Panel {
 
   /**
    * 创建行数限制提示
+   * 接收 Background 生成的完整文案
    */
-  private createLimitHint(rowLimit: number, totalRows: number): HTMLDivElement {
+  private createLimitHint(message: string): HTMLDivElement {
     const hint = document.createElement('div');
     hint.className = `${CSS_CLASS_PREFIX}-panel-limit-hint`;
-    hint.textContent = `仅展示前 ${rowLimit} 行（共 ${totalRows} 行），升级 Pro 解锁完整数据`;
+    hint.textContent = message;
     return hint;
   }
 
@@ -493,7 +503,10 @@ export class Panel {
   /**
    * 显示清洗规则选择弹窗
    */
-  private showCleaningDialog(): void {
+  showCleaningDialog(uiData?: { text?: string }): void {
+    // 如果 uiData 提供了文本，使用它；否则使用当前文本
+    const textToClean = uiData?.text || this.currentText;
+
     // 创建遮罩层
     const overlay = document.createElement('div');
     overlay.className = `${CSS_CLASS_PREFIX}-dialog-overlay`;
@@ -581,17 +594,13 @@ export class Panel {
         customSeparator: separatorInput.value || undefined
       };
       
-      // 发送消息到 background
-      chrome.runtime.sendMessage({
-        type: 'REQUEST_ACTION',
-        payload: {
-          action: 'advanced-clean',
-          data: {
-            text: this.currentText,
-            rules: selectedRules
-          }
-        }
-      });
+      // 通过回调通知 content 发送请求
+      if (this.onActionRequest) {
+        this.onActionRequest('advanced-clean', {
+          text: textToClean,
+          rules: selectedRules
+        });
+      }
       
       overlay.remove();
       this.hide();
@@ -619,7 +628,10 @@ export class Panel {
   /**
    * 显示导出格式选择弹窗
    */
-  private showExportDialog(): void {
+  showExportDialog(uiData?: { text?: string; exportFormats?: string[] }): void {
+    // 如果 uiData 提供了文本，使用它；否则使用当前文本
+    const textToExport = uiData?.text || this.currentText;
+    
     // 创建遮罩层
     const overlay = document.createElement('div');
     overlay.className = `${CSS_CLASS_PREFIX}-dialog-overlay`;
@@ -637,28 +649,25 @@ export class Panel {
     const formatsContainer = document.createElement('div');
     formatsContainer.className = `${CSS_CLASS_PREFIX}-dialog-formats`;
     
-    // 格式选项
+    // 格式选项（可以从 uiData 获取，或使用默认）
+    const availableFormats = uiData?.exportFormats || ['csv', 'excel'];
     const formats = [
       { id: 'csv', label: 'CSV 格式', icon: '📊' },
       { id: 'excel', label: 'Excel 格式', icon: '📈' }
-    ];
+    ].filter(f => availableFormats.includes(f.id));
     
     formats.forEach(format => {
       const formatBtn = document.createElement('button');
       formatBtn.className = `${CSS_CLASS_PREFIX}-dialog-format-btn`;
       formatBtn.innerHTML = `<span class="${CSS_CLASS_PREFIX}-dialog-format-icon">${format.icon}</span><span>${format.label}</span>`;
       formatBtn.onclick = () => {
-        // 发送消息到 background
-        chrome.runtime.sendMessage({
-          type: 'REQUEST_ACTION',
-          payload: {
-            action: 'table-export',
-            data: {
-              text: this.currentText,
-              format: format.id
-            }
-          }
-        });
+        // 通过回调通知 content 发送请求
+        if (this.onActionRequest) {
+          this.onActionRequest('table-export', {
+            text: textToExport,
+            format: format.id
+          });
+        }
         
         overlay.remove();
         this.hide();

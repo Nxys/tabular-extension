@@ -142,8 +142,8 @@ describe('行数限制逻辑', () => {
     const result = await handleActionRequest(payload);
 
     // Assert
-    expect(result.uiData?.message).toBeDefined();
-    expect(result.uiData?.message).toBe('Free 版最多处理 5 行，升级 Pro 解锁完整数据');
+    expect(result.uiData?.limitMessage).toBeDefined();
+    expect(result.uiData?.limitMessage).toContain('仅展示前 5 行');
   });
 
   /**

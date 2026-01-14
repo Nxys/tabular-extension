@@ -1,6 +1,14 @@
 // src/background/storage.ts
 var memoryFallback = /* @__PURE__ */ new Map();
+var DANGEROUS_KEYS = ["__proto__", "constructor", "prototype"];
+function isSafeKey(key) {
+  return !DANGEROUS_KEYS.includes(key);
+}
 async function getFromStorage(key, defaultValue) {
+  if (!isSafeKey(key)) {
+    console.warn(`Dangerous key rejected: ${key}`);
+    return defaultValue;
+  }
   try {
     const result = await chrome.storage.local.get([key]);
     return result[key] !== void 0 ? result[key] : defaultValue;
@@ -10,6 +18,10 @@ async function getFromStorage(key, defaultValue) {
   }
 }
 async function setToStorage(key, value) {
+  if (!isSafeKey(key)) {
+    console.warn(`Dangerous key rejected: ${key}`);
+    return;
+  }
   try {
     await chrome.storage.local.set({ [key]: value });
   } catch (error) {
@@ -19,87 +31,158 @@ async function setToStorage(key, value) {
 }
 
 // src/background/usage.ts
-var FREE_POLICY = {
-  maxPerDay: 20
-};
-async function checkUsage() {
-  await resetIfNewDay();
-  const count = await getUsageCount();
-  const max = FREE_POLICY.maxPerDay;
-  if (count >= max) {
+var STATE_KEY_PREFIX = "state_";
+var HASH_CONSTANT_1 = 2654435769;
+var HASH_CONSTANT_2 = 2246822507;
+var HASH_CONSTANT_3 = 2146121005;
+var HASH_CONSTANT_4 = 2221713035;
+var THRESHOLD = 1073741824;
+async function checkTrial(feature) {
+  try {
+    const state = await getFeatureState(feature);
+    const now = Date.now();
+    const allowed = deriveAllowed(state, now);
+    const remaining = deriveRemaining(state);
+    return {
+      allowed,
+      remaining,
+      feature
+    };
+  } catch (error) {
+    console.error("Error checking trial state:", error);
     return {
       allowed: false,
-      reason: "limit-reached",
       remaining: 0,
-      max
+      feature
     };
   }
+}
+async function evolveTrial(feature) {
+  try {
+    const state = await getFeatureState(feature);
+    const newState = evolveState(state);
+    await setFeatureState(feature, newState);
+  } catch (error) {
+    console.error("Error evolving trial state:", error);
+  }
+}
+async function getAllTrials() {
+  const features = [
+    "advanced-cleaning",
+    "table-detection",
+    "one-click-export"
+  ];
+  const results = {};
+  for (const feature of features) {
+    try {
+      results[feature] = await checkTrial(feature);
+    } catch (error) {
+      console.error(`Error getting trial state for ${feature}:`, error);
+      results[feature] = {
+        allowed: false,
+        remaining: 0,
+        feature
+      };
+    }
+  }
+  return results;
+}
+function deriveAllowed(state, now) {
+  const factor1 = (state.seed ^ HASH_CONSTANT_1) >>> 0;
+  const factor2 = state.entropy * HASH_CONSTANT_2 >>> 0;
+  const factor3 = Math.floor((now - state.timestamp) / 864e5);
+  const hash1 = factor1 + factor2 >>> 0;
+  const hash2 = (hash1 ^ hash1 >>> 16) * HASH_CONSTANT_3 >>> 0;
+  const hash3 = (hash2 ^ hash2 >>> 15) * HASH_CONSTANT_4 >>> 0;
+  return (hash3 ^ factor3) > THRESHOLD;
+}
+function deriveRemaining(state) {
+  const hash = (state.seed ^ state.entropy) >>> 0;
+  const normalized = hash / 4294967295;
+  return Math.max(0, Math.floor(normalized * 3.5));
+}
+function evolveState(state) {
+  const newSeed = state.seed >>> 1 >>> 0;
+  const newEntropy = state.entropy >>> 1 >>> 0;
+  return {
+    seed: newSeed,
+    entropy: newEntropy,
+    timestamp: Date.now()
+  };
+}
+async function authorize(feature) {
+  try {
+    const state = await getFeatureState(feature);
+    const now = Date.now();
+    const allowed1 = deriveAllowed(state, now);
+    const daysSinceInit = Math.floor((now - state.timestamp) / 864e5);
+    const allowed2 = daysSinceInit < 365;
+    const allowed3 = state.seed !== 0 && state.entropy !== 0;
+    return allowed1 && allowed2 && allowed3;
+  } catch (error) {
+    console.error("Error authorizing feature:", error);
+    return false;
+  }
+}
+async function checkUsage() {
   return {
     allowed: true,
-    remaining: max - count,
-    max
+    remaining: 999,
+    max: 999
   };
 }
 async function consumeUsage() {
-  const count = await getUsageCount();
-  await setToStorage("usage_count", count + 1);
 }
-async function record(event) {
+async function record(_event) {
+}
+function generateRandomSeed() {
+  return Math.floor(Math.random() * 4294967295) >>> 0;
+}
+function generateRandomEntropy() {
+  return Math.floor(Math.random() * 4294967295) >>> 0;
+}
+async function getFeatureState(feature) {
   try {
-    await resetIfNewDay();
-    const stats = await getStats();
-    switch (event) {
-      case "select":
-        stats.selectCount++;
-        break;
-      case "table-detect":
-        stats.tableDetectCount++;
-        break;
-      case "column-align":
-        stats.columnAlignCount++;
-        break;
-      case "csv-export":
-        stats.csvExportCount++;
-        break;
+    const key = getStorageKey(feature);
+    const state = await getFromStorage(key, null);
+    if (state === null) {
+      return {
+        seed: generateRandomSeed(),
+        entropy: generateRandomEntropy(),
+        timestamp: Date.now()
+      };
     }
-    await setToStorage("usage_stats", stats);
+    return state;
   } catch (error) {
-    console.warn("Failed to record usage event", event, error);
+    console.error("Error getting feature state:", error);
+    return {
+      seed: 0,
+      entropy: 0,
+      timestamp: Date.now()
+    };
   }
 }
-async function getUsageCount() {
-  return await getFromStorage("usage_count", 0);
-}
-async function getStats() {
-  const defaultStats = {
-    selectCount: 0,
-    tableDetectCount: 0,
-    columnAlignCount: 0,
-    csvExportCount: 0,
-    lastDate: (/* @__PURE__ */ new Date()).toDateString()
-  };
-  return await getFromStorage("usage_stats", defaultStats);
-}
-async function resetIfNewDay() {
-  const today = (/* @__PURE__ */ new Date()).toDateString();
-  const lastDate = await getFromStorage("last_usage_date", "");
-  if (!lastDate || lastDate !== today) {
-    await setToStorage("usage_count", 0);
-    await setToStorage("last_usage_date", today);
-    await setToStorage("usage_stats", {
-      selectCount: 0,
-      tableDetectCount: 0,
-      columnAlignCount: 0,
-      csvExportCount: 0,
-      lastDate: today
-    });
+async function setFeatureState(feature, state) {
+  try {
+    const key = getStorageKey(feature);
+    await setToStorage(key, state);
+  } catch (error) {
+    console.error("Error setting feature state:", error);
   }
+}
+function getStorageKey(feature) {
+  return `${STATE_KEY_PREFIX}${feature}`;
 }
 
 // src/background/pro.ts
 async function allow(feature) {
-  const state = await getProState();
-  return state.isPro && state.features[feature] === true;
+  try {
+    const state = await getProState();
+    return state.isPro && state.features[feature] === true;
+  } catch (error) {
+    console.error("Error checking Pro permission:", error);
+    return false;
+  }
 }
 async function getProState() {
   const defaultState = {
@@ -111,7 +194,12 @@ async function getProState() {
       "csv-export": false
     }
   };
-  return await getFromStorage("pro_state", defaultState);
+  try {
+    return await getFromStorage("pro_state", defaultState);
+  } catch (error) {
+    console.error("Error getting Pro state:", error);
+    return defaultState;
+  }
 }
 
 // src/background/settings.ts
@@ -130,6 +218,62 @@ async function updateSettings(partial) {
   }
   if (partial.panelPosition !== void 0) {
     await setToStorage("panelPosition", partial.panelPosition);
+  }
+}
+
+// src/background/cleaner.ts
+function basicClean(data) {
+  return data.map((line) => line.trim());
+}
+function advancedClean(data, rules) {
+  try {
+    let result = [...data];
+    if (rules.removeEmptyLines) {
+      result = result.filter((line) => line.trim().length > 0);
+    }
+    if (rules.mergeMultipleLines && rules.customSeparator !== void 0) {
+      result = [result.join(rules.customSeparator)];
+    }
+    if (rules.mergeToSingleLine && !rules.mergeMultipleLines) {
+      result = [result.join(" ")];
+    }
+    if (rules.removeDuplicates) {
+      const seen = /* @__PURE__ */ new Set();
+      result = result.filter((line) => {
+        if (seen.has(line)) {
+          return false;
+        }
+        seen.add(line);
+        return true;
+      });
+    }
+    return result;
+  } catch (error) {
+    console.error("Error applying advanced cleaning rules:", error);
+    return basicClean(data);
+  }
+}
+
+// src/background/exporter.ts
+function toCSV(data) {
+  try {
+    if (data.length === 0) {
+      return "";
+    }
+    return data.map((row) => {
+      return row.map((field) => {
+        const fieldStr = String(field);
+        const needsQuotes = fieldStr.includes(",") || fieldStr.includes('"') || fieldStr.includes("\n") || fieldStr.includes("\r");
+        if (needsQuotes) {
+          const escaped = fieldStr.replace(/"/g, '""');
+          return `"${escaped}"`;
+        }
+        return fieldStr;
+      }).join(",");
+    }).join("\r\n") + "\r\n";
+  } catch (error) {
+    console.error("Error converting to CSV:", error);
+    return "";
   }
 }
 
@@ -159,6 +303,16 @@ async function handleMessage(message) {
 async function handleActionRequest(payload) {
   const { action, data } = payload;
   try {
+    if (action === "advanced-clean" || action === "table-export" || action === "check-trial") {
+      switch (action) {
+        case "advanced-clean":
+          return await handleAdvancedClean(data);
+        case "table-export":
+          return await handleTableExport(data);
+        case "check-trial":
+          return await handleCheckTrial(data);
+      }
+    }
     const usage = await checkUsage();
     if (!usage.allowed) {
       return {
@@ -199,17 +353,52 @@ async function handleActionRequest(payload) {
   }
 }
 async function handleTextExtract(data) {
+  const isPro = await allow("table-detect");
+  const { limitedData, isLimited, totalRows } = await applyRowLimit(data, isPro);
+  const uiData = {
+    text: limitedData,
+    totalRows,
+    isLimited
+  };
+  if (isLimited) {
+    uiData.rowLimit = 5;
+    uiData.limitMessage = `\u4EC5\u5C55\u793A\u524D 5 \u884C\uFF08\u5171 ${totalRows} \u884C\uFF09\uFF0C\u5347\u7EA7 Pro \u89E3\u9501\u5B8C\u6574\u6570\u636E`;
+  }
   const result = {
     status: "ok",
     uiAction: "SHOW_RESULT_PANEL",
-    data,
-    uiData: {
-      text: data
-    }
+    data: limitedData,
+    uiData
   };
   await record("select");
   await consumeUsage();
   return result;
+}
+async function applyRowLimit(data, isPro) {
+  if (isPro) {
+    const lines2 = data.split("\n");
+    return {
+      limitedData: data,
+      isLimited: false,
+      totalRows: lines2.length
+    };
+  }
+  const lines = data.split("\n");
+  const totalRows = lines.length;
+  if (totalRows <= 5) {
+    return {
+      limitedData: data,
+      isLimited: false,
+      totalRows
+    };
+  }
+  const limitedLines = lines.slice(0, 5);
+  const limitedData = limitedLines.join("\n");
+  return {
+    limitedData,
+    isLimited: true,
+    totalRows
+  };
 }
 async function handleTableDetect(data) {
   if (!await allow("table-detect")) {
@@ -288,6 +477,145 @@ function tableToCSV(table) {
       return cellStr;
     }).join(",");
   }).join("\n");
+}
+async function handleCheckTrial(data) {
+  const payload = data;
+  if (!payload.feature) {
+    const allTrials = await getAllTrials();
+    return {
+      status: "ok",
+      uiAction: "SHOW_RESULT_PANEL",
+      data: allTrials,
+      uiData: {
+        message: "\u8BD5\u7528\u6B21\u6570\u67E5\u8BE2\u6210\u529F"
+      }
+    };
+  }
+  const trialState = await checkTrial(payload.feature);
+  return {
+    status: "ok",
+    uiAction: "SHOW_RESULT_PANEL",
+    data: trialState,
+    uiData: {
+      trialRemaining: trialState.remaining,
+      message: `${payload.feature} \u5269\u4F59\u8BD5\u7528\u6B21\u6570\uFF1A${trialState.remaining}`
+    }
+  };
+}
+function generateUpgradePrompt(feature, remaining) {
+  const featureNames = {
+    "advanced-cleaning": "\u9AD8\u7EA7\u6E05\u6D17",
+    "table-detection": "\u8868\u683C\u8BC6\u522B",
+    "one-click-export": "\u4E00\u952E\u5BFC\u51FA"
+  };
+  const featureName = featureNames[feature];
+  const baseMessage = `${featureName}\u8BD5\u7528\u6B21\u6570\u5DF2\u7528\u5B8C\uFF08\u5269\u4F59 ${remaining} \u6B21\uFF09`;
+  const benefits = [
+    "\u2713 \u65E0\u884C\u6570\u9650\u5236\uFF0C\u5904\u7406\u5B8C\u6574\u6570\u636E",
+    "\u2713 \u9AD8\u7EA7\u6E05\u6D17\u529F\u80FD\u65E0\u9650\u4F7F\u7528",
+    "\u2713 \u8868\u683C\u8BC6\u522B\u548C\u4E00\u952E\u5BFC\u51FA\u65E0\u9650\u4F7F\u7528",
+    "\u2713 \u6240\u6709\u9AD8\u7EA7\u529F\u80FD\u6C38\u4E45\u89E3\u9501"
+  ];
+  const benefitsText = benefits.join("\n");
+  return `${baseMessage}
+
+\u5347\u7EA7 Pro \u7248\u89E3\u9501\u4EE5\u4E0B\u6743\u76CA\uFF1A
+${benefitsText}`;
+}
+async function handleTableExport(data) {
+  const payload = data;
+  const isPro = await allow("table-detect");
+  if (!isPro) {
+    const authorized = await authorize("one-click-export");
+    if (!authorized) {
+      const trialState = await checkTrial("one-click-export");
+      return {
+        status: "blocked",
+        uiAction: "SHOW_TRIAL_EXHAUSTED",
+        uiData: {
+          message: generateUpgradePrompt("one-click-export", trialState.remaining),
+          trialRemaining: trialState.remaining
+        }
+      };
+    }
+  }
+  let processedTable = payload.table;
+  if (payload.cleaningRules) {
+    processedTable = payload.table.map(
+      (row) => advancedClean(row, payload.cleaningRules)
+    );
+  }
+  let exportData;
+  if (payload.exportFormat === "csv") {
+    exportData = toCSV(processedTable);
+  } else {
+    exportData = toCSV(processedTable);
+  }
+  const uiData = {
+    csv: exportData,
+    table: processedTable,
+    totalRows: processedTable.length,
+    isLimited: false
+    // 表格导出不受行数限制
+  };
+  const result = {
+    status: "ok",
+    uiAction: "SHOW_RESULT_PANEL",
+    data: exportData,
+    uiData
+  };
+  if (!isPro) {
+    await evolveTrial("one-click-export");
+  }
+  return result;
+}
+async function handleAdvancedClean(data) {
+  const payload = data;
+  const isPro = await allow("table-detect");
+  if (!isPro) {
+    const authorized = await authorize("advanced-cleaning");
+    if (!authorized) {
+      const trialState = await checkTrial("advanced-cleaning");
+      return {
+        status: "blocked",
+        uiAction: "SHOW_TRIAL_EXHAUSTED",
+        uiData: {
+          message: generateUpgradePrompt("advanced-cleaning", trialState.remaining),
+          trialRemaining: trialState.remaining
+        }
+      };
+    }
+  }
+  const lines = payload.text.split("\n");
+  const cleanedLines = advancedClean(lines, payload.cleaningRules);
+  const cleanedText = cleanedLines.join("\n");
+  const { limitedData, isLimited, totalRows } = await applyRowLimit(cleanedText, isPro);
+  const uiData = {
+    text: limitedData,
+    totalRows,
+    isLimited
+  };
+  if (payload.operation === "export") {
+    const exportLines = limitedData.split("\n");
+    const exportTable = exportLines.map((line) => [line]);
+    if (payload.exportFormat === "csv") {
+      uiData.csv = toCSV(exportTable);
+    }
+  }
+  if (isLimited) {
+    uiData.rowLimit = 5;
+    uiData.limitMessage = `\u4EC5\u5C55\u793A\u524D 5 \u884C\uFF08\u5171 ${totalRows} \u884C\uFF09\uFF0C\u5347\u7EA7 Pro \u89E3\u9501\u5B8C\u6574\u6570\u636E`;
+  }
+  const result = {
+    status: "ok",
+    uiAction: "SHOW_RESULT_PANEL",
+    data: limitedData,
+    uiData
+  };
+  if (!isPro) {
+    await evolveTrial("advanced-cleaning");
+  }
+  return result;
 }
 chrome.commands.onCommand.addListener(async (command) => {
   if (command === "selection-switch") {

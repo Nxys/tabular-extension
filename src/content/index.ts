@@ -27,7 +27,7 @@ import { IGNORED_TAGS, DEFAULT_LAYOUT_OPTIONS } from '../shared/constants';
 /**
  * 浏览器框选复制插件 - 内容脚本
  */
-class BrowserSelectionCopy {
+class Tabular {
   private selection: Selection;
   private panel: Panel;
   private ignoreNextOutsideClick = false;
@@ -47,6 +47,17 @@ class BrowserSelectionCopy {
   constructor() {
     this.selection = new Selection();
     this.panel = new Panel();
+    
+    // 设置 panel 的操作请求回调
+    this.panel.setActionRequestCallback(async (action, data) => {
+      try {
+        const result = await this.requestAction(action as RequestActionMessage['payload']['action'], data);
+        this.executeUIAction(result);
+      } catch (error) {
+        console.error('Action request failed:', error);
+      }
+    });
+    
     this.settingsReady = this.initializeSettings();
     this.bindEvents();
   }
@@ -247,6 +258,12 @@ class BrowserSelectionCopy {
     action: RequestActionMessage['payload']['action'],
     data?: unknown
   ): Promise<ActionResultMessage['payload']> {
+    // 检查 extension context 是否有效
+    if (!chrome.runtime?.id) {
+      console.warn('Extension context invalidated, page needs refresh');
+      throw new Error('Extension context invalidated');
+    }
+
     const message: RequestActionMessage = {
       type: 'REQUEST_ACTION',
       payload: { action, data }
@@ -256,7 +273,13 @@ class BrowserSelectionCopy {
       const response = await chrome.runtime.sendMessage(message);
       return response as ActionResultMessage['payload'];
     } catch (error) {
-      console.error('Failed to request action:', error);
+      // 检查是否是 context invalidated 错误
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('Extension context invalidated')) {
+        console.warn('Extension context invalidated, page needs refresh');
+      } else {
+        console.error('Failed to request action:', error);
+      }
       throw error;
     }
   }
@@ -286,6 +309,14 @@ class BrowserSelectionCopy {
 
       case 'SHOW_TRIAL_EXHAUSTED':
         this.panel.showTrialExhausted(uiData);
+        break;
+
+      case 'SHOW_CLEANING_DIALOG':
+        this.panel.showCleaningDialog(uiData);
+        break;
+
+      case 'SHOW_EXPORT_DIALOG':
+        this.panel.showExportDialog(uiData);
         break;
 
       default:
@@ -319,14 +350,14 @@ class BrowserSelectionCopy {
 // 全局初始化
 declare global {
   interface Window {
-    browserSelectionCopy?: BrowserSelectionCopy;
+    tabular?: Tabular;
   }
 }
 
 // 防止重复初始化
-if (!window.browserSelectionCopy) {
-  window.browserSelectionCopy = new BrowserSelectionCopy();
-  window.browserSelectionCopy.initialize();
+if (!window.tabular) {
+  window.tabular = new Tabular();
+  window.tabular.initialize();
 }
 
-export { BrowserSelectionCopy };
+export { Tabular };

@@ -67,7 +67,7 @@ describe('Property 1: Free 用户行数限制一致性', () => {
           expect(result.uiData?.totalRows).toBe(lines.length);
           
           // 4. 应该包含限制提示文案
-          expect(result.uiData?.message).toBe('Free 版最多处理 5 行，升级 Pro 解锁完整数据');
+          expect(result.uiData?.limitMessage).toContain('仅展示前 5 行');
         }
       ),
       { numRuns: 100 }

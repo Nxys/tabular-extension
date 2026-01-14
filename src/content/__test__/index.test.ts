@@ -3,11 +3,11 @@
  * 测试事件监听、消息发送和 UI Action 执行
  */
 
-import { BrowserSelectionCopy } from '../index';
+import { Tabular } from '../index';
 import { createChromeMock } from '../../__test__/mocks/chrome';
 
 describe('content/index.ts', () => {
-  let instance: BrowserSelectionCopy;
+  let instance: Tabular;
 
   beforeEach(async () => {
     // 清理 DOM
@@ -23,7 +23,7 @@ describe('content/index.ts', () => {
     });
 
     // 创建实例
-    instance = new BrowserSelectionCopy();
+    instance = new Tabular();
     instance.initialize();
 
     // 等待设置初始化
@@ -41,7 +41,7 @@ describe('content/index.ts', () => {
       const addEventListenerSpy = jest.spyOn(document, 'addEventListener');
 
       // Act
-      const newInstance = new BrowserSelectionCopy();
+      const newInstance = new Tabular();
       newInstance.initialize();
 
       // Assert
@@ -56,7 +56,7 @@ describe('content/index.ts', () => {
       const addEventListenerSpy = jest.spyOn(document, 'addEventListener');
 
       // Act
-      const newInstance = new BrowserSelectionCopy();
+      const newInstance = new Tabular();
       newInstance.initialize();
 
       // Assert
@@ -71,7 +71,7 @@ describe('content/index.ts', () => {
       const addEventListenerSpy = jest.spyOn(document, 'addEventListener');
 
       // Act
-      const newInstance = new BrowserSelectionCopy();
+      const newInstance = new Tabular();
       newInstance.initialize();
 
       // Assert
@@ -86,7 +86,7 @@ describe('content/index.ts', () => {
       const addEventListenerSpy = jest.spyOn(document, 'addEventListener');
 
       // Act
-      const newInstance = new BrowserSelectionCopy();
+      const newInstance = new Tabular();
       newInstance.initialize();
 
       // Assert
@@ -101,7 +101,7 @@ describe('content/index.ts', () => {
       const addEventListenerSpy = jest.spyOn(document, 'addEventListener');
 
       // Act
-      const newInstance = new BrowserSelectionCopy();
+      const newInstance = new Tabular();
       newInstance.initialize();
 
       // Assert
@@ -123,7 +123,7 @@ describe('content/index.ts', () => {
       document.dispatchEvent(event);
 
       // Assert - 不应该创建选择框
-      const box = document.querySelector('.browser-selection-copy-box');
+      const box = document.querySelector('.tabular-extension-box');
       expect(box).toBeNull();
     });
 
@@ -137,7 +137,7 @@ describe('content/index.ts', () => {
       document.dispatchEvent(event);
 
       // Assert - 不应该创建选择框
-      const box = document.querySelector('.browser-selection-copy-box');
+      const box = document.querySelector('.tabular-extension-box');
       expect(box).toBeNull();
     });
 
@@ -156,7 +156,7 @@ describe('content/index.ts', () => {
       input.dispatchEvent(event);
 
       // Assert - 不应该创建选择框
-      const box = document.querySelector('.browser-selection-copy-box');
+      const box = document.querySelector('.tabular-extension-box');
       expect(box).toBeNull();
     });
 
@@ -175,7 +175,7 @@ describe('content/index.ts', () => {
       textarea.dispatchEvent(event);
 
       // Assert - 不应该创建选择框
-      const box = document.querySelector('.browser-selection-copy-box');
+      const box = document.querySelector('.tabular-extension-box');
       expect(box).toBeNull();
     });
 
@@ -194,7 +194,7 @@ describe('content/index.ts', () => {
       button.dispatchEvent(event);
 
       // Assert - 不应该创建选择框
-      const box = document.querySelector('.browser-selection-copy-box');
+      const box = document.querySelector('.tabular-extension-box');
       expect(box).toBeNull();
     });
   });
@@ -209,7 +209,7 @@ describe('content/index.ts', () => {
       document.dispatchEvent(event);
 
       // Assert - 不应该有任何效果
-      const box = document.querySelector('.browser-selection-copy-box');
+      const box = document.querySelector('.tabular-extension-box');
       expect(box).toBeNull();
     });
   });
@@ -224,7 +224,7 @@ describe('content/index.ts', () => {
       document.dispatchEvent(event);
 
       // Assert - 不应该有任何效果
-      const panel = document.querySelector('.browser-selection-copy-panel');
+      const panel = document.querySelector('.tabular-extension-panel');
       expect(panel).toBeNull();
     });
   });
@@ -238,9 +238,9 @@ describe('content/index.ts', () => {
   });
 
   describe('UI Action 执行', () => {
-    it('应该能够创建 BrowserSelectionCopy 实例', () => {
+    it('应该能够创建 Tabular 实例', () => {
       // Arrange & Act
-      const newInstance = new BrowserSelectionCopy();
+      const newInstance = new Tabular();
 
       // Assert
       expect(newInstance).toBeDefined();
@@ -262,7 +262,7 @@ describe('content/index.ts', () => {
         });
 
         // Act
-        const newInstance = new BrowserSelectionCopy();
+        const newInstance = new Tabular();
         await new Promise(resolve => setTimeout(resolve, 10));
 
         // Assert - 通过测试行为验证设置已加载
@@ -277,7 +277,7 @@ describe('content/index.ts', () => {
         div.dispatchEvent(event);
 
         // 如果设置正确加载（enabled: true），应该创建选择框
-        const box = document.querySelector('.browser-selection-copy-box');
+        const box = document.querySelector('.tabular-extension-box');
         expect(box).not.toBeNull();
 
         // Cleanup
@@ -298,7 +298,7 @@ describe('content/index.ts', () => {
         };
 
         // Act
-        const newInstance = new BrowserSelectionCopy();
+        const newInstance = new Tabular();
         await new Promise(resolve => setTimeout(resolve, 10));
 
         // Assert - 默认设置 enabled: false，不应该响应鼠标事件
@@ -312,7 +312,7 @@ describe('content/index.ts', () => {
         });
         div.dispatchEvent(event);
 
-        const box = document.querySelector('.browser-selection-copy-box');
+        const box = document.querySelector('.tabular-extension-box');
         expect(box).toBeNull();
 
         // Cleanup
@@ -330,7 +330,7 @@ describe('content/index.ts', () => {
         (chrome.storage.local as any).get = jest.fn().mockRejectedValue(new Error('Storage error'));
 
         // Act
-        const newInstance = new BrowserSelectionCopy();
+        const newInstance = new Tabular();
         await new Promise(resolve => setTimeout(resolve, 10));
 
         // Assert - 应该使用默认设置 enabled: false
@@ -344,7 +344,7 @@ describe('content/index.ts', () => {
         });
         div.dispatchEvent(event);
 
-        const box = document.querySelector('.browser-selection-copy-box');
+        const box = document.querySelector('.tabular-extension-box');
         expect(box).toBeNull();
 
         // Cleanup
@@ -360,7 +360,7 @@ describe('content/index.ts', () => {
         });
 
         // Act
-        const newInstance = new BrowserSelectionCopy();
+        const newInstance = new Tabular();
         await new Promise(resolve => setTimeout(resolve, 10));
 
         // Assert - 应该使用默认值 'center'
@@ -375,7 +375,7 @@ describe('content/index.ts', () => {
     describe('设置更新', () => {
       it('应该通过消息更新设置', async () => {
         // Arrange
-        const newInstance = new BrowserSelectionCopy();
+        const newInstance = new Tabular();
         await new Promise(resolve => setTimeout(resolve, 10));
 
         // Act - 发送更新设置消息
@@ -406,7 +406,7 @@ describe('content/index.ts', () => {
         });
         div.dispatchEvent(event);
 
-        const box = document.querySelector('.browser-selection-copy-box');
+        const box = document.querySelector('.tabular-extension-box');
         expect(box).not.toBeNull();
         expect(sendResponse).toHaveBeenCalledWith({ ok: true });
 
@@ -424,7 +424,7 @@ describe('content/index.ts', () => {
         // 清理全局实例以避免干扰
         instance.cleanup();
 
-        const newInstance = new BrowserSelectionCopy();
+        const newInstance = new Tabular();
         newInstance.initialize();
         // 等待设置初始化完成
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -441,7 +441,7 @@ describe('content/index.ts', () => {
         div.dispatchEvent(mousedownEvent);
 
         // 验证选择框已创建
-        let box = document.querySelector('.browser-selection-copy-box');
+        let box = document.querySelector('.tabular-extension-box');
         expect(box).not.toBeNull();
 
         // Act - 通过消息禁用插件
@@ -461,7 +461,7 @@ describe('content/index.ts', () => {
         await new Promise(resolve => setTimeout(resolve, 100));
 
         // Assert - 选择框应该被清理
-        box = document.querySelector('.browser-selection-copy-box');
+        box = document.querySelector('.tabular-extension-box');
         expect(box).toBeNull();
 
         // Cleanup
@@ -470,7 +470,7 @@ describe('content/index.ts', () => {
 
       it('应该持久化设置到 chrome.storage', async () => {
         // Arrange
-        const newInstance = new BrowserSelectionCopy();
+        const newInstance = new Tabular();
         await new Promise(resolve => setTimeout(resolve, 10));
 
         const setSpy = jest.spyOn(chrome.storage.local, 'set');
@@ -505,7 +505,7 @@ describe('content/index.ts', () => {
           panelPosition: 'center'
         });
 
-        const newInstance = new BrowserSelectionCopy();
+        const newInstance = new Tabular();
         await new Promise(resolve => setTimeout(resolve, 10));
 
         // Act - 按下快捷键
@@ -530,7 +530,7 @@ describe('content/index.ts', () => {
         });
         div.dispatchEvent(mouseEvent);
 
-        const box = document.querySelector('.browser-selection-copy-box');
+        const box = document.querySelector('.tabular-extension-box');
         expect(box).not.toBeNull();
 
         // Cleanup
@@ -547,7 +547,7 @@ describe('content/index.ts', () => {
         // 清理全局实例以避免干扰
         instance.cleanup();
 
-        const newInstance = new BrowserSelectionCopy();
+        const newInstance = new Tabular();
         newInstance.initialize();
         await new Promise(resolve => setTimeout(resolve, 10));
 
@@ -577,7 +577,7 @@ describe('content/index.ts', () => {
         });
         div.dispatchEvent(mouseEvent);
 
-        const box = document.querySelector('.browser-selection-copy-box');
+        const box = document.querySelector('.tabular-extension-box');
         expect(box).toBeNull();
 
         // Cleanup
@@ -594,7 +594,7 @@ describe('content/index.ts', () => {
         // 清理全局实例以避免干扰
         instance.cleanup();
 
-        const newInstance = new BrowserSelectionCopy();
+        const newInstance = new Tabular();
         newInstance.initialize();
         await new Promise(resolve => setTimeout(resolve, 10));
 
@@ -624,7 +624,7 @@ describe('content/index.ts', () => {
         });
         div.dispatchEvent(mouseEvent);
 
-        const box = document.querySelector('.browser-selection-copy-box');
+        const box = document.querySelector('.tabular-extension-box');
         expect(box).toBeNull();
 
         // Cleanup
@@ -638,7 +638,7 @@ describe('content/index.ts', () => {
           panelPosition: 'center'
         });
 
-        const newInstance = new BrowserSelectionCopy();
+        const newInstance = new Tabular();
         await new Promise(resolve => setTimeout(resolve, 10));
 
         // 创建选择框
@@ -664,7 +664,7 @@ describe('content/index.ts', () => {
         await new Promise(resolve => setTimeout(resolve, 10));
 
         // Assert - UI 应该被清理
-        const box = document.querySelector('.browser-selection-copy-box');
+        const box = document.querySelector('.tabular-extension-box');
         expect(box).toBeNull();
 
         // Cleanup

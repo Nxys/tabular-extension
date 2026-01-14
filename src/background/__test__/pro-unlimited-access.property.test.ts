@@ -209,7 +209,7 @@ describe('Property 2: Pro 用户无限制访问', () => {
           const freeLines = (freeResult.data as string).split('\n');
           expect(freeLines.length).toBeLessThanOrEqual(5);
           expect(freeResult.uiData?.isLimited).toBe(true);
-          expect(freeResult.uiData?.message).toBeDefined();
+          expect(freeResult.uiData?.limitMessage).toBeDefined();
           
           // 2. Pro 用户获得完整数据
           expect(proResult.data).toBe(data);

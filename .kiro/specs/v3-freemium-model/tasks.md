@@ -143,7 +143,7 @@
   - **Validates: Requirements 5.6, 5.7**
 
 - [x] 8. 实现表格识别模块
-  - 创建 src/content/table-detector.ts
+  - 创建 src/content/detector.ts
   - 实现 scanTables 函数（扫描页面所有表格）
   - 实现 detectHTMLTable 函数（识别 `<table>` 元素）
   - 实现 detectDivTable 函数（识别 div/span 实现的表格）
@@ -161,7 +161,7 @@
   - **Validates: Requirements 4.1, 4.2, 4.3**
 
 - [x] 9. 实现表格导出按钮注入
-  - 在 table-detector.ts 中实现 injectExportButton 函数
+  - 在 detector.ts 中实现 injectExportButton 函数
   - 在表格左上角注入导出按钮（绝对定位）
   - 按钮样式：小图标，hover 显示提示
   - 实现 removeExportButtons 函数
@@ -296,7 +296,7 @@
   - 测试行数限制应用
   - _Requirements: 设计文档 - Components and Interfaces_
 
-- [ ] 19. 更新 Content 消息发送和 UI 渲染
+- [x] 19. 更新 Content 消息发送和 UI 渲染
   - 在 src/content/index.ts 中发送新的 Action 请求
   - 根据新的 uiAction 渲染对应 UI
   - 调用 panel.ts 中的新方法
@@ -307,7 +307,7 @@
   - 测试新 uiAction 的 UI 渲染
   - _Requirements: 设计文档 - Components and Interfaces_
 
-- [ ] 20. 实现错误处理
+- [x] 20. 实现错误处理
   - 在各模块中添加 try-catch 错误捕获
   - 实现加密失败的降级策略
   - 实现表格识别失败的静默处理
@@ -324,7 +324,7 @@
   - 测试清洗规则异常降级
   - _Requirements: 设计文档 - Error Handling_
 
-- [ ] 21. 编写架构守门测试
+- [x] 21. 编写架构守门测试
   - 测试 Content 层不 import Background 层文件
   - 测试 Content 层不直接访问 chrome.storage
   - 测试 Content 层不包含业务逻辑关键字
@@ -332,11 +332,11 @@
   - 测试所有跨层类型定义在 Shared 层
   - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.8, 12.9, 12.10_
 
-- [ ] 21.1 编写架构约束遵守的属性测试
+- [x] 21.1 编写架构约束遵守的属性测试
   - **Property 13: 架构约束遵守**
   - **Validates: Requirements 12.1-12.10**
 
-- [ ] 22. 集成测试
+- [x] 22. 集成测试
   - 编写端到端用户流程测试
   - 测试 Free 用户完整流程
   - 测试 Free 用户试用高级清洗流程
@@ -345,7 +345,7 @@
   - 测试权限切换流程
   - _Requirements: 设计文档 - Testing Strategy_
 
-- [ ] 23. 最终 Checkpoint - 运行所有测试
+- [x] 23. 最终 Checkpoint - 运行所有测试
   - 运行架构守门测试
   - 运行所有单元测试
   - 运行所有属性测试（100+ 迭代）

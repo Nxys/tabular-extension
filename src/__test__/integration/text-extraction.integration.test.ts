@@ -11,7 +11,6 @@ import {
   sendRequestAction,
   setupTestState,
   cleanupTestState,
-  simulateUserAction,
 } from './helpers';
 import {
   clearMessageHistory,
@@ -220,13 +219,7 @@ describe('文本提取端到端流程测试', () => {
       expect(response).toHaveProperty('status');
       expect(response).toHaveProperty('uiAction');
     });
-  });
-      // Arrange: 设置初始使用次数
-      await setupTestState({ usageCount: 5 });
-      
-      // Act: 触发可能的错误场景（发送非字符串数据）
-      await sendRequestAction('text-extract', { invalid: 'data' });
-      
+    
     test('错误后应该能够继续正常操作', async () => {
       // Arrange: 设置正常状态
       await setupTestState({ hasPro: false });

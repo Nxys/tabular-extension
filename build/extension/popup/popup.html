@@ -276,6 +276,72 @@
     .footer-link:hover {
       color: var(--accent-color);
     }
+
+    /* 能力简述区域 */
+    .capabilities {
+      border-top: 1px solid var(--border-color);
+      padding-top: 16px;
+    }
+
+    .capability-group {
+      margin-bottom: 14px;
+    }
+
+    .capability-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .capability-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .capability-list {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .capability-list li {
+      font-size: 12px;
+      color: var(--text-secondary);
+      padding: 4px 0;
+      padding-left: 16px;
+      position: relative;
+    }
+
+    .capability-list li::before {
+      content: "•";
+      position: absolute;
+      left: 4px;
+      color: var(--accent-color);
+    }
+
+    /* 升级按钮 */
+    .upgrade-button {
+      width: 100%;
+      padding: 10px 16px;
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .upgrade-button:hover {
+      background: var(--accent-color);
+      filter: brightness(1.1);
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+
+    .upgrade-button:active {
+      transform: translateY(1px);
+    }
   </style>
 </head>
 
@@ -315,6 +381,32 @@
           <option value="none">直接复制</option>
         </select>
       </div>
+    </div>
+
+    <!-- 能力简述区域 -->
+    <div class="section capabilities">
+      <div class="capability-group">
+        <div class="capability-title">Free 版能力</div>
+        <ul class="capability-list">
+          <li>框选复制（最多 5 行）</li>
+          <li>基础导出（最多 5 行）</li>
+        </ul>
+      </div>
+
+      <div class="capability-group">
+        <div class="capability-title">Pro 版能力</div>
+        <ul class="capability-list">
+          <li>无行数限制</li>
+          <li id="trialAdvancedCleaning">高级清洗（剩余 - 次试用）</li>
+          <li id="trialTableDetection">表格识别（剩余 - 次试用）</li>
+          <li id="trialOneClickExport">一键导出（剩余 - 次试用）</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 升级按钮 -->
+    <div class="section">
+      <button class="upgrade-button" id="upgradeButton">升级到 Pro 版</button>
     </div>
   </div>
 

@@ -232,7 +232,7 @@ describe('架构守门测试', () => {
           // 允许读取 UI 设置（enabled、panelPosition）
           if (line.includes('chrome.storage.local.get')) {
             // 检查是否读取业务相关的键
-            const businessKeys = ['usage', 'pro', 'limit', 'count', 'date', 'stats'];
+            const businessKeys = ['usage', 'pro', 'limit', 'count', 'date', 'stats', 'trial', 'state_'];
             const hasBusinessKey = businessKeys.some(key => line.includes(`'${key}'`) || line.includes(`"${key}"`));
             
             if (hasBusinessKey) {
@@ -258,11 +258,41 @@ describe('架构守门测试', () => {
       expect(violations).toEqual([]);
     });
     
+    it('Content 层不应该包含业务逻辑关键字', () => {
+      // Arrange
+      const contentDir = path.join(srcDir, 'content');
+      const contentFiles = scanSourceFiles(contentDir, srcDir);
+      // 业务逻辑关键字：usage、pro、trial、policy、strategy、quota、limit（作为业务判断）
+      const businessKeywords = ['checkUsage', 'consumeUsage', 'checkTrial', 'evolveTrial', 'isPro', 'verifyPro', 'getPolicy', 'applyPolicy'];
+      const violations: Array<{ file: string; keywords: string[] }> = [];
+      
+      // Act
+      for (const file of contentFiles) {
+        const content = readFileContent(file);
+        const foundKeywords = containsKeywords(content, businessKeywords);
+        
+        if (foundKeywords.length > 0) {
+          violations.push({ file, keywords: foundKeywords });
+        }
+      }
+      
+      // Assert
+      if (violations.length > 0) {
+        const errorMessage = violations
+          .map(v => `  文件：${v.file}\n  业务关键字：${v.keywords.join(', ')}`)
+          .join('\n\n');
+        
+        throw new Error(`Content 层不应该包含业务逻辑关键字\n\n${errorMessage}\n\n提示：Content 层应该只负责 UI 渲染，所有业务逻辑应该在 Background 层`);
+      }
+      
+      expect(violations).toEqual([]);
+    });
+    
     it('Shared 层不应该包含业务逻辑关键字', () => {
       // Arrange
       const sharedDir = path.join(srcDir, 'shared');
       const sharedFiles = scanSourceFiles(sharedDir, srcDir);
-      const businessKeywords = ['checkUsage', 'consumeUsage', 'isPro', 'getPolicy'];
+      const businessKeywords = ['checkUsage', 'consumeUsage', 'isPro', 'getPolicy', 'checkTrial', 'evolveTrial'];
       const violations: Array<{ file: string; keywords: string[] }> = [];
       
       // Act
@@ -285,6 +315,153 @@ describe('架构守门测试', () => {
       }
       
       expect(violations).toEqual([]);
+    });
+  });
+  
+  describe('文案生成检查', () => {
+    it('Background 层应该生成所有业务文案', () => {
+      // Arrange
+      const contentDir = path.join(srcDir, 'content');
+      const contentFiles = scanSourceFiles(contentDir, srcDir);
+      // 检查 Content 层是否包含业务文案拼接（使用模板字符串或字符串拼接）
+      const violations: Array<{ file: string; line: number; code: string; reason: string }> = [];
+      
+      // Act
+      for (const file of contentFiles) {
+        const content = readFileContent(file);
+        const lines = content.split('\n');
+        
+        lines.forEach((line, index) => {
+          // 跳过注释
+          if (line.trim().startsWith('//') || line.trim().startsWith('*')) {
+            return;
+          }
+          
+          // 跳过 fallback 默认值（使用 || 或 ?? 的情况）
+          if (line.includes('||') || line.includes('??')) {
+            return;
+          }
+          
+          // 检查是否使用模板字符串拼接业务文案
+          // 例如：`剩余 ${count} 次`、`最多 ${limit} 行`
+          const templatePatterns = [
+            /`[^`]*剩余[^`]*\$\{[^}]+\}[^`]*次[^`]*`/,
+            /`[^`]*试用[^`]*\$\{[^}]+\}[^`]*次[^`]*`/,
+            /`[^`]*最多[^`]*\$\{[^}]+\}[^`]*行[^`]*`/,
+            /`[^`]*限制[^`]*\$\{[^}]+\}[^`]*行[^`]*`/,
+            /`[^`]*升级[^`]*Pro[^`]*`/,
+            /`[^`]*Free[^`]*版[^`]*`/,
+            /`[^`]*Pro[^`]*版[^`]*`/
+          ];
+          
+          for (const pattern of templatePatterns) {
+            if (pattern.test(line)) {
+              violations.push({
+                file,
+                line: index + 1,
+                code: line.trim(),
+                reason: '使用模板字符串拼接业务文案'
+              });
+            }
+          }
+          
+          // 检查是否使用字符串拼接业务文案
+          // 例如：'剩余 ' + count + ' 次'
+          const concatPatterns = [
+            /['"]剩余['"].*\+/,
+            /['"]试用['"].*\+/,
+            /['"]最多['"].*\+/,
+            /['"]限制['"].*\+/,
+            /\+.*['"]次['"]/,
+            /\+.*['"]行['"]/
+          ];
+          
+          for (const pattern of concatPatterns) {
+            if (pattern.test(line)) {
+              violations.push({
+                file,
+                line: index + 1,
+                code: line.trim(),
+                reason: '使用字符串拼接业务文案'
+              });
+            }
+          }
+        });
+      }
+      
+      // Assert
+      if (violations.length > 0) {
+        const errorMessage = violations
+          .map(v => `  文件：${v.file}\n  行号：${v.line}\n  代码：${v.code}\n  原因：${v.reason}`)
+          .join('\n\n');
+        
+        throw new Error(`Content 层不应该拼接业务文案\n\n${errorMessage}\n\n提示：所有业务文案应该由 Background 层生成并通过 uiData.message 传递`);
+      }
+      
+      expect(violations).toEqual([]);
+    });
+  });
+  
+  describe('类型定义检查', () => {
+    it('跨层类型应该定义在 Shared 层', () => {
+      // Arrange
+      const backgroundDir = path.join(srcDir, 'background');
+      const contentDir = path.join(srcDir, 'content');
+      const backgroundFiles = scanSourceFiles(backgroundDir, srcDir);
+      const contentFiles = scanSourceFiles(contentDir, srcDir);
+      
+      // 检查是否有重复的类型定义（可能表示类型没有在 Shared 层统一定义）
+      const typeDefinitions = new Map<string, string[]>();
+      
+      // Act
+      const allFiles = [...backgroundFiles, ...contentFiles];
+      for (const file of allFiles) {
+        const content = readFileContent(file);
+        
+        // 提取 interface 和 type 定义
+        const interfaceRegex = /(?:export\s+)?interface\s+(\w+)/g;
+        const typeRegex = /(?:export\s+)?type\s+(\w+)\s*=/g;
+        
+        let match;
+        while ((match = interfaceRegex.exec(content)) !== null) {
+          const typeName = match[1];
+          if (!typeDefinitions.has(typeName)) {
+            typeDefinitions.set(typeName, []);
+          }
+          typeDefinitions.get(typeName)!.push(file);
+        }
+        
+        while ((match = typeRegex.exec(content)) !== null) {
+          const typeName = match[1];
+          if (!typeDefinitions.has(typeName)) {
+            typeDefinitions.set(typeName, []);
+          }
+          typeDefinitions.get(typeName)!.push(file);
+        }
+      }
+      
+      // 查找在多个文件中定义的类型（可能需要移到 Shared 层）
+      const duplicateTypes: Array<{ type: string; files: string[] }> = [];
+      for (const [typeName, files] of typeDefinitions.entries()) {
+        if (files.length > 1) {
+          // 检查是否至少有一个定义不在 shared 层
+          const nonSharedFiles = files.filter(f => !f.includes('shared/'));
+          if (nonSharedFiles.length > 1) {
+            duplicateTypes.push({ type: typeName, files: nonSharedFiles });
+          }
+        }
+      }
+      
+      // Assert
+      if (duplicateTypes.length > 0) {
+        const errorMessage = duplicateTypes
+          .map(d => `  类型：${d.type}\n  定义位置：\n    ${d.files.join('\n    ')}`)
+          .join('\n\n');
+        
+        throw new Error(`发现重复的类型定义，跨层类型应该统一定义在 Shared 层\n\n${errorMessage}\n\n提示：将跨层使用的类型定义移到 src/shared/types.ts`);
+      }
+      
+      expect(duplicateTypes).toEqual([]);
     });
   });
 });

@@ -1,7 +1,7 @@
 "use strict";
 (() => {
   // src/shared/constants.ts
-  var CSS_CLASS_PREFIX = "browser-selection-copy";
+  var CSS_CLASS_PREFIX = "tabular-extension";
   var IGNORED_TAGS = ["INPUT", "TEXTAREA", "SELECT", "BUTTON"];
   var DEFAULT_LAYOUT_OPTIONS = {
     lineThresholdRatio: 5,
@@ -103,11 +103,18 @@
     currentText = "";
     dragState = null;
     mousePosition = { x: 0, y: 0 };
+    onActionRequest;
     /**
      * 更新鼠标位置（用于跟随鼠标定位）
      */
     updateMousePosition(x, y) {
       this.mousePosition = { x, y };
+    }
+    /**
+     * 设置操作请求回调
+     */
+    setActionRequestCallback(callback) {
+      this.onActionRequest = callback;
     }
     /**
      * 显示结果面板
@@ -125,6 +132,10 @@
       const header = this.createHeader("\u{1F4CB}", "\u6587\u672C\u9884\u89C8");
       const previewWrapper = document.createElement("div");
       previewWrapper.className = `${CSS_CLASS_PREFIX}-panel-preview-wrapper`;
+      if (uiData?.isLimited && uiData?.limitMessage) {
+        const limitHint = this.createLimitHint(uiData.limitMessage);
+        previewWrapper.appendChild(limitHint);
+      }
       const preview = document.createElement("textarea");
       preview.className = `${CSS_CLASS_PREFIX}-panel-textarea`;
       preview.readOnly = false;
@@ -141,17 +152,17 @@
         this.currentText = target.value;
       };
       previewWrapper.appendChild(preview);
-      const copyBtnWrapper = document.createElement("div");
-      copyBtnWrapper.className = `${CSS_CLASS_PREFIX}-panel-copy-wrapper`;
+      const btnWrapper = document.createElement("div");
+      btnWrapper.className = `${CSS_CLASS_PREFIX}-panel-copy-wrapper`;
+      const advancedCleanBtn = this.createAdvancedCleanButton();
+      btnWrapper.appendChild(advancedCleanBtn);
+      const exportBtn = this.createExportButton();
+      btnWrapper.appendChild(exportBtn);
       const copyBtn = this.createCopyButton();
-      copyBtnWrapper.appendChild(copyBtn);
-      if (uiData?.csv) {
-        const csvBtn = this.createCSVButton(uiData.csv);
-        copyBtnWrapper.insertBefore(csvBtn, copyBtn);
-      }
+      btnWrapper.appendChild(copyBtn);
       this.element.appendChild(header);
       this.element.appendChild(previewWrapper);
-      this.element.appendChild(copyBtnWrapper);
+      this.element.appendChild(btnWrapper);
       document.body.appendChild(this.element);
       this.positionPanel(panelPosition);
       this.bindDragEvents(header);
@@ -194,6 +205,29 @@
       const message = document.createElement("div");
       message.className = `${CSS_CLASS_PREFIX}-panel-message`;
       message.textContent = uiData?.message || "\u8FD9\u662F Pro \u529F\u80FD";
+      messageWrapper.appendChild(message);
+      this.element.appendChild(header);
+      this.element.appendChild(messageWrapper);
+      document.body.appendChild(this.element);
+      this.bindDragEvents(header);
+    }
+    /**
+     * 显示试用次数用尽提示
+     * 
+     * 接收 background 生成的完整文案（包含权益说明）
+     * 注意：试用次数用尽提示始终页面居中显示
+     */
+    showTrialExhausted(uiData) {
+      this.hide();
+      this.element = document.createElement("div");
+      this.element.className = `${CSS_CLASS_PREFIX}-panel ${CSS_CLASS_PREFIX}-panel-force-center`;
+      const header = this.createHeader("\u{1F512}", "\u8BD5\u7528\u6B21\u6570\u5DF2\u7528\u5B8C");
+      const messageWrapper = document.createElement("div");
+      messageWrapper.className = `${CSS_CLASS_PREFIX}-panel-message-wrapper`;
+      const message = document.createElement("div");
+      message.className = `${CSS_CLASS_PREFIX}-panel-message`;
+      message.style.whiteSpace = "pre-line";
+      message.textContent = uiData?.message || "\u8BD5\u7528\u6B21\u6570\u5DF2\u7528\u5B8C\uFF0C\u5347\u7EA7 Pro \u89E3\u9501\u65E0\u9650\u4F7F\u7528";
       messageWrapper.appendChild(message);
       this.element.appendChild(header);
       this.element.appendChild(messageWrapper);
@@ -269,16 +303,38 @@
       return copyBtn;
     }
     /**
-     * 创建 CSV 导出按钮
+     * 创建行数限制提示
+     * 接收 Background 生成的完整文案
      */
-    createCSVButton(csv) {
-      const csvBtn = document.createElement("button");
-      csvBtn.className = `${CSS_CLASS_PREFIX}-panel-csv-btn`;
-      csvBtn.textContent = "\u{1F4CA} \u5BFC\u51FA CSV";
-      csvBtn.onclick = () => {
-        this.downloadCSV(csv);
+    createLimitHint(message) {
+      const hint = document.createElement("div");
+      hint.className = `${CSS_CLASS_PREFIX}-panel-limit-hint`;
+      hint.textContent = message;
+      return hint;
+    }
+    /**
+     * 创建高级清洗按钮
+     */
+    createAdvancedCleanButton() {
+      const btn = document.createElement("button");
+      btn.className = `${CSS_CLASS_PREFIX}-panel-advanced-clean-btn`;
+      btn.textContent = "\u{1F9F9} \u9AD8\u7EA7\u6E05\u6D17\uFF08Pro\uFF09";
+      btn.onclick = () => {
+        this.showCleaningDialog();
       };
-      return csvBtn;
+      return btn;
+    }
+    /**
+     * 创建导出按钮
+     */
+    createExportButton() {
+      const btn = document.createElement("button");
+      btn.className = `${CSS_CLASS_PREFIX}-panel-export-btn`;
+      btn.textContent = "\u{1F4E4} \u5BFC\u51FA";
+      btn.onclick = () => {
+        this.showExportDialog();
+      };
+      return btn;
     }
     /**
      * 复制到剪贴板
@@ -292,18 +348,6 @@
         console.error("\u590D\u5236\u5931\u8D25:", error);
         this.showToast("\u2717 \u590D\u5236\u5931\u8D25");
       }
-    }
-    /**
-     * 下载 CSV 文件
-     */
-    downloadCSV(csv) {
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `table-${Date.now()}.csv`;
-      link.click();
-      URL.revokeObjectURL(url);
     }
     /**
      * 绑定拖动事件
@@ -410,6 +454,145 @@
       setTimeout(() => {
         toast.remove();
       }, 1500);
+    }
+    /**
+     * 显示清洗规则选择弹窗
+     */
+    showCleaningDialog(uiData) {
+      const textToClean = uiData?.text || this.currentText;
+      const overlay = document.createElement("div");
+      overlay.className = `${CSS_CLASS_PREFIX}-dialog-overlay`;
+      const dialog = document.createElement("div");
+      dialog.className = `${CSS_CLASS_PREFIX}-dialog`;
+      const title = document.createElement("div");
+      title.className = `${CSS_CLASS_PREFIX}-dialog-title`;
+      title.textContent = "\u9AD8\u7EA7\u6E05\u6D17\u89C4\u5219";
+      const rulesContainer = document.createElement("div");
+      rulesContainer.className = `${CSS_CLASS_PREFIX}-dialog-rules`;
+      const rules = [
+        { id: "removeEmptyLines", label: "\u53BB\u9664\u7A7A\u884C" },
+        { id: "mergeMultipleLines", label: "\u5408\u5E76\u591A\u884C" },
+        { id: "mergeToSingleLine", label: "\u5408\u5E76\u4E3A\u4E00\u884C" },
+        { id: "removeDuplicates", label: "\u53BB\u9664\u91CD\u590D\u884C" }
+      ];
+      const checkboxes = {};
+      rules.forEach((rule) => {
+        const ruleItem = document.createElement("label");
+        ruleItem.className = `${CSS_CLASS_PREFIX}-dialog-rule-item`;
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.id = rule.id;
+        checkbox.className = `${CSS_CLASS_PREFIX}-dialog-checkbox`;
+        checkboxes[rule.id] = checkbox;
+        const labelText = document.createElement("span");
+        labelText.textContent = rule.label;
+        ruleItem.appendChild(checkbox);
+        ruleItem.appendChild(labelText);
+        rulesContainer.appendChild(ruleItem);
+      });
+      const separatorItem = document.createElement("div");
+      separatorItem.className = `${CSS_CLASS_PREFIX}-dialog-separator-item`;
+      const separatorLabel = document.createElement("label");
+      separatorLabel.textContent = "\u81EA\u5B9A\u4E49\u5206\u9694\u7B26\uFF1A";
+      const separatorInput = document.createElement("input");
+      separatorInput.type = "text";
+      separatorInput.className = `${CSS_CLASS_PREFIX}-dialog-separator-input`;
+      separatorInput.placeholder = "\u4F8B\u5982\uFF1A, \u6216 | \u6216 \u7A7A\u683C";
+      separatorItem.appendChild(separatorLabel);
+      separatorItem.appendChild(separatorInput);
+      rulesContainer.appendChild(separatorItem);
+      const btnContainer = document.createElement("div");
+      btnContainer.className = `${CSS_CLASS_PREFIX}-dialog-buttons`;
+      const cancelBtn = document.createElement("button");
+      cancelBtn.className = `${CSS_CLASS_PREFIX}-dialog-btn-cancel`;
+      cancelBtn.textContent = "\u53D6\u6D88";
+      cancelBtn.onclick = () => {
+        overlay.remove();
+      };
+      const confirmBtn = document.createElement("button");
+      confirmBtn.className = `${CSS_CLASS_PREFIX}-dialog-btn-confirm`;
+      confirmBtn.textContent = "\u5E94\u7528\u6E05\u6D17";
+      confirmBtn.onclick = () => {
+        const selectedRules = {
+          removeEmptyLines: checkboxes.removeEmptyLines.checked,
+          mergeMultipleLines: checkboxes.mergeMultipleLines.checked,
+          mergeToSingleLine: checkboxes.mergeToSingleLine.checked,
+          removeDuplicates: checkboxes.removeDuplicates.checked,
+          customSeparator: separatorInput.value || void 0
+        };
+        if (this.onActionRequest) {
+          this.onActionRequest("advanced-clean", {
+            text: textToClean,
+            rules: selectedRules
+          });
+        }
+        overlay.remove();
+        this.hide();
+      };
+      btnContainer.appendChild(cancelBtn);
+      btnContainer.appendChild(confirmBtn);
+      dialog.appendChild(title);
+      dialog.appendChild(rulesContainer);
+      dialog.appendChild(btnContainer);
+      overlay.appendChild(dialog);
+      overlay.onclick = (e) => {
+        if (e.target === overlay) {
+          overlay.remove();
+        }
+      };
+      document.body.appendChild(overlay);
+    }
+    /**
+     * 显示导出格式选择弹窗
+     */
+    showExportDialog(uiData) {
+      const textToExport = uiData?.text || this.currentText;
+      const overlay = document.createElement("div");
+      overlay.className = `${CSS_CLASS_PREFIX}-dialog-overlay`;
+      const dialog = document.createElement("div");
+      dialog.className = `${CSS_CLASS_PREFIX}-dialog`;
+      const title = document.createElement("div");
+      title.className = `${CSS_CLASS_PREFIX}-dialog-title`;
+      title.textContent = "\u9009\u62E9\u5BFC\u51FA\u683C\u5F0F";
+      const formatsContainer = document.createElement("div");
+      formatsContainer.className = `${CSS_CLASS_PREFIX}-dialog-formats`;
+      const availableFormats = uiData?.exportFormats || ["csv", "excel"];
+      const formats = [
+        { id: "csv", label: "CSV \u683C\u5F0F", icon: "\u{1F4CA}" },
+        { id: "excel", label: "Excel \u683C\u5F0F", icon: "\u{1F4C8}" }
+      ].filter((f) => availableFormats.includes(f.id));
+      formats.forEach((format2) => {
+        const formatBtn = document.createElement("button");
+        formatBtn.className = `${CSS_CLASS_PREFIX}-dialog-format-btn`;
+        formatBtn.innerHTML = `<span class="${CSS_CLASS_PREFIX}-dialog-format-icon">${format2.icon}</span><span>${format2.label}</span>`;
+        formatBtn.onclick = () => {
+          if (this.onActionRequest) {
+            this.onActionRequest("table-export", {
+              text: textToExport,
+              format: format2.id
+            });
+          }
+          overlay.remove();
+          this.hide();
+        };
+        formatsContainer.appendChild(formatBtn);
+      });
+      const cancelBtn = document.createElement("button");
+      cancelBtn.className = `${CSS_CLASS_PREFIX}-dialog-btn-cancel`;
+      cancelBtn.textContent = "\u53D6\u6D88";
+      cancelBtn.onclick = () => {
+        overlay.remove();
+      };
+      dialog.appendChild(title);
+      dialog.appendChild(formatsContainer);
+      dialog.appendChild(cancelBtn);
+      overlay.appendChild(dialog);
+      overlay.onclick = (e) => {
+        if (e.target === overlay) {
+          overlay.remove();
+        }
+      };
+      document.body.appendChild(overlay);
     }
   };
 
@@ -532,7 +715,7 @@
   }
 
   // src/content/index.ts
-  var BrowserSelectionCopy = class {
+  var Tabular = class {
     selection;
     panel;
     ignoreNextOutsideClick = false;
@@ -551,6 +734,14 @@
     constructor() {
       this.selection = new Selection();
       this.panel = new Panel();
+      this.panel.setActionRequestCallback(async (action, data) => {
+        try {
+          const result = await this.requestAction(action, data);
+          this.executeUIAction(result);
+        } catch (error) {
+          console.error("Action request failed:", error);
+        }
+      });
       this.settingsReady = this.initializeSettings();
       this.bindEvents();
     }
@@ -737,6 +928,15 @@
         case "SHOW_PRO_PANEL":
           this.panel.showPro(uiData);
           break;
+        case "SHOW_TRIAL_EXHAUSTED":
+          this.panel.showTrialExhausted(uiData);
+          break;
+        case "SHOW_CLEANING_DIALOG":
+          this.panel.showCleaningDialog(uiData);
+          break;
+        case "SHOW_EXPORT_DIALOG":
+          this.panel.showExportDialog(uiData);
+          break;
         default:
           console.warn("Unknown UI action:", uiAction);
       }
@@ -763,8 +963,8 @@
       this.messageListener = null;
     }
   };
-  if (!window.browserSelectionCopy) {
-    window.browserSelectionCopy = new BrowserSelectionCopy();
-    window.browserSelectionCopy.initialize();
+  if (!window.tabular) {
+    window.tabular = new Tabular();
+    window.tabular.initialize();
   }
 })();

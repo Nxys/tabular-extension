@@ -16,7 +16,7 @@ import {
   detectHTMLTable, 
   detectDivTable,
   type TableDetectionConfig 
-} from '../table-detector.js';
+} from '../detector.js';
 
 /**
  * 创建测试用的 <table> 元素

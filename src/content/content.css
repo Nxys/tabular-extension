@@ -46,7 +46,7 @@
 }
 
 /* ==================== 选择框样式 ==================== */
-.browser-selection-copy-box {
+.tabular-extension-box {
   position: fixed !important;
   border: 2px dashed rgba(102, 126, 234, 0.8) !important;
   background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%) !important;
@@ -67,7 +67,7 @@
 
 /* 深色模式下的选择框 */
 @media (prefers-color-scheme: dark) {
-  .browser-selection-copy-box {
+  .tabular-extension-box {
     border: 2px dashed rgba(102, 126, 234, 0.9) !important;
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%) !important;
     box-shadow: 0 0 0 1px rgba(102, 126, 234, 0.3), 0 4px 12px rgba(102, 126, 234, 0.25) !important;
@@ -75,7 +75,7 @@
 }
 
 /* ==================== 结果面板样式 ==================== */
-.browser-selection-copy-panel {
+.tabular-extension-panel {
   position: fixed !important;
   width: 340px !important;
   max-height: 460px !important;
@@ -97,7 +97,7 @@
 }
 
 /* 限制面板强制居中样式 */
-.browser-selection-copy-panel-force-center {
+.tabular-extension-panel-force-center {
   position: fixed !important;
   left: 50% !important;
   top: 50% !important;
@@ -105,12 +105,12 @@
 }
 
 /* 确保面板内容不被页面样式影响 */
-.browser-selection-copy-panel * {
+.tabular-extension-panel * {
   box-sizing: border-box !important;
 }
 
 /* ==================== 标题栏样式 ==================== */
-.browser-selection-copy-panel-header {
+.tabular-extension-panel-header {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
@@ -125,7 +125,7 @@
   margin: 0 !important;
 }
 
-.browser-selection-copy-panel-title {
+.tabular-extension-panel-title {
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
@@ -134,13 +134,13 @@
   padding: 0 !important;
 }
 
-.browser-selection-copy-panel-icon {
+.tabular-extension-panel-icon {
   font-size: 16px !important;
   line-height: 1 !important;
 }
 
 /* 免费额度显示（次要信息） */
-.browser-selection-copy-panel-usage-info {
+.tabular-extension-panel-usage-info {
   font-size: 12px !important;
   color: rgba(255, 255, 255, 0.7) !important;
   font-weight: 400 !important;
@@ -148,7 +148,7 @@
 }
 
 /* ==================== 按钮样式 ==================== */
-.browser-selection-copy-panel-close {
+.tabular-extension-panel-close {
   width: 24px !important;
   height: 24px !important;
   border: none !important;
@@ -163,20 +163,20 @@
   transition: all 0.2s ease !important;
 }
 
-.browser-selection-copy-panel-close:hover {
+.tabular-extension-panel-close:hover {
   background: var(--bsc-close-btn-hover) !important;
   transform: scale(1.1) !important;
 }
 
 /* ==================== 文本预览区域 ==================== */
-.browser-selection-copy-panel-preview-wrapper {
+.tabular-extension-panel-preview-wrapper {
   position: relative !important;
   padding: 16px !important;
   background: var(--bsc-preview-bg) !important;
   margin: 0 !important;
 }
 
-.browser-selection-copy-panel-textarea {
+.tabular-extension-panel-textarea {
   width: 100% !important;
   height: 240px !important;
   resize: none !important;
@@ -195,19 +195,19 @@
   margin: 0 !important;
 }
 
-.browser-selection-copy-panel-textarea:focus {
+.tabular-extension-panel-textarea:focus {
   border-color: var(--bsc-focus-border) !important;
 }
 
 /* ==================== 复制按钮区域 ==================== */
-.browser-selection-copy-panel-copy-wrapper {
+.tabular-extension-panel-copy-wrapper {
   padding: 0 16px 16px 16px !important;
   display: flex !important;
   gap: 8px !important;
   margin: 0 !important;
 }
 
-.browser-selection-copy-panel-copy-btn {
+.tabular-extension-panel-copy-btn {
   flex: 1 !important;
   padding: 12px !important;
   background: var(--bsc-copy-btn-gradient) !important;
@@ -222,26 +222,26 @@
   margin: 0 !important;
 }
 
-.browser-selection-copy-panel-copy-btn:hover {
+.tabular-extension-panel-copy-btn:hover {
   transform: translateY(-1px) !important;
   box-shadow: var(--bsc-copy-btn-hover-shadow) !important;
 }
 
-.browser-selection-copy-panel-copy-btn-content {
+.tabular-extension-panel-copy-btn-content {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 6px !important;
 }
 
-.browser-selection-copy-panel-copy-btn-icon {
+.tabular-extension-panel-copy-btn-icon {
   font-size: 16px !important;
   line-height: 1 !important;
 }
 
 /* ==================== 表格模式样式 ==================== */
 /* 表格模式下使用等宽字体，确保列对齐 */
-.browser-selection-copy-table-mode .browser-selection-copy-panel-textarea {
+.tabular-extension-table-mode .tabular-extension-panel-textarea {
   font-family: 'SF Mono', 'Monaco', 'Consolas', 'Courier New', monospace !important;
   font-size: 13px !important;
   line-height: 1.5 !important;
@@ -253,7 +253,7 @@
 }
 
 /* ==================== CSV 导出按钮样式 ==================== */
-.browser-selection-copy-panel-csv-btn {
+.tabular-extension-panel-csv-btn {
   padding: 10px 16px !important;
   margin-right: 8px !important;
   background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
@@ -270,30 +270,30 @@
   gap: 6px !important;
 }
 
-.browser-selection-copy-panel-csv-btn:hover {
+.tabular-extension-panel-csv-btn:hover {
   transform: translateY(-1px) !important;
   box-shadow: 0 6px 16px rgba(40, 167, 69, 0.35) !important;
   background: linear-gradient(135deg, #218838 0%, #1ea87a 100%) !important;
 }
 
-.browser-selection-copy-panel-csv-btn:active {
+.tabular-extension-panel-csv-btn:active {
   transform: translateY(0) !important;
 }
 
 /* 深色模式下的 CSV 按钮 */
 @media (prefers-color-scheme: dark) {
-  .browser-selection-copy-panel-csv-btn {
+  .tabular-extension-panel-csv-btn {
     box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3) !important;
   }
   
-  .browser-selection-copy-panel-csv-btn:hover {
+  .tabular-extension-panel-csv-btn:hover {
     box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4) !important;
   }
 }
 
 /* ==================== 限制面板文本样式 ==================== */
 /* 限制面板主提示样式 */
-.browser-selection-copy-panel-limit-count {
+.tabular-extension-panel-limit-count {
   font-size: 16px !important;
   font-weight: 600 !important;
   color: var(--bsc-text) !important;
@@ -302,7 +302,7 @@
 }
 
 /* 限制面板次要说明样式 */
-.browser-selection-copy-panel-limit-secondary {
+.tabular-extension-panel-limit-secondary {
   font-size: 13px !important;
   color: var(--bsc-text) !important;
   opacity: 0.7 !important;
@@ -311,21 +311,21 @@
 }
 
 /* ==================== Pro 升级提示样式 ==================== */
-.browser-selection-copy-panel-pro-required {
+.tabular-extension-panel-pro-required {
   padding: 24px !important;
   text-align: center !important;
   background: var(--bsc-preview-bg) !important;
   margin: 0 !important;
 }
 
-.browser-selection-copy-panel-pro-icon {
+.tabular-extension-panel-pro-icon {
   font-size: 48px !important;
   margin-bottom: 16px !important;
   display: block !important;
   line-height: 1 !important;
 }
 
-.browser-selection-copy-panel-pro-title {
+.tabular-extension-panel-pro-title {
   font-size: 18px !important;
   font-weight: 600 !important;
   color: var(--bsc-text) !important;
@@ -333,7 +333,7 @@
   padding: 0 !important;
 }
 
-.browser-selection-copy-panel-pro-message {
+.tabular-extension-panel-pro-message {
   font-size: 14px !important;
   color: var(--bsc-text) !important;
   opacity: 0.8 !important;
@@ -342,7 +342,7 @@
   line-height: 1.6 !important;
 }
 
-.browser-selection-copy-panel-pro-upgrade-btn {
+.tabular-extension-panel-pro-upgrade-btn {
   width: 100% !important;
   padding: 12px !important;
   background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%) !important;
@@ -361,31 +361,31 @@
   gap: 6px !important;
 }
 
-.browser-selection-copy-panel-pro-upgrade-btn:hover {
+.tabular-extension-panel-pro-upgrade-btn:hover {
   transform: translateY(-1px) !important;
   box-shadow: 0 6px 16px rgba(255, 215, 0, 0.4) !important;
   background: linear-gradient(135deg, #ffed4e 0%, #ffd700 100%) !important;
 }
 
-.browser-selection-copy-panel-pro-upgrade-btn:active {
+.tabular-extension-panel-pro-upgrade-btn:active {
   transform: translateY(0) !important;
 }
 
 /* 深色模式下的 Pro 升级按钮 */
 @media (prefers-color-scheme: dark) {
-  .browser-selection-copy-panel-pro-upgrade-btn {
+  .tabular-extension-panel-pro-upgrade-btn {
     background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%) !important;
     color: #1a1a1a !important;
     box-shadow: 0 4px 12px rgba(255, 215, 0, 0.35) !important;
   }
   
-  .browser-selection-copy-panel-pro-upgrade-btn:hover {
+  .tabular-extension-panel-pro-upgrade-btn:hover {
     box-shadow: 0 6px 16px rgba(255, 215, 0, 0.45) !important;
   }
 }
 
 /* ==================== Toast 提示样式 ==================== */
-.browser-selection-copy-toast {
+.tabular-extension-toast {
   position: fixed !important;
   left: 50% !important;
   top: 20px !important;
@@ -423,14 +423,14 @@
 
 /* 深色模式下的 Toast */
 @media (prefers-color-scheme: dark) {
-  .browser-selection-copy-toast {
+  .tabular-extension-toast {
     background: rgba(255, 255, 255, 0.9) !important;
     color: #1a1a1a !important;
   }
 }
 
 /* ==================== 行数限制提示样式 ==================== */
-.browser-selection-copy-panel-limit-hint {
+.tabular-extension-panel-limit-hint {
   padding: 8px 12px !important;
   margin-bottom: 12px !important;
   background: rgba(255, 193, 7, 0.1) !important;
@@ -443,14 +443,14 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  .browser-selection-copy-panel-limit-hint {
+  .tabular-extension-panel-limit-hint {
     background: rgba(255, 193, 7, 0.15) !important;
     border-color: rgba(255, 193, 7, 0.4) !important;
   }
 }
 
 /* ==================== 高级清洗按钮样式 ==================== */
-.browser-selection-copy-panel-advanced-clean-btn {
+.tabular-extension-panel-advanced-clean-btn {
   flex: 1 !important;
   padding: 10px 12px !important;
   margin-right: 8px !important;
@@ -465,27 +465,27 @@
   box-shadow: 0 4px 12px rgba(240, 147, 251, 0.25) !important;
 }
 
-.browser-selection-copy-panel-advanced-clean-btn:hover {
+.tabular-extension-panel-advanced-clean-btn:hover {
   transform: translateY(-1px) !important;
   box-shadow: 0 6px 16px rgba(240, 147, 251, 0.35) !important;
 }
 
-.browser-selection-copy-panel-advanced-clean-btn:active {
+.tabular-extension-panel-advanced-clean-btn:active {
   transform: translateY(0) !important;
 }
 
 @media (prefers-color-scheme: dark) {
-  .browser-selection-copy-panel-advanced-clean-btn {
+  .tabular-extension-panel-advanced-clean-btn {
     box-shadow: 0 4px 12px rgba(240, 147, 251, 0.3) !important;
   }
   
-  .browser-selection-copy-panel-advanced-clean-btn:hover {
+  .tabular-extension-panel-advanced-clean-btn:hover {
     box-shadow: 0 6px 16px rgba(240, 147, 251, 0.4) !important;
   }
 }
 
 /* ==================== 导出按钮样式 ==================== */
-.browser-selection-copy-panel-export-btn {
+.tabular-extension-panel-export-btn {
   flex: 1 !important;
   padding: 10px 12px !important;
   margin-right: 8px !important;
@@ -500,27 +500,27 @@
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25) !important;
 }
 
-.browser-selection-copy-panel-export-btn:hover {
+.tabular-extension-panel-export-btn:hover {
   transform: translateY(-1px) !important;
   box-shadow: 0 6px 16px rgba(102, 126, 234, 0.35) !important;
 }
 
-.browser-selection-copy-panel-export-btn:active {
+.tabular-extension-panel-export-btn:active {
   transform: translateY(0) !important;
 }
 
 @media (prefers-color-scheme: dark) {
-  .browser-selection-copy-panel-export-btn {
+  .tabular-extension-panel-export-btn {
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
   }
   
-  .browser-selection-copy-panel-export-btn:hover {
+  .tabular-extension-panel-export-btn:hover {
     box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4) !important;
   }
 }
 
 /* ==================== 弹窗遮罩层样式 ==================== */
-.browser-selection-copy-dialog-overlay {
+.tabular-extension-dialog-overlay {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
@@ -535,7 +535,7 @@
 }
 
 /* ==================== 弹窗样式 ==================== */
-.browser-selection-copy-dialog {
+.tabular-extension-dialog {
   background: var(--bsc-panel-bg) !important;
   border-radius: 12px !important;
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2) !important;
@@ -546,7 +546,7 @@
   overflow-y: auto !important;
 }
 
-.browser-selection-copy-dialog-title {
+.tabular-extension-dialog-title {
   font-size: 18px !important;
   font-weight: 600 !important;
   color: var(--bsc-text) !important;
@@ -555,11 +555,11 @@
 }
 
 /* ==================== 清洗规则选择样式 ==================== */
-.browser-selection-copy-dialog-rules {
+.tabular-extension-dialog-rules {
   margin-bottom: 20px !important;
 }
 
-.browser-selection-copy-dialog-rule-item {
+.tabular-extension-dialog-rule-item {
   display: flex !important;
   align-items: center !important;
   padding: 10px !important;
@@ -570,25 +570,25 @@
   transition: all 0.2s ease !important;
 }
 
-.browser-selection-copy-dialog-rule-item:hover {
+.tabular-extension-dialog-rule-item:hover {
   background: var(--bsc-textarea-bg) !important;
 }
 
-.browser-selection-copy-dialog-checkbox {
+.tabular-extension-dialog-checkbox {
   margin-right: 12px !important;
   width: 18px !important;
   height: 18px !important;
   cursor: pointer !important;
 }
 
-.browser-selection-copy-dialog-separator-item {
+.tabular-extension-dialog-separator-item {
   margin-top: 16px !important;
   padding: 12px !important;
   background: var(--bsc-preview-bg) !important;
   border-radius: 8px !important;
 }
 
-.browser-selection-copy-dialog-separator-item label {
+.tabular-extension-dialog-separator-item label {
   display: block !important;
   font-size: 13px !important;
   color: var(--bsc-text) !important;
@@ -596,7 +596,7 @@
   font-weight: 500 !important;
 }
 
-.browser-selection-copy-dialog-separator-input {
+.tabular-extension-dialog-separator-input {
   width: 100% !important;
   padding: 8px 12px !important;
   border: 2px solid var(--bsc-dashed-border) !important;
@@ -608,19 +608,19 @@
   transition: border-color 0.2s ease !important;
 }
 
-.browser-selection-copy-dialog-separator-input:focus {
+.tabular-extension-dialog-separator-input:focus {
   border-color: var(--bsc-focus-border) !important;
 }
 
 /* ==================== 导出格式选择样式 ==================== */
-.browser-selection-copy-dialog-formats {
+.tabular-extension-dialog-formats {
   display: flex !important;
   flex-direction: column !important;
   gap: 12px !important;
   margin-bottom: 20px !important;
 }
 
-.browser-selection-copy-dialog-format-btn {
+.tabular-extension-dialog-format-btn {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -636,29 +636,29 @@
   transition: all 0.2s ease !important;
 }
 
-.browser-selection-copy-dialog-format-btn:hover {
+.tabular-extension-dialog-format-btn:hover {
   background: var(--bsc-textarea-bg) !important;
   border-color: var(--bsc-focus-border) !important;
   transform: translateY(-2px) !important;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15) !important;
 }
 
-.browser-selection-copy-dialog-format-btn:active {
+.tabular-extension-dialog-format-btn:active {
   transform: translateY(0) !important;
 }
 
-.browser-selection-copy-dialog-format-icon {
+.tabular-extension-dialog-format-icon {
   font-size: 24px !important;
 }
 
 /* ==================== 弹窗按钮样式 ==================== */
-.browser-selection-copy-dialog-buttons {
+.tabular-extension-dialog-buttons {
   display: flex !important;
   gap: 12px !important;
   margin-top: 20px !important;
 }
 
-.browser-selection-copy-dialog-btn-cancel {
+.tabular-extension-dialog-btn-cancel {
   flex: 1 !important;
   padding: 12px !important;
   background: var(--bsc-preview-bg) !important;
@@ -671,12 +671,12 @@
   transition: all 0.2s ease !important;
 }
 
-.browser-selection-copy-dialog-btn-cancel:hover {
+.tabular-extension-dialog-btn-cancel:hover {
   background: var(--bsc-textarea-bg) !important;
   border-color: var(--bsc-focus-border) !important;
 }
 
-.browser-selection-copy-dialog-btn-confirm {
+.tabular-extension-dialog-btn-confirm {
   flex: 2 !important;
   padding: 12px !important;
   background: var(--bsc-copy-btn-gradient) !important;
@@ -690,12 +690,12 @@
   box-shadow: var(--bsc-copy-btn-shadow) !important;
 }
 
-.browser-selection-copy-dialog-btn-confirm:hover {
+.tabular-extension-dialog-btn-confirm:hover {
   transform: translateY(-1px) !important;
   box-shadow: var(--bsc-copy-btn-hover-shadow) !important;
 }
 
-.browser-selection-copy-dialog-btn-confirm:active {
+.tabular-extension-dialog-btn-confirm:active {
   transform: translateY(0) !important;
 }
 

@@ -45,24 +45,31 @@ export async function exportData(
   data: string[][],
   options: ExportOptions
 ): Promise<Blob> {
-  // 应用清洗规则（如果提供）
-  let processedData = data;
-  if (options.cleaningRules) {
-    processedData = data.map(row => 
-      advancedClean(row, options.cleaningRules!)
-    );
-  } else {
-    processedData = data.map(row => basicClean(row));
-  }
+  try {
+    // 应用清洗规则（如果提供）
+    let processedData = data;
+    if (options.cleaningRules) {
+      processedData = data.map(row => 
+        advancedClean(row, options.cleaningRules!)
+      );
+    } else {
+      processedData = data.map(row => basicClean(row));
+    }
 
-  // 根据格式导出
-  switch (options.format) {
-    case 'csv':
-      return toCSVBlob(processedData);
-    case 'excel':
-      return toExcelBlob(processedData);
-    default:
-      throw new Error(`Unsupported export format: ${options.format}`);
+    // 根据格式导出
+    switch (options.format) {
+      case 'csv':
+        return toCSVBlob(processedData);
+      case 'excel':
+        return toExcelBlob(processedData);
+      default:
+        throw new Error(`Unsupported export format: ${options.format}`);
+    }
+  } catch (error) {
+    console.error('Error exporting data:', error);
+    // 降级策略：返回基础 CSV 格式
+    const csvContent = toCSV(data);
+    return new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   }
 }
 
@@ -79,32 +86,38 @@ export async function exportData(
  * @returns CSV 格式字符串
  */
 export function toCSV(data: string[][]): string {
-  // 处理空数组
-  if (data.length === 0) {
+  try {
+    // 处理空数组
+    if (data.length === 0) {
+      return '';
+    }
+    
+    return data.map(row => {
+      return row.map(field => {
+        // 转换为字符串
+        const fieldStr = String(field);
+        
+        // 检查是否需要引号包裹
+        const needsQuotes = 
+          fieldStr.includes(',') || 
+          fieldStr.includes('"') || 
+          fieldStr.includes('\n') ||
+          fieldStr.includes('\r');
+        
+        if (needsQuotes) {
+          // 转义双引号（双引号变为两个双引号）
+          const escaped = fieldStr.replace(/"/g, '""');
+          return `"${escaped}"`;
+        }
+        
+        return fieldStr;
+      }).join(',');
+    }).join('\r\n') + '\r\n'; // 在末尾添加 CRLF，确保最后一行也有结束符
+  } catch (error) {
+    console.error('Error converting to CSV:', error);
+    // 降级策略：返回空字符串
     return '';
   }
-  
-  return data.map(row => {
-    return row.map(field => {
-      // 转换为字符串
-      const fieldStr = String(field);
-      
-      // 检查是否需要引号包裹
-      const needsQuotes = 
-        fieldStr.includes(',') || 
-        fieldStr.includes('"') || 
-        fieldStr.includes('\n') ||
-        fieldStr.includes('\r');
-      
-      if (needsQuotes) {
-        // 转义双引号（双引号变为两个双引号）
-        const escaped = fieldStr.replace(/"/g, '""');
-        return `"${escaped}"`;
-      }
-      
-      return fieldStr;
-    }).join(',');
-  }).join('\r\n') + '\r\n'; // 在末尾添加 CRLF，确保最后一行也有结束符
 }
 
 /**

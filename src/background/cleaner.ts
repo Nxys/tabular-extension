@@ -58,37 +58,43 @@ export function basicClean(data: string[]): string[] {
  * @returns 清洗后的数据行数组
  */
 export function advancedClean(data: string[], rules: CleaningRules): string[] {
-  let result = [...data];
+  try {
+    let result = [...data];
 
-  // 1. 去空行（如果启用）
-  if (rules.removeEmptyLines) {
-    result = result.filter(line => line.trim().length > 0);
+    // 1. 去空行（如果启用）
+    if (rules.removeEmptyLines) {
+      result = result.filter(line => line.trim().length > 0);
+    }
+
+    // 2. 合并多行（如果启用）
+    if (rules.mergeMultipleLines && rules.customSeparator !== undefined) {
+      // 使用自定义分隔符合并所有行
+      result = [result.join(rules.customSeparator)];
+    }
+
+    // 3. 合并为一行（如果启用且未被上一步处理）
+    if (rules.mergeToSingleLine && !rules.mergeMultipleLines) {
+      // 使用空格合并所有行
+      result = [result.join(' ')];
+    }
+
+    // 4. 去重（如果启用）
+    if (rules.removeDuplicates) {
+      // 使用 Set 去重，保持原始顺序
+      const seen = new Set<string>();
+      result = result.filter(line => {
+        if (seen.has(line)) {
+          return false;
+        }
+        seen.add(line);
+        return true;
+      });
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error applying advanced cleaning rules:', error);
+    // 降级策略：返回基础清洗结果
+    return basicClean(data);
   }
-
-  // 2. 合并多行（如果启用）
-  if (rules.mergeMultipleLines && rules.customSeparator !== undefined) {
-    // 使用自定义分隔符合并所有行
-    result = [result.join(rules.customSeparator)];
-  }
-
-  // 3. 合并为一行（如果启用且未被上一步处理）
-  if (rules.mergeToSingleLine && !rules.mergeMultipleLines) {
-    // 使用空格合并所有行
-    result = [result.join(' ')];
-  }
-
-  // 4. 去重（如果启用）
-  if (rules.removeDuplicates) {
-    // 使用 Set 去重，保持原始顺序
-    const seen = new Set<string>();
-    result = result.filter(line => {
-      if (seen.has(line)) {
-        return false;
-      }
-      seen.add(line);
-      return true;
-    });
-  }
-
-  return result;
 }

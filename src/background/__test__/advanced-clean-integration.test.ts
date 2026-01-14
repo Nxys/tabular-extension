@@ -157,7 +157,7 @@ describe('高级清洗集成测试', () => {
       expect(result.uiData?.totalRows).toBe(10);
       expect(result.uiData?.isLimited).toBe(true);
       expect(result.uiData?.rowLimit).toBe(5);
-      expect(result.uiData?.message).toContain('Free 版最多处理 5 行');
+      expect(result.uiData?.limitMessage).toContain('仅展示前 5 行');
       
       // 验证数据被限制为 5 行
       const lines = (result.data as string).split('\n');

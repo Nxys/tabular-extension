@@ -51,33 +51,49 @@ const DEFAULT_CONFIG: TableDetectionConfig = {
  * @returns 识别到的表格列表
  */
 export function scanTables(config: TableDetectionConfig = DEFAULT_CONFIG): TableInfo[] {
-  const tables: TableInfo[] = [];
-  
-  // 1. 识别所有 <table> 元素
-  const htmlTables = document.querySelectorAll('table');
-  for (const table of htmlTables) {
-    const tableInfo = detectHTMLTable(table, config);
-    if (tableInfo) {
-      tables.push(tableInfo);
-    }
-  }
-  
-  // 2. 识别 div/span 实现的表格
-  // 扫描所有可能的容器元素
-  const candidates = document.querySelectorAll('div, section, article');
-  for (const candidate of candidates) {
-    // 跳过已经识别为 <table> 的元素的子元素
-    if (isInsideHTMLTable(candidate)) {
-      continue;
+  try {
+    const tables: TableInfo[] = [];
+    
+    // 1. 识别所有 <table> 元素
+    const htmlTables = document.querySelectorAll('table');
+    for (const table of htmlTables) {
+      try {
+        const tableInfo = detectHTMLTable(table, config);
+        if (tableInfo) {
+          tables.push(tableInfo);
+        }
+      } catch (error) {
+        console.error('Error detecting HTML table:', error);
+        // 静默失败：跳过该表格，继续识别其他表格
+      }
     }
     
-    const tableInfo = detectDivTable(candidate as HTMLElement, config);
-    if (tableInfo) {
-      tables.push(tableInfo);
+    // 2. 识别 div/span 实现的表格
+    // 扫描所有可能的容器元素
+    const candidates = document.querySelectorAll('div, section, article');
+    for (const candidate of candidates) {
+      try {
+        // 跳过已经识别为 <table> 的元素的子元素
+        if (isInsideHTMLTable(candidate)) {
+          continue;
+        }
+        
+        const tableInfo = detectDivTable(candidate as HTMLElement, config);
+        if (tableInfo) {
+          tables.push(tableInfo);
+        }
+      } catch (error) {
+        console.error('Error detecting div table:', error);
+        // 静默失败：跳过该元素，继续识别其他元素
+      }
     }
+    
+    return tables;
+  } catch (error) {
+    console.error('Error scanning tables:', error);
+    // 降级策略：返回空数组
+    return [];
   }
-  
-  return tables;
 }
 
 /**
@@ -91,48 +107,54 @@ export function detectHTMLTable(
   element: HTMLTableElement,
   config: TableDetectionConfig = DEFAULT_CONFIG
 ): TableInfo | null {
-  // 检查元素是否可见
-  if (!isVisible(element)) {
-    return null;
-  }
-  
-  // 提取表格数据
-  const data: string[][] = [];
-  const rows = element.querySelectorAll('tr');
-  
-  if (rows.length < config.minRows) {
-    return null;
-  }
-  
-  let maxCols = 0;
-  
-  for (const row of rows) {
-    const cells = row.querySelectorAll('td, th');
-    const rowData: string[] = [];
-    
-    for (const cell of cells) {
-      const text = cell.textContent?.trim() || '';
-      rowData.push(text);
+  try {
+    // 检查元素是否可见
+    if (!isVisible(element)) {
+      return null;
     }
     
-    // 添加行数据（即使为空）
-    data.push(rowData);
-    maxCols = Math.max(maxCols, rowData.length);
-  }
-  
-  // 检查列数是否符合要求
-  if (maxCols < config.minCols || data.length < config.minRows) {
+    // 提取表格数据
+    const data: string[][] = [];
+    const rows = element.querySelectorAll('tr');
+    
+    if (rows.length < config.minRows) {
+      return null;
+    }
+    
+    let maxCols = 0;
+    
+    for (const row of rows) {
+      const cells = row.querySelectorAll('td, th');
+      const rowData: string[] = [];
+      
+      for (const cell of cells) {
+        const text = cell.textContent?.trim() || '';
+        rowData.push(text);
+      }
+      
+      // 添加行数据（即使为空）
+      data.push(rowData);
+      maxCols = Math.max(maxCols, rowData.length);
+    }
+    
+    // 检查列数是否符合要求
+    if (maxCols < config.minCols || data.length < config.minRows) {
+      return null;
+    }
+    
+    return {
+      element,
+      type: 'html-table',
+      rows: data.length,
+      cols: maxCols,
+      data,
+      boundingRect: element.getBoundingClientRect()
+    };
+  } catch (error) {
+    console.error('Error detecting HTML table:', error);
+    // 静默失败：返回 null
     return null;
   }
-  
-  return {
-    element,
-    type: 'html-table',
-    rows: data.length,
-    cols: maxCols,
-    data,
-    boundingRect: element.getBoundingClientRect()
-  };
 }
 
 /**
@@ -151,107 +173,113 @@ export function detectDivTable(
   element: HTMLElement,
   config: TableDetectionConfig = DEFAULT_CONFIG
 ): TableInfo | null {
-  // 检查元素是否可见
-  if (!isVisible(element)) {
-    return null;
-  }
-  
-  // 获取所有直接子元素
-  const children = Array.from(element.children).filter(child => 
-    child instanceof HTMLElement && isVisible(child)
-  ) as HTMLElement[];
-  
-  // 至少需要 minRows * minCols 个子元素
-  if (children.length < config.minRows * config.minCols) {
-    return null;
-  }
-  
-  // 收集子元素的位置信息
-  const positions = children.map(child => {
-    const rect = child.getBoundingClientRect();
-    return {
-      element: child,
-      x: rect.left,
-      y: rect.top,
-      width: rect.width,
-      height: rect.height,
-      text: child.textContent?.trim() || ''
-    };
-  });
-  
-  // 1. Y 轴聚类（识别行）
-  const rowClusters = clusterByPosition(
-    positions.map(p => p.y),
-    config.alignmentThreshold
-  );
-  
-  if (rowClusters.length < config.minRows) {
-    return null;
-  }
-  
-  // 2. X 轴聚类（识别列）
-  const colClusters = clusterByPosition(
-    positions.map(p => p.x),
-    config.alignmentThreshold
-  );
-  
-  if (colClusters.length < config.minCols) {
-    return null;
-  }
-  
-  // 3. 检查网格规律性
-  // 计算每行的元素数量
-  const rowElementCounts = rowClusters.map(cluster => 
-    positions.filter(p => Math.abs(p.y - cluster.center) <= config.alignmentThreshold).length
-  );
-  
-  // 检查是否大部分行的元素数量相同（允许少量差异）
-  const mostCommonCount = getMostCommonValue(rowElementCounts);
-  const regularRows = rowElementCounts.filter(count => 
-    Math.abs(count - mostCommonCount) <= 1
-  ).length;
-  
-  // 至少 70% 的行应该有相似的元素数量
-  if (regularRows < rowClusters.length * 0.7) {
-    return null;
-  }
-  
-  // 4. 检查网格间隙的一致性
-  if (!hasConsistentGaps(positions, rowClusters, colClusters, config.gridGapTolerance)) {
-    return null;
-  }
-  
-  // 5. 构建表格数据
-  const data: string[][] = [];
-  
-  for (const rowCluster of rowClusters) {
-    const rowElements = positions.filter(p => 
-      Math.abs(p.y - rowCluster.center) <= config.alignmentThreshold
-    );
-    
-    // 按 X 坐标排序
-    rowElements.sort((a, b) => a.x - b.x);
-    
-    // 分配到列
-    const rowData: string[] = [];
-    for (const colCluster of colClusters) {
-      const cell = rowElements.find(el => 
-        Math.abs(el.x - colCluster.center) <= config.alignmentThreshold
-      );
-      rowData.push(cell?.text || '');
+  try {
+    // 检查元素是否可见
+    if (!isVisible(element)) {
+      return null;
     }
     
-    data.push(rowData);
+    // 获取所有直接子元素
+    const children = Array.from(element.children).filter(child => 
+      child instanceof HTMLElement && isVisible(child)
+    ) as HTMLElement[];
+    
+    // 至少需要 minRows * minCols 个子元素
+    if (children.length < config.minRows * config.minCols) {
+      return null;
+    }
+    
+    // 收集子元素的位置信息
+    const positions = children.map(child => {
+      const rect = child.getBoundingClientRect();
+      return {
+        element: child,
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height,
+        text: child.textContent?.trim() || ''
+      };
+    });
+    
+    // 1. Y 轴聚类（识别行）
+    const rowClusters = clusterByPosition(
+      positions.map(p => p.y),
+      config.alignmentThreshold
+    );
+    
+    if (rowClusters.length < config.minRows) {
+      return null;
+    }
+    
+    // 2. X 轴聚类（识别列）
+    const colClusters = clusterByPosition(
+      positions.map(p => p.x),
+      config.alignmentThreshold
+    );
+    
+    if (colClusters.length < config.minCols) {
+      return null;
+    }
+    
+    // 3. 检查网格规律性
+    // 计算每行的元素数量
+    const rowElementCounts = rowClusters.map(cluster => 
+      positions.filter(p => Math.abs(p.y - cluster.center) <= config.alignmentThreshold).length
+    );
+    
+    // 检查是否大部分行的元素数量相同（允许少量差异）
+    const mostCommonCount = getMostCommonValue(rowElementCounts);
+    const regularRows = rowElementCounts.filter(count => 
+      Math.abs(count - mostCommonCount) <= 1
+    ).length;
+    
+    // 至少 70% 的行应该有相似的元素数量
+    if (regularRows < rowClusters.length * 0.7) {
+      return null;
+    }
+    
+    // 4. 检查网格间隙的一致性
+    if (!hasConsistentGaps(positions, rowClusters, colClusters, config.gridGapTolerance)) {
+      return null;
+    }
+    
+    // 5. 构建表格数据
+    const data: string[][] = [];
+    
+    for (const rowCluster of rowClusters) {
+      const rowElements = positions.filter(p => 
+        Math.abs(p.y - rowCluster.center) <= config.alignmentThreshold
+      );
+      
+      // 按 X 坐标排序
+      rowElements.sort((a, b) => a.x - b.x);
+      
+      // 分配到列
+      const rowData: string[] = [];
+      for (const colCluster of colClusters) {
+        const cell = rowElements.find(el => 
+          Math.abs(el.x - colCluster.center) <= config.alignmentThreshold
+        );
+        rowData.push(cell?.text || '');
+      }
+      
+      data.push(rowData);
+    }
+    
+    return {
+      element,
+      type: 'div-table',
+      rows: rowClusters.length,
+      cols: colClusters.length,
+      data,
+      boundingRect: element.getBoundingClientRect()
+    };
+  } catch (error) {
+    console.error('Error detecting div table:', error);
+    // 静默失败：返回 null
+    return null;
   }
-  
-  return {
-    element,
-    type: 'div-table',
-    rows: rowClusters.length,
-    cols: colClusters.length,
-    data,
-    boundingRect: element.getBoundingClientRect()
-  };
 }
 
 /**
@@ -263,39 +291,49 @@ export function detectDivTable(
  * @param onClick 点击回调
  */
 export function injectExportButton(table: TableInfo, onClick: () => void): void {
-  // 检查是否已经注入过
-  const existingButton = table.element.querySelector('.table-export-button');
-  if (existingButton) {
-    return;
+  try {
+    // 检查是否已经注入过
+    const existingButton = table.element.querySelector('.table-export-button');
+    if (existingButton) {
+      return;
+    }
+    
+    // 创建按钮
+    const button = document.createElement('button');
+    button.className = 'table-export-button';
+    button.innerHTML = '📊';
+    button.title = '导出表格';
+    button.onclick = (e) => {
+      e.stopPropagation();
+      onClick();
+    };
+    
+    // 确保表格元素有相对定位
+    const computedStyle = window.getComputedStyle(table.element);
+    if (computedStyle.position === 'static') {
+      table.element.style.position = 'relative';
+    }
+    
+    // 注入按钮
+    table.element.appendChild(button);
+  } catch (error) {
+    console.error('Error injecting export button:', error);
+    // 静默失败：不影响其他功能
   }
-  
-  // 创建按钮
-  const button = document.createElement('button');
-  button.className = 'table-export-button';
-  button.innerHTML = '📊';
-  button.title = '导出表格';
-  button.onclick = (e) => {
-    e.stopPropagation();
-    onClick();
-  };
-  
-  // 确保表格元素有相对定位
-  const computedStyle = window.getComputedStyle(table.element);
-  if (computedStyle.position === 'static') {
-    table.element.style.position = 'relative';
-  }
-  
-  // 注入按钮
-  table.element.appendChild(button);
 }
 
 /**
  * 移除所有导出按钮
  */
 export function removeExportButtons(): void {
-  const buttons = document.querySelectorAll('.table-export-button');
-  for (const button of buttons) {
-    button.remove();
+  try {
+    const buttons = document.querySelectorAll('.table-export-button');
+    for (const button of buttons) {
+      button.remove();
+    }
+  } catch (error) {
+    console.error('Error removing export buttons:', error);
+    // 静默失败：不影响其他功能
   }
 }
 

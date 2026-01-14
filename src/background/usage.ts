@@ -74,17 +74,27 @@ const THRESHOLD = 0x40000000;
  * @returns 试用状态
  */
 export async function checkTrial(feature: AdvancedFeature): Promise<TrialState> {
-  const state = await getFeatureState(feature);
-  const now = Date.now();
-  
-  const allowed = deriveAllowed(state, now);
-  const remaining = deriveRemaining(state);
-  
-  return {
-    allowed,
-    remaining,
-    feature
-  };
+  try {
+    const state = await getFeatureState(feature);
+    const now = Date.now();
+    
+    const allowed = deriveAllowed(state, now);
+    const remaining = deriveRemaining(state);
+    
+    return {
+      allowed,
+      remaining,
+      feature
+    };
+  } catch (error) {
+    console.error('Error checking trial state:', error);
+    // 降级策略：返回保守的默认值
+    return {
+      allowed: false,
+      remaining: 0,
+      feature
+    };
+  }
 }
 
 /**
@@ -92,9 +102,15 @@ export async function checkTrial(feature: AdvancedFeature): Promise<TrialState> 
  * @param feature 高级能力类型
  */
 export async function evolveTrial(feature: AdvancedFeature): Promise<void> {
-  const state = await getFeatureState(feature);
-  const newState = evolveState(state);
-  await setFeatureState(feature, newState);
+  try {
+    const state = await getFeatureState(feature);
+    const newState = evolveState(state);
+    await setFeatureState(feature, newState);
+  } catch (error) {
+    console.error('Error evolving trial state:', error);
+    // 降级策略：静默失败，不抛出异常
+    // 这样可以避免阻塞用户操作
+  }
 }
 
 /**
@@ -111,7 +127,17 @@ export async function getAllTrials(): Promise<Record<AdvancedFeature, TrialState
   const results: Partial<Record<AdvancedFeature, TrialState>> = {};
   
   for (const feature of features) {
-    results[feature] = await checkTrial(feature);
+    try {
+      results[feature] = await checkTrial(feature);
+    } catch (error) {
+      console.error(`Error getting trial state for ${feature}:`, error);
+      // 降级策略：返回保守的默认值
+      results[feature] = {
+        allowed: false,
+        remaining: 0,
+        feature
+      };
+    }
   }
   
   return results as Record<AdvancedFeature, TrialState>;
@@ -129,17 +155,23 @@ export async function initializeTrials(): Promise<void> {
   ];
   
   for (const feature of features) {
-    const key = getStorageKey(feature);
-    const existing = await getFromStorage<FeatureState | null>(key, null);
-    
-    // 仅在未初始化时设置
-    if (existing === null) {
-      const initialState: FeatureState = {
-        seed: generateRandomSeed(),
-        entropy: generateRandomEntropy(),
-        timestamp: Date.now()
-      };
-      await setToStorage(key, initialState);
+    try {
+      const key = getStorageKey(feature);
+      const existing = await getFromStorage<FeatureState | null>(key, null);
+      
+      // 仅在未初始化时设置
+      if (existing === null) {
+        const initialState: FeatureState = {
+          seed: generateRandomSeed(),
+          entropy: generateRandomEntropy(),
+          timestamp: Date.now()
+        };
+        await setToStorage(key, initialState);
+      }
+    } catch (error) {
+      console.error(`Error initializing trial state for ${feature}:`, error);
+      // 降级策略：继续初始化其他功能
+      // 失败的功能将在使用时返回默认值
     }
   }
 }
@@ -210,21 +242,27 @@ function evolveState(state: FeatureState): FeatureState {
  * @returns 是否授权
  */
 export async function authorize(feature: AdvancedFeature): Promise<boolean> {
-  const state = await getFeatureState(feature);
-  const now = Date.now();
-  
-  // 因子1：状态派生
-  const allowed1 = deriveAllowed(state, now);
-  
-  // 因子2：时间窗口（一年内有效）
-  const daysSinceInit = Math.floor((now - state.timestamp) / 86400000);
-  const allowed2 = daysSinceInit < 365;
-  
-  // 因子3：状态完整性
-  const allowed3 = state.seed !== 0 && state.entropy !== 0;
-  
-  // 多因子折叠
-  return allowed1 && allowed2 && allowed3;
+  try {
+    const state = await getFeatureState(feature);
+    const now = Date.now();
+    
+    // 因子1：状态派生
+    const allowed1 = deriveAllowed(state, now);
+    
+    // 因子2：时间窗口（一年内有效）
+    const daysSinceInit = Math.floor((now - state.timestamp) / 86400000);
+    const allowed2 = daysSinceInit < 365;
+    
+    // 因子3：状态完整性
+    const allowed3 = state.seed !== 0 && state.entropy !== 0;
+    
+    // 多因子折叠
+    return allowed1 && allowed2 && allowed3;
+  } catch (error) {
+    console.error('Error authorizing feature:', error);
+    // 降级策略：返回保守的默认值（不授权）
+    return false;
+  }
 }
 
 /**
@@ -311,19 +349,29 @@ function generateRandomEntropy(): number {
  * @returns 特征状态
  */
 async function getFeatureState(feature: AdvancedFeature): Promise<FeatureState> {
-  const key = getStorageKey(feature);
-  const state = await getFromStorage<FeatureState | null>(key, null);
-  
-  // 如果未初始化，返回默认状态
-  if (state === null) {
+  try {
+    const key = getStorageKey(feature);
+    const state = await getFromStorage<FeatureState | null>(key, null);
+    
+    // 如果未初始化，返回默认状态
+    if (state === null) {
+      return {
+        seed: generateRandomSeed(),
+        entropy: generateRandomEntropy(),
+        timestamp: Date.now()
+      };
+    }
+    
+    return state;
+  } catch (error) {
+    console.error('Error getting feature state:', error);
+    // 降级策略：返回默认状态（会导致授权失败）
     return {
-      seed: generateRandomSeed(),
-      entropy: generateRandomEntropy(),
+      seed: 0,
+      entropy: 0,
       timestamp: Date.now()
     };
   }
-  
-  return state;
 }
 
 /**
@@ -332,8 +380,14 @@ async function getFeatureState(feature: AdvancedFeature): Promise<FeatureState> 
  * @param state 特征状态
  */
 async function setFeatureState(feature: AdvancedFeature, state: FeatureState): Promise<void> {
-  const key = getStorageKey(feature);
-  await setToStorage(key, state);
+  try {
+    const key = getStorageKey(feature);
+    await setToStorage(key, state);
+  } catch (error) {
+    console.error('Error setting feature state:', error);
+    // 降级策略：静默失败
+    // 这样可以避免阻塞用户操作
+  }
 }
 
 /**

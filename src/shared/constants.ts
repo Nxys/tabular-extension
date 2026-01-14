@@ -16,7 +16,7 @@ import type { LayoutOptions } from './types';
  * CSS 类名前缀
  * 用于所有插件相关的 DOM 元素
  */
-export const CSS_CLASS_PREFIX = 'browser-selection-copy';
+export const CSS_CLASS_PREFIX = 'tabular-extension';
 
 /**
  * 需要忽略的交互元素标签名

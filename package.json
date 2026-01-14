@@ -1,5 +1,5 @@
 {
-  "name": "browser-selection-copy",
+  "name": "tabular-extension",
   "version": "1.0.0",
   "description": "浏览器框选复制插件 - Chrome扩展",
   "type": "module",

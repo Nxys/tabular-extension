@@ -43,6 +43,7 @@ export interface ActionResultMessage {
       table?: string[][];
       csv?: string;
       message?: string;           // 由 background 生成的完整文案
+      limitMessage?: string;      // 行数限制提示文案（由 background 生成）
       rowLimit?: number;          // 行数限制
       totalRows?: number;         // 总行数
       isLimited?: boolean;        // 是否被限制

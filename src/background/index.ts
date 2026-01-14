@@ -62,7 +62,7 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
  * 处理 Action 请求
  * 导出用于测试
  */
-export async function handleActionRequest(
+async function handleActionRequest(
   payload: RequestActionMessage['payload']
 ): Promise<ActionResultMessage['payload']> {
   const { action, data } = payload;
@@ -148,10 +148,10 @@ async function handleTextExtract(data: unknown): Promise<ActionResultMessage['pa
     isLimited: isLimited
   };
   
-  // 只在限制时添加 rowLimit 和 message
+  // 只在限制时添加 rowLimit 和 limitMessage
   if (isLimited) {
     uiData.rowLimit = 5;
-    uiData.message = 'Free 版最多处理 5 行，升级 Pro 解锁完整数据';
+    uiData.limitMessage = `仅展示前 5 行（共 ${totalRows} 行），升级 Pro 解锁完整数据`;
   }
   
   const result: ActionResultMessage['payload'] = {
@@ -565,10 +565,10 @@ async function handleAdvancedClean(data: unknown): Promise<ActionResultMessage['
     }
   }
   
-  // 只在限制时添加 rowLimit 和 message
+  // 只在限制时添加 rowLimit 和 limitMessage
   if (isLimited) {
     uiData.rowLimit = 5;
-    uiData.message = 'Free 版最多处理 5 行，升级 Pro 解锁完整数据';
+    uiData.limitMessage = `仅展示前 5 行（共 ${totalRows} 行），升级 Pro 解锁完整数据`;
   }
   
   const result: ActionResultMessage['payload'] = {

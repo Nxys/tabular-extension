@@ -21,7 +21,7 @@ describe('constants.ts - 常量定义测试', () => {
   describe('CSS_CLASS_PREFIX', () => {
     it('应该定义正确的 CSS 类名前缀', () => {
       // Assert
-      expect(CSS_CLASS_PREFIX).toBe('browser-selection-copy');
+      expect(CSS_CLASS_PREFIX).toBe('tabular-extension');
     });
 
     it('应该是字符串类型', () => {

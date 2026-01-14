@@ -25,7 +25,7 @@
 ## 项目结构
 
 ```
-browser-selection-copy/
+tabular-extension/
 ├── src/                  # TypeScript 源代码
 │   ├── manifest.json     # 扩展配置
 │   │

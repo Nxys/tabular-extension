@@ -345,12 +345,15 @@ describe('storage.ts', () => {
      * 
      * 对于任意的键值对 (key, value)，调用 setToStorage(key, value) 
      * 然后调用 getFromStorage(key, defaultValue) 应该返回与 value 相等的结果。
+     * 
+     * 注意：排除危险键（__proto__、constructor、prototype）以防止原型污染
      */
     it('存储然后读取应该返回相同的值', async () => {
       await fc.assert(
         fc.asyncProperty(
-          // 生成存储键：非空字符串，长度 1-50
-          fc.string({ minLength: 1, maxLength: 50 }),
+          // 生成存储键：非空字符串，长度 1-50，排除危险键
+          fc.string({ minLength: 1, maxLength: 50 })
+            .filter(key => !['__proto__', 'constructor', 'prototype'].includes(key)),
           // 生成存储值：字符串、数字、布尔值或对象
           fc.oneof(
             fc.string(),

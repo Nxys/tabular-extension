@@ -83,6 +83,10 @@ export async function setupTestState(state: {
   usageDate?: string;   // 已废弃：新模型不再使用日期重置
   hasPro?: boolean;
   settings?: Partial<PluginSettings>;
+  trialStates?: {
+    feature: 'advanced-cleaning' | 'table-detection' | 'one-click-export';
+    allowed: boolean;
+  }[];
 }): Promise<void> {
   // 注意：usageCount 和 usageDate 参数已废弃
   // 新的双轨制模型不再使用统一的 usage_count
@@ -101,6 +105,33 @@ export async function setupTestState(state: {
         },
       },
     });
+  }
+  
+  // 设置试用状态（如果提供）
+  if (state.trialStates) {
+    for (const trialState of state.trialStates) {
+      const key = `state_${trialState.feature}`;
+      if (trialState.allowed) {
+        // 设置一个肯定能通过 authorize 的状态
+        // 使用高 seed 和 entropy 值，确保 deriveAllowed 返回 true
+        await chrome.storage.local.set({
+          [key]: {
+            seed: 0xf0000000,  // 高值确保哈希结果大于阈值
+            entropy: 0xf0000000,
+            timestamp: Date.now(),
+          },
+        });
+      } else {
+        // 设置一个肯定不能通过 authorize 的状态
+        await chrome.storage.local.set({
+          [key]: {
+            seed: 0,
+            entropy: 0,
+            timestamp: Date.now(),
+          },
+        });
+      }
+    }
   }
   
   // 设置插件配置（直接存储 enabled 和 panelPosition）

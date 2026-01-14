@@ -39,15 +39,21 @@ export interface ProState {
  * @returns 是否允许使用
  */
 export async function allow(feature: ProFeature): Promise<boolean> {
-  const state = await getProState();
-  
-  // 简化实现：当前所有 Pro 功能都不可用
-  // 未来可扩展为：
-  // - 验证签名
-  // - 检查功能是否启用
-  // - 验证使用模式
-  
-  return state.isPro && state.features[feature] === true;
+  try {
+    const state = await getProState();
+    
+    // 简化实现：当前所有 Pro 功能都不可用
+    // 未来可扩展为：
+    // - 验证签名
+    // - 检查功能是否启用
+    // - 验证使用模式
+    
+    return state.isPro && state.features[feature] === true;
+  } catch (error) {
+    console.error('Error checking Pro permission:', error);
+    // 降级策略：默认按 Free 用户处理
+    return false;
+  }
 }
 
 /**
@@ -64,5 +70,11 @@ async function getProState(): Promise<ProState> {
     }
   };
   
-  return await getFromStorage('pro_state', defaultState);
+  try {
+    return await getFromStorage('pro_state', defaultState);
+  } catch (error) {
+    console.error('Error getting Pro state:', error);
+    // 降级策略：返回默认状态（Free 用户）
+    return defaultState;
+  }
 }
