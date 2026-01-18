@@ -166,6 +166,15 @@ export function createChromeMock(): typeof chrome {
   const runtimeMock = createRuntimeMock();
   const tabsMock = createTabsMock();
   
+  // Mock URL.createObjectURL and URL.revokeObjectURL
+  if (typeof global.URL === 'undefined') {
+    (global as any).URL = {};
+  }
+  global.URL.createObjectURL = jest.fn((_blob: Blob) => {
+    return `blob:mock-url-${Date.now()}`;
+  });
+  global.URL.revokeObjectURL = jest.fn();
+  
   // 使用 unknown 作为中间类型以避免类型检查错误
   return {
     storage: {
@@ -197,6 +206,13 @@ export function createChromeMock(): typeof chrome {
         hasListeners: jest.fn(),
         listeners: commandsListeners
       }
+    } as any,
+    downloads: {
+      download: jest.fn((_options: { url: string; filename: string; saveAs: boolean }, callback?: (downloadId?: number) => void) => {
+        if (callback) {
+          setTimeout(() => callback(Date.now()), 0);
+        }
+      })
     } as any
   } as unknown as typeof chrome;
 }

@@ -317,6 +317,7 @@ export async function consumeUsage(): Promise<void> {
  * 注意：在新的双轨制模型中，基础能力不再记录次数
  * 这个函数保留是为了兼容性，不执行任何操作
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function record(_event: UsageEvent): Promise<void> {
   // 不执行任何操作
 }

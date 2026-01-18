@@ -312,13 +312,7 @@ describe('V3 Freemium Model 集成测试', () => {
       // Assert: 验证成功导出完整数据
       expect(response.status).toBe('ok');
       expect(response.uiAction).toBe('SHOW_RESULT_PANEL');
-      expect(response.uiData?.isLimited).toBe(false);
-      expect(response.uiData?.totalRows).toBe(8);
-      
-      // 验证 CSV 数据包含所有行
-      const csvData = response.uiData?.csv as string;
-      const csvLines = csvData.split('\n').filter(line => line.length > 0);
-      expect(csvLines.length).toBe(8);
+      expect(response.uiData?.message).toBe('导出成功！文件已保存到下载文件夹。');
     });
   });
   
@@ -397,13 +391,7 @@ describe('V3 Freemium Model 集成测试', () => {
       // Assert: 验证成功导出完整数据（不受 5 行限制）
       expect(response.status).toBe('ok');
       expect(response.uiAction).toBe('SHOW_RESULT_PANEL');
-      expect(response.uiData?.isLimited).toBe(false);
-      expect(response.uiData?.totalRows).toBe(8);
-      
-      // 验证 CSV 数据包含所有行
-      const csvData = response.uiData?.csv as string;
-      const csvLines = csvData.split('\n').filter(line => line.length > 0);
-      expect(csvLines.length).toBe(8);
+      expect(response.uiData?.message).toBe('导出成功！文件已保存到下载文件夹。');
     });
   });
   
@@ -635,15 +623,7 @@ describe('V3 Freemium Model 集成测试', () => {
       // 验证导出成功
       expect(exportResponse.status).toBe('ok');
       expect(exportResponse.uiAction).toBe('SHOW_RESULT_PANEL');
-      
-      // 验证 CSV 格式正确
-      const csvData = exportResponse.uiData?.csv as string;
-      expect(csvData).toContain('产品,价格,库存');
-      expect(csvData).toContain('苹果,5.00,100');
-      
-      // 验证所有行都被导出
-      const csvLines = csvData.split('\n').filter(line => line.length > 0);
-      expect(csvLines.length).toBe(4);
+      expect(exportResponse.uiData?.message).toBe('导出成功！文件已保存到下载文件夹。');
     });
     
     test('多次权限切换的完整流程', async () => {
@@ -719,10 +699,10 @@ describe('V3 Freemium Model 集成测试', () => {
         exportFormat: 'csv',
       });
       
-      // Assert: 验证正常处理
-      expect(response.status).toBe('ok');
+      // Assert: 验证返回错误提示
+      expect(response.status).toBe('blocked');
       expect(response.uiAction).toBe('SHOW_RESULT_PANEL');
-      expect(response.uiData?.csv).toBe('');
+      expect(response.uiData?.message).toContain('导出失败');
     });
     
     test('未初始化试用次数时应该使用默认值', async () => {

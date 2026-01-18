@@ -453,7 +453,6 @@
 .tabular-extension-panel-advanced-clean-btn {
   flex: 1 !important;
   padding: 10px 12px !important;
-  margin-right: 8px !important;
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
   color: white !important;
   border: none !important;
@@ -488,7 +487,6 @@
 .tabular-extension-panel-export-btn {
   flex: 1 !important;
   padding: 10px 12px !important;
-  margin-right: 8px !important;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
   color: white !important;
   border: none !important;
@@ -568,6 +566,7 @@
   border-radius: 8px !important;
   cursor: pointer !important;
   transition: all 0.2s ease !important;
+  color: var(--bsc-text) !important;
 }
 
 .tabular-extension-dialog-rule-item:hover {
@@ -658,6 +657,13 @@
   margin-top: 20px !important;
 }
 
+/* 导出弹窗按钮容器 - 居右布局 */
+.tabular-extension-dialog-export-buttons {
+  display: flex !important;
+  justify-content: flex-end !important;
+  margin-top: 20px !important;
+}
+
 .tabular-extension-dialog-btn-cancel {
   flex: 1 !important;
   padding: 12px !important;
@@ -669,6 +675,13 @@
   font-weight: 600 !important;
   color: var(--bsc-text) !important;
   transition: all 0.2s ease !important;
+}
+
+/* 导出弹窗中的取消按钮 - 固定宽度 */
+.tabular-extension-dialog-export-buttons .tabular-extension-dialog-btn-cancel {
+  flex: none !important;
+  padding: 10px 24px !important;
+  min-width: 80px !important;
 }
 
 .tabular-extension-dialog-btn-cancel:hover {

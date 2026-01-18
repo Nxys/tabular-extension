@@ -12,9 +12,20 @@ import type { AdvancedFeature } from '../../shared/types';
 
 // Mock chrome API
 const mockStorage: Record<string, unknown> = {};
+const mockDownloads: { url: string; filename: string; saveAs: boolean }[] = [];
 
 beforeAll(() => {
+  // Mock URL.createObjectURL and URL.revokeObjectURL
+  global.URL.createObjectURL = jest.fn((_blob: Blob) => {
+    return `blob:mock-url-${Date.now()}`;
+  });
+  global.URL.revokeObjectURL = jest.fn();
+  
   (global as any).chrome = {
+    runtime: {
+      id: 'test-extension-id-12345', // Mock 扩展 ID
+      lastError: undefined
+    },
     storage: {
       local: {
         get: jest.fn((keys: string | string[] | null) => {
@@ -36,12 +47,27 @@ beforeAll(() => {
         }),
       },
     },
+    downloads: {
+      download: jest.fn((options: { url: string; filename: string; saveAs: boolean }, callback?: (downloadId?: number) => void) => {
+        mockDownloads.push(options);
+        if (callback) {
+          // 模拟成功下载
+          setTimeout(() => callback(Date.now()), 0);
+        }
+      })
+    }
   };
 });
 
 beforeEach(() => {
   // 清空 mock storage
   Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
+  
+  // 清空 mock downloads
+  mockDownloads.length = 0;
+  
+  // 重置 chrome.runtime.lastError
+  (global as any).chrome.runtime.lastError = undefined;
   
   // 初始化试用状态（设置为允许使用的状态）
   const features: AdvancedFeature[] = [
@@ -95,9 +121,10 @@ describe('表格导出功能测试', () => {
       // Assert
       expect(result.status).toBe('ok');
       expect(result.uiAction).toBe('SHOW_RESULT_PANEL');
-      expect(result.uiData?.csv).toBeDefined();
-      expect(result.uiData?.isLimited).toBe(false);
-      expect(result.uiData?.totalRows).toBe(3);
+      expect(result.uiData?.message).toBe('导出成功！文件已保存到下载文件夹。');
+      // 验证下载被触发
+      expect(mockDownloads.length).toBe(1);
+      expect(mockDownloads[0].filename).toMatch(/^export_.*\.csv$/);
     });
     
     test('应该成功导出表格为 Excel 格式', async () => {
@@ -122,8 +149,10 @@ describe('表格导出功能测试', () => {
       // Assert
       expect(result.status).toBe('ok');
       expect(result.uiAction).toBe('SHOW_RESULT_PANEL');
-      expect(result.uiData?.csv).toBeDefined();
-      expect(result.uiData?.isLimited).toBe(false);
+      expect(result.uiData?.message).toBe('导出成功！文件已保存到下载文件夹。');
+      // 验证下载被触发，文件扩展名为 .xls
+      expect(mockDownloads.length).toBe(1);
+      expect(mockDownloads[0].filename).toMatch(/^export_.*\.xls$/);
     });
     
     test('Free 用户有试用次数时不受 5 行限制', async () => {
@@ -152,11 +181,9 @@ describe('表格导出功能测试', () => {
       
       // Assert
       expect(result.status).toBe('ok');
-      expect(result.uiData?.isLimited).toBe(false);
-      expect(result.uiData?.totalRows).toBe(8);
-      // 验证所有行都被导出
-      const csvLines = result.uiData?.csv?.split('\r\n').filter(line => line.length > 0);
-      expect(csvLines?.length).toBe(8);
+      expect(result.uiData?.message).toBe('导出成功！文件已保存到下载文件夹。');
+      // 验证下载被触发，所有 8 行都应该被导出（不受 5 行限制）
+      expect(mockDownloads.length).toBe(1);
     });
     
     test('应该消耗试用次数', async () => {
@@ -267,18 +294,17 @@ describe('表格导出功能测试', () => {
       
       // Assert
       expect(result.status).toBe('ok');
-      expect(result.uiData?.csv).toBeDefined();
-      // 验证清洗规则已应用
-      const csvLines = result.uiData?.csv?.split('\r\n').filter(line => line.length > 0);
-      // 去空行后应该有 4 行（原始 5 行 - 1 行空行）
-      expect(csvLines?.length).toBe(4);
+      expect(result.uiData?.message).toBe('导出成功！文件已保存到下载文件夹。');
+      // 验证下载被触发
+      expect(mockDownloads.length).toBe(1);
     });
   });
   
   describe('Pro 用户', () => {
-    beforeEach(() => {
-      // 设置 Pro 状态
-      mockStorage['pro_state'] = {
+    beforeEach(async () => {
+      // 设置 Pro 状态（使用加密格式）
+      const { encryptProState } = await import('../crypto');
+      const proState = {
         isPro: true,
         signature: 'test',
         features: {
@@ -287,6 +313,7 @@ describe('表格导出功能测试', () => {
           'csv-export': true
         }
       };
+      mockStorage['pro_state'] = await encryptProState(proState);
     });
     
     test('应该不受试用次数限制', async () => {
@@ -312,6 +339,7 @@ describe('表格导出功能测试', () => {
       // Assert: Pro 用户应该成功
       expect(result.status).toBe('ok');
       expect(result.uiAction).toBe('SHOW_RESULT_PANEL');
+      expect(result.uiData?.message).toBe('导出成功！文件已保存到下载文件夹。');
     });
     
     test('应该不消耗试用次数', async () => {

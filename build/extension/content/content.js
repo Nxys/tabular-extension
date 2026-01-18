@@ -98,12 +98,24 @@
   };
 
   // src/content/panel.ts
-  var Panel = class {
+  var Panel = class _Panel {
     element = null;
     currentText = "";
     dragState = null;
     mousePosition = { x: 0, y: 0 };
     onActionRequest;
+    /**
+     * 全局弹窗栈，用于管理多层弹窗的ESC键关闭顺序
+     */
+    static dialogStack = [];
+    /**
+     * 主面板ESC键监听器
+     */
+    handleKeyDown = (event) => {
+      if (event.key === "Escape" && _Panel.dialogStack.length === 0) {
+        this.hide();
+      }
+    };
     /**
      * 更新鼠标位置（用于跟随鼠标定位）
      */
@@ -127,6 +139,7 @@
         return;
       }
       this.hide();
+      this.disableTextSelection();
       this.element = document.createElement("div");
       this.element.className = `${CSS_CLASS_PREFIX}-panel`;
       const header = this.createHeader("\u{1F4CB}", "\u6587\u672C\u9884\u89C8");
@@ -166,6 +179,7 @@
       document.body.appendChild(this.element);
       this.positionPanel(panelPosition);
       this.bindDragEvents(header);
+      document.addEventListener("keydown", this.handleKeyDown);
     }
     /**
      * 显示限制提示
@@ -175,6 +189,7 @@
      */
     showLimit(uiData) {
       this.hide();
+      this.disableTextSelection();
       this.element = document.createElement("div");
       this.element.className = `${CSS_CLASS_PREFIX}-panel ${CSS_CLASS_PREFIX}-panel-force-center`;
       const header = this.createHeader("\u{1F6AB}", "\u4F7F\u7528\u9650\u5236");
@@ -188,6 +203,7 @@
       this.element.appendChild(messageWrapper);
       document.body.appendChild(this.element);
       this.bindDragEvents(header);
+      document.addEventListener("keydown", this.handleKeyDown);
     }
     /**
      * 显示 Pro 升级提示
@@ -197,6 +213,7 @@
      */
     showPro(uiData) {
       this.hide();
+      this.disableTextSelection();
       this.element = document.createElement("div");
       this.element.className = `${CSS_CLASS_PREFIX}-panel ${CSS_CLASS_PREFIX}-panel-force-center`;
       const header = this.createHeader("\u2B50", "Pro \u529F\u80FD");
@@ -210,6 +227,7 @@
       this.element.appendChild(messageWrapper);
       document.body.appendChild(this.element);
       this.bindDragEvents(header);
+      document.addEventListener("keydown", this.handleKeyDown);
     }
     /**
      * 显示试用次数用尽提示
@@ -219,6 +237,7 @@
      */
     showTrialExhausted(uiData) {
       this.hide();
+      this.disableTextSelection();
       this.element = document.createElement("div");
       this.element.className = `${CSS_CLASS_PREFIX}-panel ${CSS_CLASS_PREFIX}-panel-force-center`;
       const header = this.createHeader("\u{1F512}", "\u8BD5\u7528\u6B21\u6570\u5DF2\u7528\u5B8C");
@@ -233,6 +252,7 @@
       this.element.appendChild(messageWrapper);
       document.body.appendChild(this.element);
       this.bindDragEvents(header);
+      document.addEventListener("keydown", this.handleKeyDown);
     }
     /**
      * 隐藏面板
@@ -244,7 +264,9 @@
       }
       document.removeEventListener("mousemove", this.handleDrag);
       document.removeEventListener("mouseup", this.endDrag);
+      document.removeEventListener("keydown", this.handleKeyDown);
       this.dragState = null;
+      this.enableTextSelection();
     }
     /**
      * 检查点击是否在面板内
@@ -257,6 +279,29 @@
      * 私有辅助方法
      * ============================================
      */
+    /**
+     * 禁用页面文本选择
+     */
+    disableTextSelection() {
+      const style = document.createElement("style");
+      style.id = `${CSS_CLASS_PREFIX}-disable-selection`;
+      style.textContent = `
+      * {
+        user-select: none !important;
+        -webkit-user-select: none !important;
+      }
+    `;
+      document.head.appendChild(style);
+    }
+    /**
+     * 恢复页面文本选择
+     */
+    enableTextSelection() {
+      const style = document.getElementById(`${CSS_CLASS_PREFIX}-disable-selection`);
+      if (style) {
+        style.remove();
+      }
+    }
     /**
      * 创建标题栏
      */
@@ -293,7 +338,7 @@
       copyBtnIcon.className = `${CSS_CLASS_PREFIX}-panel-copy-btn-icon`;
       copyBtnIcon.textContent = "\u{1F4C4}";
       const copyBtnText = document.createElement("span");
-      copyBtnText.textContent = "\u590D\u5236\u5230\u526A\u8D34\u677F";
+      copyBtnText.textContent = "\u590D\u5236";
       copyBtnContent.appendChild(copyBtnIcon);
       copyBtnContent.appendChild(copyBtnText);
       copyBtn.appendChild(copyBtnContent);
@@ -318,7 +363,7 @@
     createAdvancedCleanButton() {
       const btn = document.createElement("button");
       btn.className = `${CSS_CLASS_PREFIX}-panel-advanced-clean-btn`;
-      btn.textContent = "\u{1F9F9} \u9AD8\u7EA7\u6E05\u6D17\uFF08Pro\uFF09";
+      btn.textContent = "\u{1F9F9} \u6E05\u6D17";
       btn.onclick = () => {
         this.showCleaningDialog();
       };
@@ -471,8 +516,8 @@
       rulesContainer.className = `${CSS_CLASS_PREFIX}-dialog-rules`;
       const rules = [
         { id: "removeEmptyLines", label: "\u53BB\u9664\u7A7A\u884C" },
-        { id: "mergeMultipleLines", label: "\u5408\u5E76\u591A\u884C" },
-        { id: "mergeToSingleLine", label: "\u5408\u5E76\u4E3A\u4E00\u884C" },
+        { id: "mergeMultipleLines", label: "\u5408\u5E76\u591A\u884C\uFF08\u4F7F\u7528\u81EA\u5B9A\u4E49\u5206\u9694\u7B26\uFF09" },
+        { id: "mergeToSingleLine", label: "\u5408\u5E76\u4E3A\u4E00\u884C\uFF08\u4F7F\u7528\u7A7A\u683C\u5206\u9694\uFF09" },
         { id: "removeDuplicates", label: "\u53BB\u9664\u91CD\u590D\u884C" }
       ];
       const checkboxes = {};
@@ -489,6 +534,23 @@
         ruleItem.appendChild(checkbox);
         ruleItem.appendChild(labelText);
         rulesContainer.appendChild(ruleItem);
+      });
+      checkboxes.mergeToSingleLine.addEventListener("change", () => {
+        if (checkboxes.mergeToSingleLine.checked) {
+          checkboxes.mergeMultipleLines.checked = false;
+          separatorInput.disabled = true;
+          separatorInput.style.opacity = "0.5";
+        } else {
+          separatorInput.disabled = false;
+          separatorInput.style.opacity = "1";
+        }
+      });
+      checkboxes.mergeMultipleLines.addEventListener("change", () => {
+        if (checkboxes.mergeMultipleLines.checked) {
+          checkboxes.mergeToSingleLine.checked = false;
+          separatorInput.disabled = false;
+          separatorInput.style.opacity = "1";
+        }
       });
       const separatorItem = document.createElement("div");
       separatorItem.className = `${CSS_CLASS_PREFIX}-dialog-separator-item`;
@@ -508,6 +570,11 @@
       cancelBtn.textContent = "\u53D6\u6D88";
       cancelBtn.onclick = () => {
         overlay.remove();
+        _Panel.dialogStack.pop();
+        document.removeEventListener("keydown", handleEsc);
+        if (_Panel.dialogStack.length === 0) {
+          this.enableTextSelection();
+        }
       };
       const confirmBtn = document.createElement("button");
       confirmBtn.className = `${CSS_CLASS_PREFIX}-dialog-btn-confirm`;
@@ -523,10 +590,17 @@
         if (this.onActionRequest) {
           this.onActionRequest("advanced-clean", {
             text: textToClean,
-            rules: selectedRules
+            cleaningRules: selectedRules,
+            operation: "copy"
+            // 默认为复制操作
           });
         }
         overlay.remove();
+        _Panel.dialogStack.pop();
+        document.removeEventListener("keydown", handleEsc);
+        if (_Panel.dialogStack.length === 0) {
+          this.enableTextSelection();
+        }
         this.hide();
       };
       btnContainer.appendChild(cancelBtn);
@@ -538,8 +612,28 @@
       overlay.onclick = (e) => {
         if (e.target === overlay) {
           overlay.remove();
+          _Panel.dialogStack.pop();
+          document.removeEventListener("keydown", handleEsc);
+          if (_Panel.dialogStack.length === 0) {
+            this.enableTextSelection();
+          }
         }
       };
+      const handleEsc = (e) => {
+        if (e.key === "Escape" && _Panel.dialogStack[_Panel.dialogStack.length - 1] === overlay) {
+          overlay.remove();
+          _Panel.dialogStack.pop();
+          document.removeEventListener("keydown", handleEsc);
+          if (_Panel.dialogStack.length === 0) {
+            this.enableTextSelection();
+          }
+        }
+      };
+      _Panel.dialogStack.push(overlay);
+      document.addEventListener("keydown", handleEsc);
+      if (_Panel.dialogStack.length === 1) {
+        this.disableTextSelection();
+      }
       document.body.appendChild(overlay);
     }
     /**
@@ -573,25 +667,58 @@
             });
           }
           overlay.remove();
+          _Panel.dialogStack.pop();
+          document.removeEventListener("keydown", handleEsc);
+          if (_Panel.dialogStack.length === 0) {
+            this.enableTextSelection();
+          }
           this.hide();
         };
         formatsContainer.appendChild(formatBtn);
       });
+      const btnContainer = document.createElement("div");
+      btnContainer.className = `${CSS_CLASS_PREFIX}-dialog-export-buttons`;
       const cancelBtn = document.createElement("button");
       cancelBtn.className = `${CSS_CLASS_PREFIX}-dialog-btn-cancel`;
       cancelBtn.textContent = "\u53D6\u6D88";
       cancelBtn.onclick = () => {
         overlay.remove();
+        _Panel.dialogStack.pop();
+        document.removeEventListener("keydown", handleEsc);
+        if (_Panel.dialogStack.length === 0) {
+          this.enableTextSelection();
+        }
       };
+      btnContainer.appendChild(cancelBtn);
       dialog.appendChild(title);
       dialog.appendChild(formatsContainer);
-      dialog.appendChild(cancelBtn);
+      dialog.appendChild(btnContainer);
       overlay.appendChild(dialog);
       overlay.onclick = (e) => {
         if (e.target === overlay) {
           overlay.remove();
+          _Panel.dialogStack.pop();
+          document.removeEventListener("keydown", handleEsc);
+          if (_Panel.dialogStack.length === 0) {
+            this.enableTextSelection();
+          }
         }
       };
+      const handleEsc = (e) => {
+        if (e.key === "Escape" && _Panel.dialogStack[_Panel.dialogStack.length - 1] === overlay) {
+          overlay.remove();
+          _Panel.dialogStack.pop();
+          document.removeEventListener("keydown", handleEsc);
+          if (_Panel.dialogStack.length === 0) {
+            this.enableTextSelection();
+          }
+        }
+      };
+      _Panel.dialogStack.push(overlay);
+      document.addEventListener("keydown", handleEsc);
+      if (_Panel.dialogStack.length === 1) {
+        this.disableTextSelection();
+      }
       document.body.appendChild(overlay);
     }
   };
@@ -898,6 +1025,10 @@
      * 向 background 请求执行操作
      */
     async requestAction(action, data) {
+      if (!chrome.runtime?.id) {
+        console.warn("Extension context invalidated, page needs refresh");
+        throw new Error("Extension context invalidated");
+      }
       const message = {
         type: "REQUEST_ACTION",
         payload: { action, data }
@@ -906,7 +1037,12 @@
         const response = await chrome.runtime.sendMessage(message);
         return response;
       } catch (error) {
-        console.error("Failed to request action:", error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage.includes("Extension context invalidated")) {
+          console.warn("Extension context invalidated, page needs refresh");
+        } else {
+          console.error("Failed to request action:", error);
+        }
         throw error;
       }
     }

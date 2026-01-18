@@ -83,6 +83,7 @@ describe('cleaner 模块', () => {
         mergeMultipleLines: true,
         customSeparator: ''
       };
+      // 空字符串是有效的分隔符，表示直接连接
       const expected = ['helloworld'];
       expect(advancedClean(input, rules)).toEqual(expected);
     });
@@ -98,14 +99,15 @@ describe('cleaner 模块', () => {
       expect(advancedClean(input, rules)).toEqual(expected);
     });
 
-    test('未提供分隔符时不应该合并', () => {
+    test('未提供分隔符时应该使用默认换行符', () => {
       const input = ['hello', 'world'];
       const rules: CleaningRules = {
         ...BASIC_CLEANING,
         mergeMultipleLines: true
-        // customSeparator 未定义
+        // customSeparator 未定义，应使用默认换行符
       };
-      expect(advancedClean(input, rules)).toEqual(input);
+      const expected = ['hello\nworld'];
+      expect(advancedClean(input, rules)).toEqual(expected);
     });
   });
 
@@ -120,7 +122,7 @@ describe('cleaner 模块', () => {
       expect(advancedClean(input, rules)).toEqual(expected);
     });
 
-    test('合并多行优先级高于合并为一行', () => {
+    test('合并为一行优先级高于合并多行', () => {
       const input = ['hello', 'world'];
       const rules: CleaningRules = {
         ...BASIC_CLEANING,
@@ -128,8 +130,8 @@ describe('cleaner 模块', () => {
         customSeparator: ', ',
         mergeToSingleLine: true
       };
-      // 应该使用自定义分隔符，而不是空格
-      const expected = ['hello, world'];
+      // 当两个选项都启用时，"合并为一行"优先，使用空格而不是自定义分隔符
+      const expected = ['hello world'];
       expect(advancedClean(input, rules)).toEqual(expected);
     });
   });

@@ -112,7 +112,11 @@ describe('表格识别完整性属性测试', () => {
           minRows: 2,
           minCols: 2,
           alignmentThreshold: 5,
-          gridGapTolerance: 10
+          gridGapTolerance: 10,
+          detectEmptyTables: true,
+          filterAuxiliaryRows: true,
+          detectFixedColumns: true,
+          penetrateNesting: true
         };
         
         const tableInfo = detectHTMLTable(table, config);
@@ -136,8 +140,9 @@ describe('表格识别完整性属性测试', () => {
           for (let i = 0; i < data.length; i++) {
             expect(tableInfo.data[i].length).toBe(data[i].length);
             for (let j = 0; j < data[i].length; j++) {
-              // 期望值也应该 trim，因为 detectHTMLTable 会 trim
-              expect(tableInfo.data[i][j]).toBe(data[i][j].trim());
+              // 期望值应该 trim 并规范化空白字符，因为 extractCellText 会这样处理
+              const expected = data[i][j].replace(/\s+/g, ' ').trim();
+              expect(tableInfo.data[i][j]).toBe(expected);
             }
           }
         }
@@ -180,7 +185,11 @@ describe('表格识别完整性属性测试', () => {
           minRows: 2,
           minCols: 2,
           alignmentThreshold: 5,
-          gridGapTolerance: 10
+          gridGapTolerance: 10,
+          detectEmptyTables: true,
+          filterAuxiliaryRows: true,
+          detectFixedColumns: true,
+          penetrateNesting: true
         };
         
         const tableInfo = detectDivTable(container, config);
@@ -233,7 +242,11 @@ describe('表格识别完整性属性测试', () => {
             minRows: 2,
             minCols: 2,
             alignmentThreshold: 5,
-            gridGapTolerance: 10
+            gridGapTolerance: 10,
+            detectEmptyTables: true,
+            filterAuxiliaryRows: true,
+            detectFixedColumns: true,
+            penetrateNesting: true
           };
           
           const detected = scanTables(config);
@@ -267,7 +280,11 @@ describe('表格识别完整性属性测试', () => {
       minRows: 2,
       minCols: 2,
       alignmentThreshold: 5,
-      gridGapTolerance: 10
+      gridGapTolerance: 10,
+      detectEmptyTables: true,
+      filterAuxiliaryRows: true,
+      detectFixedColumns: true,
+      penetrateNesting: true
     };
     
     const tableInfo = detectHTMLTable(table, config);
@@ -289,7 +306,11 @@ describe('表格识别完整性属性测试', () => {
       minRows: 2,
       minCols: 2,
       alignmentThreshold: 5,
-      gridGapTolerance: 10
+      gridGapTolerance: 10,
+      detectEmptyTables: true,
+      filterAuxiliaryRows: true,
+      detectFixedColumns: true,
+      penetrateNesting: true
     };
     
     const tableInfo = detectHTMLTable(table, config);
@@ -309,7 +330,11 @@ describe('表格识别完整性属性测试', () => {
       minRows: 2,
       minCols: 2,
       alignmentThreshold: 5,
-      gridGapTolerance: 10
+      gridGapTolerance: 10,
+      detectEmptyTables: true,
+      filterAuxiliaryRows: true,
+      detectFixedColumns: true,
+      penetrateNesting: true
     };
     
     const tableInfo = detectHTMLTable(table, config);
@@ -333,7 +358,11 @@ describe('表格识别完整性属性测试', () => {
       minRows: 2,
       minCols: 2,
       alignmentThreshold: 5,
-      gridGapTolerance: 10
+      gridGapTolerance: 10,
+      detectEmptyTables: true,
+      filterAuxiliaryRows: true,
+      detectFixedColumns: true,
+      penetrateNesting: true
     };
     
     const tableInfo = detectHTMLTable(table, config);
@@ -357,7 +386,11 @@ describe('表格识别完整性属性测试', () => {
       minRows: 2,
       minCols: 2,
       alignmentThreshold: 5,
-      gridGapTolerance: 10
+      gridGapTolerance: 10,
+      detectEmptyTables: true,
+      filterAuxiliaryRows: true,
+      detectFixedColumns: true,
+      penetrateNesting: true
     };
     
     const tableInfo = detectHTMLTable(table, config);

@@ -24,6 +24,21 @@ export class Panel {
     | null = null;
   private mousePosition: { x: number; y: number } = { x: 0, y: 0 };
   private onActionRequest?: (action: string, data: unknown) => void;
+  
+  /**
+   * 全局弹窗栈，用于管理多层弹窗的ESC键关闭顺序
+   */
+  private static dialogStack: HTMLElement[] = [];
+  
+  /**
+   * 主面板ESC键监听器
+   */
+  private handleKeyDown = (event: KeyboardEvent): void => {
+    // 只有在没有弹窗时才关闭主面板
+    if (event.key === 'Escape' && Panel.dialogStack.length === 0) {
+      this.hide();
+    }
+  };
 
   /**
    * 更新鼠标位置（用于跟随鼠标定位）
@@ -61,6 +76,9 @@ export class Panel {
     }
 
     this.hide();
+    
+    // 禁用页面文本选择
+    this.disableTextSelection();
     
     // 创建面板
     this.element = document.createElement('div');
@@ -124,6 +142,9 @@ export class Panel {
     document.body.appendChild(this.element);
     this.positionPanel(panelPosition);
     this.bindDragEvents(header);
+    
+    // 绑定ESC键监听
+    document.addEventListener('keydown', this.handleKeyDown);
   }
 
   /**
@@ -134,6 +155,9 @@ export class Panel {
    */
   showLimit(uiData?: { message?: string }): void {
     this.hide();
+    
+    // 禁用页面文本选择
+    this.disableTextSelection();
     
     // 创建面板
     this.element = document.createElement('div');
@@ -158,6 +182,9 @@ export class Panel {
 
     document.body.appendChild(this.element);
     this.bindDragEvents(header);
+    
+    // 绑定ESC键监听
+    document.addEventListener('keydown', this.handleKeyDown);
   }
 
   /**
@@ -168,6 +195,9 @@ export class Panel {
    */
   showPro(uiData?: { message?: string }): void {
     this.hide();
+    
+    // 禁用页面文本选择
+    this.disableTextSelection();
     
     // 创建面板
     this.element = document.createElement('div');
@@ -192,6 +222,9 @@ export class Panel {
 
     document.body.appendChild(this.element);
     this.bindDragEvents(header);
+    
+    // 绑定ESC键监听
+    document.addEventListener('keydown', this.handleKeyDown);
   }
 
   /**
@@ -202,6 +235,9 @@ export class Panel {
    */
   showTrialExhausted(uiData?: { message?: string; trialRemaining?: number }): void {
     this.hide();
+    
+    // 禁用页面文本选择
+    this.disableTextSelection();
     
     // 创建面板
     this.element = document.createElement('div');
@@ -228,6 +264,9 @@ export class Panel {
 
     document.body.appendChild(this.element);
     this.bindDragEvents(header);
+    
+    // 绑定ESC键监听
+    document.addEventListener('keydown', this.handleKeyDown);
   }
 
   /**
@@ -240,7 +279,9 @@ export class Panel {
     }
     document.removeEventListener('mousemove', this.handleDrag);
     document.removeEventListener('mouseup', this.endDrag);
+    document.removeEventListener('keydown', this.handleKeyDown);
     this.dragState = null;
+    this.enableTextSelection();
   }
 
   /**
@@ -255,6 +296,31 @@ export class Panel {
    * 私有辅助方法
    * ============================================
    */
+
+  /**
+   * 禁用页面文本选择
+   */
+  private disableTextSelection(): void {
+    const style = document.createElement('style');
+    style.id = `${CSS_CLASS_PREFIX}-disable-selection`;
+    style.textContent = `
+      * {
+        user-select: none !important;
+        -webkit-user-select: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  /**
+   * 恢复页面文本选择
+   */
+  private enableTextSelection(): void {
+    const style = document.getElementById(`${CSS_CLASS_PREFIX}-disable-selection`);
+    if (style) {
+      style.remove();
+    }
+  }
 
   /**
    * 创建标题栏
@@ -303,7 +369,7 @@ export class Panel {
     copyBtnIcon.textContent = '📄';
     
     const copyBtnText = document.createElement('span');
-    copyBtnText.textContent = '复制到剪贴板';
+    copyBtnText.textContent = '复制';
     
     copyBtnContent.appendChild(copyBtnIcon);
     copyBtnContent.appendChild(copyBtnText);
@@ -333,7 +399,7 @@ export class Panel {
   private createAdvancedCleanButton(): HTMLButtonElement {
     const btn = document.createElement('button');
     btn.className = `${CSS_CLASS_PREFIX}-panel-advanced-clean-btn`;
-    btn.textContent = '🧹 高级清洗（Pro）';
+    btn.textContent = '🧹 清洗';
     btn.onclick = () => {
       this.showCleaningDialog();
     };
@@ -527,8 +593,8 @@ export class Panel {
     // 规则选项
     const rules = [
       { id: 'removeEmptyLines', label: '去除空行' },
-      { id: 'mergeMultipleLines', label: '合并多行' },
-      { id: 'mergeToSingleLine', label: '合并为一行' },
+      { id: 'mergeMultipleLines', label: '合并多行（使用自定义分隔符）' },
+      { id: 'mergeToSingleLine', label: '合并为一行（使用空格分隔）' },
       { id: 'removeDuplicates', label: '去除重复行' }
     ];
     
@@ -550,6 +616,27 @@ export class Panel {
       ruleItem.appendChild(checkbox);
       ruleItem.appendChild(labelText);
       rulesContainer.appendChild(ruleItem);
+    });
+    
+    // 添加互斥逻辑：当选中"合并为一行"时，取消"合并多行"
+    checkboxes.mergeToSingleLine.addEventListener('change', () => {
+      if (checkboxes.mergeToSingleLine.checked) {
+        checkboxes.mergeMultipleLines.checked = false;
+        separatorInput.disabled = true;
+        separatorInput.style.opacity = '0.5';
+      } else {
+        separatorInput.disabled = false;
+        separatorInput.style.opacity = '1';
+      }
+    });
+    
+    // 添加互斥逻辑：当选中"合并多行"时，取消"合并为一行"
+    checkboxes.mergeMultipleLines.addEventListener('change', () => {
+      if (checkboxes.mergeMultipleLines.checked) {
+        checkboxes.mergeToSingleLine.checked = false;
+        separatorInput.disabled = false;
+        separatorInput.style.opacity = '1';
+      }
     });
     
     // 自定义分隔符选项
@@ -578,6 +665,12 @@ export class Panel {
     cancelBtn.textContent = '取消';
     cancelBtn.onclick = () => {
       overlay.remove();
+      Panel.dialogStack.pop();
+      document.removeEventListener('keydown', handleEsc);
+      // 如果所有弹窗都关闭了，恢复文本选择
+      if (Panel.dialogStack.length === 0) {
+        this.enableTextSelection();
+      }
     };
     
     // 确认按钮
@@ -595,14 +688,22 @@ export class Panel {
       };
       
       // 通过回调通知 content 发送请求
+      // 消息格式：{ text, cleaningRules, operation, exportFormat }
       if (this.onActionRequest) {
         this.onActionRequest('advanced-clean', {
           text: textToClean,
-          rules: selectedRules
+          cleaningRules: selectedRules,
+          operation: 'copy'  // 默认为复制操作
         });
       }
       
       overlay.remove();
+      Panel.dialogStack.pop();
+      document.removeEventListener('keydown', handleEsc);
+      // 如果所有弹窗都关闭了，恢复文本选择
+      if (Panel.dialogStack.length === 0) {
+        this.enableTextSelection();
+      }
       this.hide();
     };
     
@@ -619,8 +720,36 @@ export class Panel {
     overlay.onclick = (e) => {
       if (e.target === overlay) {
         overlay.remove();
+        Panel.dialogStack.pop();
+        document.removeEventListener('keydown', handleEsc);
+        // 如果所有弹窗都关闭了，恢复文本选择
+        if (Panel.dialogStack.length === 0) {
+          this.enableTextSelection();
+        }
       }
     };
+    
+    // ESC键监听 - 只关闭栈顶弹窗
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && Panel.dialogStack[Panel.dialogStack.length - 1] === overlay) {
+        overlay.remove();
+        Panel.dialogStack.pop();
+        document.removeEventListener('keydown', handleEsc);
+        // 如果所有弹窗都关闭了，恢复文本选择
+        if (Panel.dialogStack.length === 0) {
+          this.enableTextSelection();
+        }
+      }
+    };
+    
+    // 推入弹窗栈并绑定ESC监听
+    Panel.dialogStack.push(overlay);
+    document.addEventListener('keydown', handleEsc);
+    
+    // 禁用页面文本选择（如果这是第一个弹窗）
+    if (Panel.dialogStack.length === 1) {
+      this.disableTextSelection();
+    }
     
     document.body.appendChild(overlay);
   }
@@ -670,11 +799,21 @@ export class Panel {
         }
         
         overlay.remove();
+        Panel.dialogStack.pop();
+        document.removeEventListener('keydown', handleEsc);
+        // 如果所有弹窗都关闭了，恢复文本选择
+        if (Panel.dialogStack.length === 0) {
+          this.enableTextSelection();
+        }
         this.hide();
       };
       
       formatsContainer.appendChild(formatBtn);
     });
+    
+    // 按钮容器（居右布局）
+    const btnContainer = document.createElement('div');
+    btnContainer.className = `${CSS_CLASS_PREFIX}-dialog-export-buttons`;
     
     // 取消按钮
     const cancelBtn = document.createElement('button');
@@ -682,20 +821,56 @@ export class Panel {
     cancelBtn.textContent = '取消';
     cancelBtn.onclick = () => {
       overlay.remove();
+      Panel.dialogStack.pop();
+      document.removeEventListener('keydown', handleEsc);
+      // 如果所有弹窗都关闭了，恢复文本选择
+      if (Panel.dialogStack.length === 0) {
+        this.enableTextSelection();
+      }
     };
+    
+    btnContainer.appendChild(cancelBtn);
     
     // 组装弹窗
     dialog.appendChild(title);
     dialog.appendChild(formatsContainer);
-    dialog.appendChild(cancelBtn);
+    dialog.appendChild(btnContainer);
     overlay.appendChild(dialog);
     
     // 点击遮罩层关闭
     overlay.onclick = (e) => {
       if (e.target === overlay) {
         overlay.remove();
+        Panel.dialogStack.pop();
+        document.removeEventListener('keydown', handleEsc);
+        // 如果所有弹窗都关闭了，恢复文本选择
+        if (Panel.dialogStack.length === 0) {
+          this.enableTextSelection();
+        }
       }
     };
+    
+    // ESC键监听 - 只关闭栈顶弹窗
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && Panel.dialogStack[Panel.dialogStack.length - 1] === overlay) {
+        overlay.remove();
+        Panel.dialogStack.pop();
+        document.removeEventListener('keydown', handleEsc);
+        // 如果所有弹窗都关闭了，恢复文本选择
+        if (Panel.dialogStack.length === 0) {
+          this.enableTextSelection();
+        }
+      }
+    };
+    
+    // 推入弹窗栈并绑定ESC监听
+    Panel.dialogStack.push(overlay);
+    document.addEventListener('keydown', handleEsc);
+    
+    // 禁用页面文本选择（如果这是第一个弹窗）
+    if (Panel.dialogStack.length === 1) {
+      this.disableTextSelection();
+    }
     
     document.body.appendChild(overlay);
   }

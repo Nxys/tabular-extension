@@ -1,4 +1,5 @@
 import type { PluginSettings } from '../shared/types';
+import { getProState, setProState, type ProState } from '../background/pro';
 
 type PanelPosition = PluginSettings['panelPosition'];
 
@@ -139,6 +140,7 @@ async function notifyContentScripts(settings: PluginSettings): Promise<void> {
 async function initializePopup(): Promise<void> {
   const { enableToggle, positionSelect } = getControls();
   const settings = await loadSettings();
+  const proState = await loadProState();
   const trialStates = await loadTrialStates();
 
   // 根据操作系统设置快捷键提示文本
@@ -156,8 +158,11 @@ async function initializePopup(): Promise<void> {
     versionElement.textContent = `v${manifest.version}`;
   }
 
+  // 更新 Pro 状态显示
+  updateProDisplay(proState.isPro);
+
   // 更新试用次数显示
-  updateTrialDisplay(trialStates);
+  updateTrialDisplay(trialStates, proState.isPro);
 
   enableToggle.checked = settings.enabled;
   positionSelect.value = settings.panelPosition;
@@ -180,40 +185,131 @@ async function initializePopup(): Promise<void> {
     await notifyContentScripts(next);
   });
 
-  // 升级按钮事件（当前为占位）
+  // 升级按钮事件
   const upgradeButton = document.getElementById('upgradeButton');
   if (upgradeButton) {
-    upgradeButton.addEventListener('click', () => {
-      // 当前阶段为占位实现
-      // 未来可以打开升级页面或显示升级信息
-      alert('升级功能即将推出！');
+    upgradeButton.addEventListener('click', async () => {
+      try {
+        // 使用加密存储设置 Pro 状态
+        const newProState: ProState = {
+          isPro: true,
+          signature: 'dev-test',
+          features: {
+            'table-detect': true,
+            'column-align': true,
+            'csv-export': true
+          }
+        };
+        
+        await setProState(newProState);
+        
+        // 提示用户
+        alert('Pro 功能已开启！请刷新页面后使用。');
+        
+        // 关闭 popup
+        window.close();
+      } catch (error) {
+        console.error('开启 Pro 功能失败:', error);
+        alert('开启失败，请重试');
+      }
     });
   }
 }
 
 /**
- * 更新试用次数显示
+ * 加载 Pro 状态
+ * 
+ * 从 storage 读取并解密 Pro 状态
+ * 
+ * @returns Pro 状态
  */
-function updateTrialDisplay(trialStates: Record<AdvancedFeature, TrialState>): void {
+async function loadProState(): Promise<ProState> {
+  try {
+    return await getProState();
+  } catch (error) {
+    console.error('加载 Pro 状态失败:', error);
+    // 返回默认 Free 状态
+    return {
+      isPro: false,
+      signature: '',
+      features: {
+        'table-detect': false,
+        'column-align': false,
+        'csv-export': false
+      }
+    };
+  }
+}
+
+/**
+ * 更新 Pro 状态显示
+ * 
+ * 根据 isPro 标志更新 UI：
+ * - Pro 用户：禁用升级按钮并显示"已激活"
+ * - Free 用户：启用升级按钮并显示"升级到 Pro 版"
+ * 
+ * @param isPro 是否为 Pro 用户
+ */
+function updateProDisplay(isPro: boolean): void {
+  const upgradeButton = document.getElementById('upgradeButton') as HTMLButtonElement;
+  
+  if (upgradeButton) {
+    if (isPro) {
+      // Pro 用户：禁用按钮并显示"已激活"
+      upgradeButton.textContent = '已激活';
+      upgradeButton.disabled = true;
+      upgradeButton.style.opacity = '0.6';
+      upgradeButton.style.cursor = 'not-allowed';
+    } else {
+      // Free 用户：启用按钮并显示"升级到 Pro 版"
+      upgradeButton.textContent = '升级到 Pro 版';
+      upgradeButton.disabled = false;
+      upgradeButton.style.opacity = '1';
+      upgradeButton.style.cursor = 'pointer';
+    }
+  }
+}
+
+/**
+ * 更新试用次数显示
+ * 
+ * Pro 用户显示"无限使用"，Free 用户显示剩余次数
+ * 
+ * @param trialStates 试用状态
+ * @param isPro 是否为 Pro 用户
+ */
+function updateTrialDisplay(trialStates: Record<AdvancedFeature, TrialState>, isPro: boolean): void {
   // 更新高级清洗
   const advancedCleaningEl = document.getElementById('trialAdvancedCleaning');
   if (advancedCleaningEl) {
-    const state = trialStates['advanced-cleaning'];
-    advancedCleaningEl.textContent = `高级清洗（剩余 ${state.remaining} 次试用）`;
+    if (isPro) {
+      advancedCleaningEl.textContent = '高级清洗（无限使用）';
+    } else {
+      const state = trialStates['advanced-cleaning'];
+      advancedCleaningEl.textContent = `高级清洗（剩余 ${state.remaining} 次试用）`;
+    }
   }
 
   // 更新表格识别
   const tableDetectionEl = document.getElementById('trialTableDetection');
   if (tableDetectionEl) {
-    const state = trialStates['table-detection'];
-    tableDetectionEl.textContent = `表格识别（剩余 ${state.remaining} 次试用）`;
+    if (isPro) {
+      tableDetectionEl.textContent = '表格识别（无限使用）';
+    } else {
+      const state = trialStates['table-detection'];
+      tableDetectionEl.textContent = `表格识别（剩余 ${state.remaining} 次试用）`;
+    }
   }
 
   // 更新一键导出
   const oneClickExportEl = document.getElementById('trialOneClickExport');
   if (oneClickExportEl) {
-    const state = trialStates['one-click-export'];
-    oneClickExportEl.textContent = `一键导出（剩余 ${state.remaining} 次试用）`;
+    if (isPro) {
+      oneClickExportEl.textContent = '一键导出（无限使用）';
+    } else {
+      const state = trialStates['one-click-export'];
+      oneClickExportEl.textContent = `一键导出（剩余 ${state.remaining} 次试用）`;
+    }
   }
 }
 

@@ -4,9 +4,31 @@
  */
 
 import { createChromeMock, resetChromeMock } from './mocks/chrome';
+import { webcrypto } from 'crypto';
+import { TextEncoder, TextDecoder } from 'util';
 
 // 初始化 chrome API mock
 global.chrome = createChromeMock();
+
+// 添加 Web Crypto API polyfill
+// @ts-ignore - Node.js crypto polyfill
+global.crypto = webcrypto as unknown as Crypto;
+
+// 确保 crypto.subtle 可用
+if (!global.crypto.subtle) {
+  // @ts-ignore
+  global.crypto.subtle = webcrypto.subtle;
+}
+
+// 添加 TextEncoder/TextDecoder polyfill
+if (!global.TextEncoder) {
+  // @ts-ignore - Node.js util polyfill
+  global.TextEncoder = TextEncoder;
+}
+if (!global.TextDecoder) {
+  // @ts-ignore - Node.js util polyfill
+  global.TextDecoder = TextDecoder;
+}
 
 // 保存原始的 Date 对象
 let originalDate: DateConstructor;

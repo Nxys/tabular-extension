@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "浏览器框选复制",
+  "name": "Tabular – Copy Web Tables & Format Data",
   "version": "1.0.0",
-  "description": "通过鼠标拖拽创建选择框，智能提取并复制页面文本",
+  "description": "Copy tables from web pages, convert content to structured tables, and format data instantly.",
   
   "permissions": [
     "activeTab",
     "clipboardWrite",
-    "storage"
+    "storage",
+    "downloads"
   ],
   
   "content_scripts": [

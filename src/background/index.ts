@@ -18,7 +18,7 @@ import { checkUsage, consumeUsage, record, checkTrial, evolveTrial, authorize, g
 import { allow } from './pro';
 import { getSettings, updateSettings } from './settings';
 import { advancedClean, type CleaningRules } from './cleaner';
-import { toCSV } from './exporter';
+import { toCSV, exportData, type ExportFormat } from './exporter';
 
 /**
  * 消息监听器
@@ -409,91 +409,178 @@ function generateUpgradePrompt(feature: AdvancedFeature, remaining: number): str
 }
 
 /**
+ * 解析文本为表格数据
+ * 
+ * 功能：
+ * - 将文本按行分割
+ * - 过滤空行
+ * - 每行作为一个单元格（简单实现）
+ * 
+ * @param text 原始文本
+ * @returns 二维数组表格数据
+ */
+function parseTextToTable(text: string): string[][] {
+  if (!text || typeof text !== 'string') {
+    throw new Error('无效的文本数据');
+  }
+  
+  const lines = text.split('\n').filter(line => line.trim().length > 0);
+  return lines.map(line => [line]);
+}
+
+/**
  * 处理表格导出
  * 
  * 功能：
  * - 检查 Pro 权限或试用次数
- * - 提取表格完整数据
+ * - 解析文本为表格数据或使用提供的表格数据
  * - 应用清洗规则（如果选择）
- * - 转换为选定格式（CSV 或 Excel）
+ * - 生成导出文件 Blob
+ * - 触发浏览器下载
  * - 消耗试用次数（Free 用户）
- * - Free 用户有试用次数时不受 5 行限制
  * 
  * 数据格式：
- * - data.table: 表格数据（二维数组）
- * - data.exportFormat: 导出格式（'csv' 或 'excel'）
+ * - data.text: 文本数据（字符串）- 从 content 层传递
+ * - data.format: 导出格式（'csv' 或 'excel'）
+ * - data.table: 表格数据（二维数组）- 可选，优先使用
+ * - data.exportFormat: 导出格式（'csv' 或 'excel'）- 可选，兼容旧格式
  * - data.cleaningRules: 清洗规则配置（可选）
  */
 async function handleTableExport(data: unknown): Promise<ActionResultMessage['payload']> {
-  const payload = data as {
-    table: string[][];
-    exportFormat: 'csv' | 'excel';
-    cleaningRules?: CleaningRules;
-  };
-  
-  // 检查是否为 Pro 用户
-  const isPro = await allow('table-detect');
-  
-  // 如果不是 Pro 用户，检查试用次数
-  if (!isPro) {
-    const authorized = await authorize('one-click-export');
+  try {
+    const payload = data as {
+      text?: string;
+      format?: string;
+      table?: string[][];
+      exportFormat?: 'csv' | 'excel';
+      cleaningRules?: CleaningRules;
+    };
     
-    if (!authorized) {
-      // 试用次数用尽，生成包含权益说明的提示文案
-      const trialState = await checkTrial('one-click-export');
+    // 检查是否为 Pro 用户
+    const isPro = await allow('table-detect');
+    
+    // 如果不是 Pro 用户，检查试用次数
+    if (!isPro) {
+      const authorized = await authorize('one-click-export');
+      
+      if (!authorized) {
+        // 试用次数用尽，生成包含权益说明的提示文案
+        const trialState = await checkTrial('one-click-export');
+        return {
+          status: 'blocked',
+          uiAction: 'SHOW_TRIAL_EXHAUSTED',
+          uiData: {
+            message: generateUpgradePrompt('one-click-export', trialState.remaining),
+            trialRemaining: trialState.remaining
+          }
+        };
+      }
+    }
+    
+    // 解析表格数据：优先使用 table，否则从 text 解析
+    let tableData: string[][];
+    if (payload.table && Array.isArray(payload.table)) {
+      tableData = payload.table;
+    } else if (payload.text) {
+      tableData = parseTextToTable(payload.text);
+    } else {
       return {
         status: 'blocked',
-        uiAction: 'SHOW_TRIAL_EXHAUSTED',
+        uiAction: 'SHOW_RESULT_PANEL',
         uiData: {
-          message: generateUpgradePrompt('one-click-export', trialState.remaining),
-          trialRemaining: trialState.remaining
+          message: '导出失败：未提供有效的数据'
         }
       };
     }
+    
+    // 确定导出格式
+    const format: ExportFormat = (payload.format || payload.exportFormat || 'csv') as ExportFormat;
+    
+    // 生成导出文件 Blob
+    const exportOptions: { format: ExportFormat; cleaningRules?: CleaningRules } = {
+      format
+    };
+    if (payload.cleaningRules) {
+      exportOptions.cleaningRules = payload.cleaningRules;
+    }
+    const blob = await exportData(tableData, exportOptions);
+    
+    // 生成带时间戳的文件名
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+    const extension = format === 'csv' ? 'csv' : 'xls';
+    const filename = `export_${timestamp}.${extension}`;
+    
+    // 将 Blob 转换为 Data URL（service worker 不支持 URL.createObjectURL）
+    const reader = new FileReader();
+    
+    return new Promise<ActionResultMessage['payload']>((resolve) => {
+      reader.onloadend = () => {
+        const dataUrl = reader.result as string;
+        
+        // 使用 chrome.downloads API 触发下载
+        chrome.downloads.download({
+          url: dataUrl,
+          filename: filename,
+          saveAs: false  // 直接下载到默认位置，不显示保存对话框
+        }, (_downloadId?: number) => {
+          if (chrome.runtime.lastError) {
+            console.error('Download failed:', chrome.runtime.lastError);
+            resolve({
+              status: 'blocked',
+              uiAction: 'SHOW_RESULT_PANEL',
+              uiData: {
+                message: `导出失败：${chrome.runtime.lastError.message}`
+              }
+            });
+            return;
+          }
+          
+          // 只在成功后消耗试用次数（Free 用户）
+          if (!isPro) {
+            evolveTrial('one-click-export').then(() => {
+              resolve({
+                status: 'ok',
+                uiAction: 'SHOW_RESULT_PANEL',
+                uiData: {
+                  message: '导出成功！文件已保存到下载文件夹。'
+                }
+              });
+            });
+          } else {
+            resolve({
+              status: 'ok',
+              uiAction: 'SHOW_RESULT_PANEL',
+              uiData: {
+                message: '导出成功！文件已保存到下载文件夹。'
+              }
+            });
+          }
+        });
+      };
+      
+      reader.onerror = () => {
+        resolve({
+          status: 'blocked',
+          uiAction: 'SHOW_RESULT_PANEL',
+          uiData: {
+            message: '导出失败：无法读取文件数据'
+          }
+        });
+      };
+      
+      // 读取 Blob 为 Data URL
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Export error:', error);
+    return {
+      status: 'blocked',
+      uiAction: 'SHOW_RESULT_PANEL',
+      uiData: {
+        message: `导出失败：${error instanceof Error ? error.message : '未知错误'}`
+      }
+    };
   }
-  
-  // 应用清洗规则（如果提供）
-  let processedTable = payload.table;
-  if (payload.cleaningRules) {
-    processedTable = payload.table.map(row => 
-      advancedClean(row, payload.cleaningRules!)
-    );
-  }
-  
-  // Free 用户有试用次数时不受 5 行限制
-  // Pro 用户也不受限制
-  // 因此这里不应用行数限制
-  
-  // 转换为选定格式
-  let exportData: string;
-  if (payload.exportFormat === 'csv') {
-    exportData = toCSV(processedTable);
-  } else {
-    // Excel 格式（当前使用 CSV 作为简化实现）
-    exportData = toCSV(processedTable);
-  }
-  
-  // 构建 uiData
-  const uiData: ActionResultMessage['payload']['uiData'] = {
-    csv: exportData,
-    table: processedTable,
-    totalRows: processedTable.length,
-    isLimited: false  // 表格导出不受行数限制
-  };
-  
-  const result: ActionResultMessage['payload'] = {
-    status: 'ok',
-    uiAction: 'SHOW_RESULT_PANEL',
-    data: exportData,
-    uiData
-  };
-  
-  // 只在成功后消耗试用次数（Free 用户）
-  if (!isPro) {
-    await evolveTrial('one-click-export');
-  }
-  
-  return result;
 }
 
 /**

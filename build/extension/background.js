@@ -174,7 +174,80 @@ function getStorageKey(feature) {
   return `${STATE_KEY_PREFIX}${feature}`;
 }
 
+// src/background/crypto.ts
+var ALGORITHM = "AES-GCM";
+var KEY_LENGTH = 256;
+var IV_LENGTH = 12;
+var SALT = "table-capture-pro-v1";
+async function deriveKey() {
+  const extensionId = chrome.runtime.id;
+  const password = `${extensionId}-${SALT}`;
+  const encoder = new TextEncoder();
+  const passwordBuffer = encoder.encode(password);
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    passwordBuffer,
+    "PBKDF2",
+    false,
+    ["deriveBits", "deriveKey"]
+  );
+  const key = await crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: encoder.encode(SALT),
+      iterations: 1e5,
+      hash: "SHA-256"
+    },
+    keyMaterial,
+    { name: ALGORITHM, length: KEY_LENGTH },
+    false,
+    ["encrypt", "decrypt"]
+  );
+  return key;
+}
+async function encryptProState(state) {
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(JSON.stringify(state));
+    const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
+    const key = await deriveKey();
+    const encrypted = await crypto.subtle.encrypt(
+      { name: ALGORITHM, iv },
+      key,
+      data
+    );
+    const combined = new Uint8Array(iv.length + encrypted.byteLength);
+    combined.set(iv, 0);
+    combined.set(new Uint8Array(encrypted), iv.length);
+    return btoa(String.fromCharCode(...combined));
+  } catch (error) {
+    console.error("Error encrypting Pro state:", error);
+    throw new Error("Failed to encrypt Pro state");
+  }
+}
+async function decryptProState(encrypted) {
+  try {
+    const combined = Uint8Array.from(atob(encrypted), (c) => c.charCodeAt(0));
+    const iv = combined.slice(0, IV_LENGTH);
+    const data = combined.slice(IV_LENGTH);
+    const key = await deriveKey();
+    const decrypted = await crypto.subtle.decrypt(
+      { name: ALGORITHM, iv },
+      key,
+      data
+    );
+    const decoder = new TextDecoder();
+    const json = decoder.decode(decrypted);
+    const state = JSON.parse(json);
+    return state;
+  } catch (error) {
+    console.error("Error decrypting Pro state:", error);
+    return null;
+  }
+}
+
 // src/background/pro.ts
+var PRO_STATE_KEY = "pro_state";
 async function allow(feature) {
   try {
     const state = await getProState();
@@ -184,8 +257,8 @@ async function allow(feature) {
     return false;
   }
 }
-async function getProState() {
-  const defaultState = {
+function getDefaultProState() {
+  return {
     isPro: false,
     signature: "",
     features: {
@@ -194,11 +267,45 @@ async function getProState() {
       "csv-export": false
     }
   };
+}
+async function getProState() {
+  const defaultState = getDefaultProState();
   try {
-    return await getFromStorage("pro_state", defaultState);
+    const rawData = await getFromStorage(PRO_STATE_KEY, null);
+    if (!rawData) {
+      return defaultState;
+    }
+    if (typeof rawData === "string") {
+      const decrypted = await decryptProState(rawData);
+      if (decrypted) {
+        return decrypted;
+      }
+      console.warn("Failed to decrypt Pro state, using default Free state");
+      return defaultState;
+    }
+    if (typeof rawData === "object" && rawData !== null) {
+      console.log("Detected plaintext Pro state, migrating to encrypted format");
+      const state = rawData;
+      if (typeof state.isPro === "boolean" && state.features) {
+        await setProState(state);
+        return state;
+      }
+    }
+    console.warn("Invalid Pro state format, using default Free state");
+    return defaultState;
   } catch (error) {
     console.error("Error getting Pro state:", error);
     return defaultState;
+  }
+}
+async function setProState(state) {
+  try {
+    const encrypted = await encryptProState(state);
+    await setToStorage(PRO_STATE_KEY, encrypted);
+    console.log("Pro state saved successfully (encrypted)");
+  } catch (error) {
+    console.error("Error setting Pro state:", error);
+    throw new Error("Failed to save Pro state");
   }
 }
 
@@ -231,11 +338,11 @@ function advancedClean(data, rules) {
     if (rules.removeEmptyLines) {
       result = result.filter((line) => line.trim().length > 0);
     }
-    if (rules.mergeMultipleLines && rules.customSeparator !== void 0) {
-      result = [result.join(rules.customSeparator)];
-    }
-    if (rules.mergeToSingleLine && !rules.mergeMultipleLines) {
+    if (rules.mergeToSingleLine) {
       result = [result.join(" ")];
+    } else if (rules.mergeMultipleLines) {
+      const separator = rules.customSeparator !== void 0 ? rules.customSeparator : "\n";
+      result = [result.join(separator)];
     }
     if (rules.removeDuplicates) {
       const seen = /* @__PURE__ */ new Set();
@@ -255,26 +362,63 @@ function advancedClean(data, rules) {
 }
 
 // src/background/exporter.ts
+async function exportData(data, options) {
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    throw new Error("\u5BFC\u51FA\u6570\u636E\u65E0\u6548\u6216\u4E3A\u7A7A");
+  }
+  let processedData = data;
+  if (options.cleaningRules) {
+    processedData = data.map(
+      (row) => advancedClean(row, options.cleaningRules)
+    );
+  } else {
+    processedData = data.map((row) => basicClean(row));
+  }
+  switch (options.format) {
+    case "csv":
+      return toCSVBlob(processedData);
+    case "excel":
+      return toExcelBlob(processedData);
+    default:
+      throw new Error(`\u4E0D\u652F\u6301\u7684\u5BFC\u51FA\u683C\u5F0F: ${options.format}`);
+  }
+}
 function toCSV(data) {
-  try {
-    if (data.length === 0) {
-      return "";
-    }
-    return data.map((row) => {
-      return row.map((field) => {
-        const fieldStr = String(field);
-        const needsQuotes = fieldStr.includes(",") || fieldStr.includes('"') || fieldStr.includes("\n") || fieldStr.includes("\r");
-        if (needsQuotes) {
-          const escaped = fieldStr.replace(/"/g, '""');
-          return `"${escaped}"`;
-        }
-        return fieldStr;
-      }).join(",");
-    }).join("\r\n") + "\r\n";
-  } catch (error) {
-    console.error("Error converting to CSV:", error);
+  if (!data || !Array.isArray(data)) {
+    console.error("Invalid data: data is not an array");
+    throw new Error("\u6570\u636E\u683C\u5F0F\u65E0\u6548\uFF1A\u5FC5\u987B\u662F\u6570\u7EC4");
+  }
+  if (data.length === 0) {
     return "";
   }
+  return data.map((row) => {
+    if (!Array.isArray(row)) {
+      console.warn("Invalid row: not an array", row);
+      throw new Error("\u6570\u636E\u683C\u5F0F\u65E0\u6548\uFF1A\u6BCF\u884C\u5FC5\u987B\u662F\u6570\u7EC4");
+    }
+    return row.map((field) => {
+      const fieldStr = String(field);
+      const needsQuotes = fieldStr.includes(",") || fieldStr.includes('"') || fieldStr.includes("\n") || fieldStr.includes("\r");
+      if (needsQuotes) {
+        const escaped = fieldStr.replace(/"/g, '""');
+        return `"${escaped}"`;
+      }
+      return fieldStr;
+    }).join(",");
+  }).join("\r\n") + "\r\n";
+}
+function toCSVBlob(data) {
+  const csvContent = toCSV(data);
+  return new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+}
+function toExcel(data) {
+  const csvContent = toCSV(data);
+  return new Blob([csvContent], {
+    type: "application/vnd.ms-excel;charset=utf-8;"
+  });
+}
+function toExcelBlob(data) {
+  return toExcel(data);
 }
 
 // src/background/index.ts
@@ -522,52 +666,119 @@ function generateUpgradePrompt(feature, remaining) {
 \u5347\u7EA7 Pro \u7248\u89E3\u9501\u4EE5\u4E0B\u6743\u76CA\uFF1A
 ${benefitsText}`;
 }
+function parseTextToTable(text) {
+  if (!text || typeof text !== "string") {
+    throw new Error("\u65E0\u6548\u7684\u6587\u672C\u6570\u636E");
+  }
+  const lines = text.split("\n").filter((line) => line.trim().length > 0);
+  return lines.map((line) => [line]);
+}
 async function handleTableExport(data) {
-  const payload = data;
-  const isPro = await allow("table-detect");
-  if (!isPro) {
-    const authorized = await authorize("one-click-export");
-    if (!authorized) {
-      const trialState = await checkTrial("one-click-export");
+  try {
+    const payload = data;
+    const isPro = await allow("table-detect");
+    if (!isPro) {
+      const authorized = await authorize("one-click-export");
+      if (!authorized) {
+        const trialState = await checkTrial("one-click-export");
+        return {
+          status: "blocked",
+          uiAction: "SHOW_TRIAL_EXHAUSTED",
+          uiData: {
+            message: generateUpgradePrompt("one-click-export", trialState.remaining),
+            trialRemaining: trialState.remaining
+          }
+        };
+      }
+    }
+    let tableData;
+    if (payload.table && Array.isArray(payload.table)) {
+      tableData = payload.table;
+    } else if (payload.text) {
+      tableData = parseTextToTable(payload.text);
+    } else {
       return {
         status: "blocked",
-        uiAction: "SHOW_TRIAL_EXHAUSTED",
+        uiAction: "SHOW_RESULT_PANEL",
         uiData: {
-          message: generateUpgradePrompt("one-click-export", trialState.remaining),
-          trialRemaining: trialState.remaining
+          message: "\u5BFC\u51FA\u5931\u8D25\uFF1A\u672A\u63D0\u4F9B\u6709\u6548\u7684\u6570\u636E"
         }
       };
     }
+    const format = payload.format || payload.exportFormat || "csv";
+    const exportOptions = {
+      format
+    };
+    if (payload.cleaningRules) {
+      exportOptions.cleaningRules = payload.cleaningRules;
+    }
+    const blob = await exportData(tableData, exportOptions);
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace(/:/g, "-");
+    const extension = format === "csv" ? "csv" : "xls";
+    const filename = `export_${timestamp}.${extension}`;
+    const reader = new FileReader();
+    return new Promise((resolve) => {
+      reader.onloadend = () => {
+        const dataUrl = reader.result;
+        chrome.downloads.download({
+          url: dataUrl,
+          filename,
+          saveAs: false
+          // 直接下载到默认位置，不显示保存对话框
+        }, (_downloadId) => {
+          if (chrome.runtime.lastError) {
+            console.error("Download failed:", chrome.runtime.lastError);
+            resolve({
+              status: "blocked",
+              uiAction: "SHOW_RESULT_PANEL",
+              uiData: {
+                message: `\u5BFC\u51FA\u5931\u8D25\uFF1A${chrome.runtime.lastError.message}`
+              }
+            });
+            return;
+          }
+          if (!isPro) {
+            evolveTrial("one-click-export").then(() => {
+              resolve({
+                status: "ok",
+                uiAction: "SHOW_RESULT_PANEL",
+                uiData: {
+                  message: "\u5BFC\u51FA\u6210\u529F\uFF01\u6587\u4EF6\u5DF2\u4FDD\u5B58\u5230\u4E0B\u8F7D\u6587\u4EF6\u5939\u3002"
+                }
+              });
+            });
+          } else {
+            resolve({
+              status: "ok",
+              uiAction: "SHOW_RESULT_PANEL",
+              uiData: {
+                message: "\u5BFC\u51FA\u6210\u529F\uFF01\u6587\u4EF6\u5DF2\u4FDD\u5B58\u5230\u4E0B\u8F7D\u6587\u4EF6\u5939\u3002"
+              }
+            });
+          }
+        });
+      };
+      reader.onerror = () => {
+        resolve({
+          status: "blocked",
+          uiAction: "SHOW_RESULT_PANEL",
+          uiData: {
+            message: "\u5BFC\u51FA\u5931\u8D25\uFF1A\u65E0\u6CD5\u8BFB\u53D6\u6587\u4EF6\u6570\u636E"
+          }
+        });
+      };
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error("Export error:", error);
+    return {
+      status: "blocked",
+      uiAction: "SHOW_RESULT_PANEL",
+      uiData: {
+        message: `\u5BFC\u51FA\u5931\u8D25\uFF1A${error instanceof Error ? error.message : "\u672A\u77E5\u9519\u8BEF"}`
+      }
+    };
   }
-  let processedTable = payload.table;
-  if (payload.cleaningRules) {
-    processedTable = payload.table.map(
-      (row) => advancedClean(row, payload.cleaningRules)
-    );
-  }
-  let exportData;
-  if (payload.exportFormat === "csv") {
-    exportData = toCSV(processedTable);
-  } else {
-    exportData = toCSV(processedTable);
-  }
-  const uiData = {
-    csv: exportData,
-    table: processedTable,
-    totalRows: processedTable.length,
-    isLimited: false
-    // 表格导出不受行数限制
-  };
-  const result = {
-    status: "ok",
-    uiAction: "SHOW_RESULT_PANEL",
-    data: exportData,
-    uiData
-  };
-  if (!isPro) {
-    await evolveTrial("one-click-export");
-  }
-  return result;
 }
 async function handleAdvancedClean(data) {
   const payload = data;

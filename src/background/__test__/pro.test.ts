@@ -117,4 +117,43 @@ describe('pro.ts', () => {
       expect(await allow('csv-export')).toBe(true);
     });
   });
+
+  describe('错误处理', () => {
+    it('应该在读取 Pro 状态失败时返回 false', async () => {
+      // Arrange - 设置一个无效的 Pro 状态
+      await setToStorage('pro_state', 'invalid');
+      
+      // Act
+      const result = await allow('table-detect');
+      
+      // Assert
+      expect(result).toBe(false);
+    });
+    
+    it('应该在检查权限时处理异常', async () => {
+      // Arrange - 设置一个会导致错误的状态
+      await setToStorage('pro_state', null);
+      
+      // Act
+      const result = await allow('table-detect');
+      
+      // Assert
+      expect(result).toBe(false);
+    });
+    
+    it('应该处理缺少 features 字段的 Pro 状态', async () => {
+      // Arrange
+      await setToStorage('pro_state', {
+        isPro: true,
+        signature: 'test'
+        // 缺少 features 字段
+      });
+      
+      // Act
+      const result = await allow('table-detect');
+      
+      // Assert
+      expect(result).toBe(false);
+    });
+  });
 });

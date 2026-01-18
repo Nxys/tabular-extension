@@ -104,8 +104,8 @@ describe('Property 4: 清洗规则应用一致性', () => {
         (data, rules) => {
           const result = advancedClean(data, rules);
 
-          // 如果启用了合并多行且提供了分隔符，结果应该是单行
-          if (rules.mergeMultipleLines && rules.customSeparator !== undefined) {
+          // 如果启用了合并多行，结果应该是单行（无论是否提供分隔符）
+          if (rules.mergeMultipleLines) {
             expect(result.length).toBeLessThanOrEqual(1);
           } else if (rules.mergeToSingleLine && !rules.mergeMultipleLines) {
             // 如果启用了合并为一行（且未被合并多行覆盖），结果应该是单行

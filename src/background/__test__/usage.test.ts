@@ -1107,3 +1107,76 @@ describe('usage.ts - 无语义状态管理', () => {
     });
   });
 });
+
+
+  describe('错误处理', () => {
+    it('应该在读取状态失败时返回保守的默认值', async () => {
+      // Arrange
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      
+      // 设置一个无效的状态
+      await setToStorage('state_advanced-cleaning', 'invalid-state');
+      
+      // Act
+      const result = await checkTrial('advanced-cleaning');
+      
+      // Assert - 应该能处理无效状态
+      expect(result).toBeDefined();
+      expect(result.feature).toBe('advanced-cleaning');
+      
+      // Cleanup
+      consoleErrorSpy.mockRestore();
+    });
+    
+    it('应该在状态不完整时拒绝授权', async () => {
+      // Arrange - 设置一个不完整的状态（seed 或 entropy 为 0）
+      await setToStorage('state_advanced-cleaning', {
+        seed: 0,
+        entropy: 0,
+        timestamp: Date.now()
+      });
+      
+      // Act
+      const result = await authorize('advanced-cleaning');
+      
+      // Assert
+      expect(result).toBe(false);
+    });
+    
+    it('应该处理未初始化的状态', async () => {
+      // Arrange - 不初始化任何状态
+      
+      // Act
+      const result = await checkTrial('advanced-cleaning');
+      
+      // Assert - 应该返回默认值
+      expect(result).toBeDefined();
+      expect(result.feature).toBe('advanced-cleaning');
+    });
+    
+    it('应该在 evolveTrial 后更新状态', async () => {
+      // Arrange
+      await initializeTrials();
+      const initialState = await getFromStorage('state_advanced-cleaning', null);
+      
+      // Act
+      await evolveTrial('advanced-cleaning');
+      
+      // Assert - 状态应该已更新
+      const finalState = await getFromStorage('state_advanced-cleaning', null);
+      expect(finalState).not.toEqual(initialState);
+    });
+    
+    it('应该在 getAllTrials 中返回所有功能的状态', async () => {
+      // Arrange
+      await initializeTrials();
+      
+      // Act
+      const results = await getAllTrials();
+      
+      // Assert - 应该返回所有功能的状态
+      expect(results['advanced-cleaning']).toBeDefined();
+      expect(results['table-detection']).toBeDefined();
+      expect(results['one-click-export']).toBeDefined();
+    });
+  });

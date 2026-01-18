@@ -375,3 +375,52 @@ describe('storage.ts', () => {
     });
   });
 });
+
+
+  describe('安全性测试', () => {
+    it('应该拒绝 __proto__ 键', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      await setToStorage('__proto__', 'malicious');
+      const result = await getFromStorage('__proto__', 'default');
+      
+      expect(result).toBe('default');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Dangerous key rejected'));
+      
+      consoleWarnSpy.mockRestore();
+    });
+    
+    it('应该拒绝 constructor 键', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      await setToStorage('constructor', 'malicious');
+      const result = await getFromStorage('constructor', 'default');
+      
+      expect(result).toBe('default');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Dangerous key rejected'));
+      
+      consoleWarnSpy.mockRestore();
+    });
+    
+    it('应该拒绝 prototype 键', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      await setToStorage('prototype', 'malicious');
+      const result = await getFromStorage('prototype', 'default');
+      
+      expect(result).toBe('default');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Dangerous key rejected'));
+      
+      consoleWarnSpy.mockRestore();
+    });
+    
+    it('应该拒绝危险键的删除操作', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      await removeFromStorage('__proto__');
+      
+      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Dangerous key rejected'));
+      
+      consoleWarnSpy.mockRestore();
+    });
+  });
