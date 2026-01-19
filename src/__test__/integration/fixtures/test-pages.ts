@@ -204,3 +204,180 @@ export function generateMixedContentPage(): string {
 </body>
 </html>`;
 }
+
+
+/**
+ * 生成包含特殊字符的文本页面
+ */
+export function generateSpecialCharPage(
+  includeHtmlEntities: boolean,
+  includeUnicode: boolean,
+  includeEmoji: boolean
+): string {
+  let content = '基础文本内容';
+  
+  if (includeHtmlEntities) {
+    content += '<br>&lt;div&gt;HTML实体&lt;/div&gt; &amp; &quot;引号&quot;';
+  }
+  
+  if (includeUnicode) {
+    content += '<br>Unicode: \u4E2D\u6587 \u65E5\u672C\u8A9E \uD55C\uAD6D\uC5B4';
+  }
+  
+  if (includeEmoji) {
+    content += '<br>Emoji: 😀 🎉 🚀 ❤️ 👍';
+  }
+
+  return `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>特殊字符测试页面</title>
+    <style>
+        .test-content { margin: 20px; line-height: 1.8; }
+    </style>
+</head>
+<body>
+    <div class="test-content" id="special-text">
+        ${content}
+    </div>
+</body>
+</html>`;
+}
+
+/**
+ * 生成大型表格页面
+ */
+export function generateLargeTablePage(rows: number, cols: number): string {
+  const headerCells = Array(cols).fill(0).map((_, i) => `<th>列${i + 1}</th>`).join('');
+  const dataRows = Array(rows).fill(0).map((_, i) => {
+    const cells = Array(cols).fill(0).map((_, j) => `<td>数据${i + 1}-${j + 1}</td>`).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('\n');
+
+  return `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>大型表格测试页面</title>
+    <style>
+        table { border-collapse: collapse; margin: 20px; }
+        td, th { border: 1px solid #ccc; padding: 4px; font-size: 12px; }
+        th { background-color: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <h1>大型表格测试 (${rows} 行 x ${cols} 列)</h1>
+    <table id="large-table">
+        <thead>
+            <tr>${headerCells}</tr>
+        </thead>
+        <tbody>
+            ${dataRows}
+        </tbody>
+    </table>
+</body>
+</html>`;
+}
+
+/**
+ * 生成空白页面
+ */
+export function generateEmptyPage(): string {
+  return `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>空白测试页面</title>
+</head>
+<body>
+    <div id="empty-content"></div>
+</body>
+</html>`;
+}
+
+/**
+ * 生成包含动态内容的页面
+ */
+export function generateDynamicPage(
+  initialContent: string,
+  dynamicContent: string
+): string {
+  return `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>动态内容测试页面</title>
+    <style>
+        .content { margin: 20px; padding: 15px; border: 1px solid #ddd; }
+        button { margin: 10px; padding: 8px 16px; }
+    </style>
+</head>
+<body>
+    <div class="content" id="dynamic-content">${initialContent}</div>
+    <button id="add-content">添加内容</button>
+    <script>
+        document.getElementById('add-content').onclick = function() {
+            document.getElementById('dynamic-content').innerHTML += '${dynamicContent}';
+        };
+    </script>
+</body>
+</html>`;
+}
+
+/**
+ * 生成包含 iframe 的页面
+ */
+export function generateIframePage(): string {
+  return `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Iframe 测试页面</title>
+    <style>
+        .container { margin: 20px; }
+        iframe { border: 1px solid #ccc; width: 600px; height: 400px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>主页面内容</h1>
+        <p id="main-text">这是主页面的文本内容</p>
+        <iframe id="test-iframe" srcdoc="<html><body><p>这是 iframe 中的内容</p></body></html>"></iframe>
+    </div>
+</body>
+</html>`;
+}
+
+/**
+ * 生成包含 Shadow DOM 的页面
+ */
+export function generateShadowDOMPage(): string {
+  return `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Shadow DOM 测试页面</title>
+    <style>
+        .container { margin: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Shadow DOM 测试</h1>
+        <div id="shadow-host"></div>
+    </div>
+    <script>
+        const host = document.getElementById('shadow-host');
+        const shadow = host.attachShadow({ mode: 'open' });
+        shadow.innerHTML = '<p id="shadow-text">这是 Shadow DOM 中的内容</p>';
+    </script>
+</body>
+</html>`;
+}

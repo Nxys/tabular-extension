@@ -8,9 +8,10 @@
   },
   "scripts": {
     "test": "jest",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:debug": "playwright test --debug",
+    "test:integration": "npm run build && playwright test",
+    "test:integration:headless": "playwright test",
+    "test:integration:ui": "playwright test --ui",
+    "test:integration:debug": "playwright test --debug",
     "lint": "eslint src/**/*.ts",
     "clean": "rm -rf build/dist",
     "build:popup": "esbuild src/popup/popup.ts --bundle --format=esm --outfile=build/dist/popup/popup.js",
@@ -100,7 +101,7 @@
     "retries": 0,
     "workers": 1,
     "reporter": [
-      ["html", { "outputFolder": "src/__test__/coverage/e2e-report" }],
+      ["html", { "outputFolder": "src/__test__/coverage/integration-report" }],
       ["list"]
     ],
     "use": {

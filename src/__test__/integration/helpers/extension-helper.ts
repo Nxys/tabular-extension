@@ -164,3 +164,85 @@ export async function rightClickAndSelectMenu(page: Page, selector: string, menu
   await page.locator(selector).click({ button: 'right' });
   await page.getByText(menuText).click();
 }
+
+/**
+ * 模拟鼠标框选操作
+ */
+export async function dragSelection(
+  page: Page,
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number
+): Promise<void> {
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(endX, endY);
+  await page.mouse.up();
+}
+
+/**
+ * 等待 Result_Panel 显示并返回面板元素
+ */
+export async function waitForResultPanel(
+  page: Page,
+  timeout: number = 5000
+): Promise<any> {
+  await page.waitForSelector('.tabular-panel', { timeout });
+  return page.locator('.tabular-panel');
+}
+
+/**
+ * 获取面板中的表格数据
+ */
+export async function getPanelTableData(page: Page): Promise<string[][]> {
+  return await page.evaluate(() => {
+    const panel = document.querySelector('.tabular-panel');
+    if (!panel) return [];
+
+    const table = panel.querySelector('table');
+    if (!table) return [];
+
+    const rows = Array.from(table.querySelectorAll('tr'));
+    return rows.map(row => {
+      const cells = Array.from(row.querySelectorAll('td, th'));
+      return cells.map(cell => cell.textContent?.trim() || '');
+    });
+  });
+}
+
+/**
+ * 检查面板是否显示升级提示
+ */
+export async function hasUpgradePrompt(page: Page): Promise<boolean> {
+  const panelText = await getPanelText(page);
+  return panelText.includes('升级') || panelText.includes('Pro');
+}
+
+/**
+ * 获取面板中显示的行数限制信息
+ */
+export async function getRowLimitInfo(
+  page: Page
+): Promise<{ limited: boolean; current: number; max: number }> {
+  const panelText = await getPanelText(page);
+  
+  // 检查是否有限制提示
+  const limitMatch = panelText.match(/仅展示前\s*(\d+)\s*行.*共\s*(\d+)\s*行/);
+  
+  if (limitMatch) {
+    return {
+      limited: true,
+      current: parseInt(limitMatch[1], 10),
+      max: parseInt(limitMatch[2], 10)
+    };
+  }
+
+  // 如果没有限制提示，尝试获取实际行数
+  const tableData = await getPanelTableData(page);
+  return {
+    limited: false,
+    current: tableData.length,
+    max: tableData.length
+  };
+}

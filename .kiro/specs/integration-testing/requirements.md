@@ -1,150 +1,147 @@
-# 需求文档：集成测试套件
+# Requirements Document
 
-## 简介
+## Introduction
 
-本文档定义了 Chrome 插件集成测试套件的需求。集成测试将验证 Background 层、Content 层和 Shared 层之间的消息通信协议、端到端工作流程以及跨层交互的正确性。与单元测试关注单个模块的功能不同，集成测试关注多个模块协同工作时的行为。
+本文档定义了 Chrome 浏览器插件集成测试重构的需求。该插件提供文本提取、表格检测、数据导出等功能，采用三层架构（Background/Content/Shared）。当前集成测试存在覆盖不全、辅助函数不完善、缺少关键场景等问题。本次重构旨在建立完整、可靠的集成测试体系，确保所有核心功能在真实浏览器环境中正确运行。
 
-## 术语表
+## Glossary
 
-- **System**：Chrome 插件系统，包括 Background 层、Content 层和 Shared 层
-- **Background_Layer**：业务逻辑层，负责状态管理和策略决策
-- **Content_Layer**：UI 交互层，负责页面交互和数据提取
-- **Message_Protocol**：层间通信协议，包括 REQUEST_ACTION 和 ACTION_RESULT
-- **Integration_Test**：集成测试，验证多个模块协同工作的测试
-- **End_to_End_Flow**：端到端流程，从用户交互到 UI 响应的完整流程
-- **Usage_Limit**：使用次数限制，免费用户每天的操作次数上限
+- **Integration_Test_Suite**: 集成测试套件，在真实浏览器环境中运行的端到端测试
+- **Playwright**: 浏览器自动化测试框架，用于控制真实浏览器
+- **Background**: 插件的业务逻辑层，负责状态管理和决策
+- **Content**: 插件的 UI 交互层，负责页面交互和渲染
+- **Shared**: 插件的协议层，定义消息协议和类型
+- **REQUEST_ACTION**: Content 发送给 Background 的请求消息
+- **ACTION_RESULT**: Background 返回给 Content 的响应消息
+- **uiAction**: Background 在 ACTION_RESULT 中指定的 UI 操作指令
+- **Test_Fixture**: 测试页面生成器，创建包含特定内容的测试页面
+- **Test_Helper**: 测试辅助函数，封装常用的测试操作
+- **Pro_User**: 付费用户，享有无限制功能
+- **Free_User**: 免费用户，受功能限制（如 5 行限制）
+- **Trial_Count**: 试用次数，Free 用户可试用高级功能的次数
+- **Result_Panel**: 结果面板，显示提取结果的 UI 组件
+- **Selection_Box**: 框选框，用户框选页面内容的可视化边框
 
-## 需求
+## Requirements
 
-### 需求 1：消息通信协议集成测试
+### Requirement 1: 基础文本提取测试
 
-**用户故事：** 作为开发者，我想验证 Background 层和 Content 层之间的消息通信协议正确工作，以确保层间通信的可靠性。
+**User Story:** 作为测试工程师，我希望测试文本提取功能，以确保插件能正确提取各种文本内容。
 
-#### 验收标准
+#### Acceptance Criteria
 
-1. WHEN Content 层发送 REQUEST_ACTION 消息 THEN Background 层 SHALL 正确接收并解析消息
-2. WHEN Background 层处理完请求 THEN Background 层 SHALL 返回符合 ACTION_RESULT 格式的响应
-3. WHEN 消息包含无效的 action 类型 THEN Background 层 SHALL 返回兜底响应
-4. WHEN 消息传递过程中发生错误 THEN System SHALL 优雅降级并返回错误响应
+1. WHEN 用户框选简单文本 THEN THE Integration_Test_Suite SHALL 验证提取的文本与原始文本完全一致
+2. WHEN 用户框选多行文本 THEN THE Integration_Test_Suite SHALL 验证提取的文本保留换行符和格式
+3. WHEN 用户框选包含特殊字符的文本（如 HTML 实体、Unicode、emoji）THEN THE Integration_Test_Suite SHALL 验证特殊字符被正确解码和提取
+4. WHEN 用户框选空白区域 THEN THE Integration_Test_Suite SHALL 验证系统返回空结果或提示消息
+5. WHEN 用户框选包含嵌套 HTML 标签的文本 THEN THE Integration_Test_Suite SHALL 验证提取的纯文本去除了所有标签
 
-### 需求 2：文本提取端到端流程测试
+### Requirement 2: 表格检测和提取测试
 
-**用户故事：** 作为用户，我想验证文本提取功能的完整流程，从框选到显示结果，以确保功能正常工作。
+**User Story:** 作为测试工程师，我希望测试表格检测功能，以确保插件能识别和提取各种表格结构。
 
-#### 验收标准
+#### Acceptance Criteria
 
-1. WHEN 用户框选页面文本并触发提取 THEN System SHALL 提取文本、检查使用次数、返回结果并显示面板
-2. WHEN 提取的文本为空 THEN System SHALL 返回空结果并正确显示
-3. WHEN 用户达到使用次数限制 THEN System SHALL 返回限制提示并显示限制面板
-4. WHEN 提取过程中发生错误 THEN System SHALL 返回错误信息并显示在面板中
+1. WHEN 用户框选简单表格（2x2）THEN THE Integration_Test_Suite SHALL 验证表格被正确识别且数据结构完整
+2. WHEN 用户框选复杂表格（包含合并单元格）THEN THE Integration_Test_Suite SHALL 验证合并单元格被正确处理
+3. WHEN 用户框选嵌套表格 THEN THE Integration_Test_Suite SHALL 验证内外层表格都被正确提取
+4. WHEN 用户框选包含表头的表格 THEN THE Integration_Test_Suite SHALL 验证表头被正确识别和标记
+5. WHEN 用户框选非表格内容 THEN THE Integration_Test_Suite SHALL 验证系统不会误判为表格
 
-### 需求 3：表格检测端到端流程测试
+### Requirement 3: 数据导出功能测试
 
-**用户故事：** 作为用户，我想验证表格检测功能的完整流程，包括 Pro 权限检查，以确保功能按预期工作。
+**User Story:** 作为测试工程师，我希望测试数据导出功能，以确保插件能正确导出 CSV 和 Excel 格式。
 
-#### 验收标准
+#### Acceptance Criteria
 
-1. WHEN 用户触发表格检测且未达到使用限制 THEN System SHALL 检测表格、检查 Pro 权限、返回结果
-2. WHEN 用户没有 Pro 权限 THEN System SHALL 返回 Pro 提示并显示 Pro 面板
-3. WHEN 用户达到使用次数限制 THEN System SHALL 优先显示限制提示
-4. WHEN 检测到的表格为空 THEN System SHALL 返回空结果并正确处理
+1. WHEN 用户点击 CSV 导出按钮 THEN THE Integration_Test_Suite SHALL 验证生成的 CSV 文件格式正确且内容完整
+2. WHEN 用户点击 Excel 导出按钮 THEN THE Integration_Test_Suite SHALL 验证生成的 Excel 文件格式正确且内容完整
+3. WHEN 导出的数据包含特殊字符（逗号、引号、换行）THEN THE Integration_Test_Suite SHALL 验证特殊字符被正确转义
+4. WHEN 导出空数据 THEN THE Integration_Test_Suite SHALL 验证系统返回错误提示或空文件
+5. WHEN 导出大量数据（超过 1000 行）THEN THE Integration_Test_Suite SHALL 验证导出过程不会超时或崩溃
 
-### 需求 4：列对齐端到端流程测试
+### Requirement 4: Pro 功能和权限测试
 
-**用户故事：** 作为用户，我想验证列对齐功能的完整流程，包括 Pro 权限检查，以确保功能正确工作。
+**User Story:** 作为测试工程师，我希望测试 Pro 功能和权限控制，以确保免费用户和付费用户获得正确的功能访问。
 
-#### 验收标准
+#### Acceptance Criteria
 
-1. WHEN 用户触发列对齐且有 Pro 权限 THEN System SHALL 对齐列、消耗使用次数、返回结果
-2. WHEN 用户没有 Pro 权限 THEN System SHALL 返回 Pro 提示并显示 Pro 面板
-3. WHEN 输入数据无法对齐 THEN System SHALL 返回错误信息
-4. WHEN 用户达到使用次数限制 THEN System SHALL 优先显示限制提示
+1. WHEN Free_User 提取超过 5 行数据 THEN THE Integration_Test_Suite SHALL 验证系统只返回前 5 行并显示升级提示
+2. WHEN Pro_User 提取超过 5 行数据 THEN THE Integration_Test_Suite SHALL 验证系统返回所有数据且无限制提示
+3. WHEN Free_User 使用高级清洗功能 THEN THE Integration_Test_Suite SHALL 验证 Trial_Count 正确递减
+4. WHEN Free_User 的 Trial_Count 为 0 时使用高级清洗 THEN THE Integration_Test_Suite SHALL 验证系统显示升级提示并阻止操作
+5. WHEN Pro_User 使用高级清洗功能 THEN THE Integration_Test_Suite SHALL 验证 Trial_Count 不受影响且功能正常
 
-### 需求 5：CSV 导出端到端流程测试
+### Requirement 5: 用户交互流程测试
 
-**用户故事：** 作为用户，我想验证 CSV 导出功能的完整流程，包括 Pro 权限检查，以确保导出功能正常。
+**User Story:** 作为测试工程师，我希望测试用户交互流程，以确保插件的 UI 响应正确且流畅。
 
-#### 验收标准
+#### Acceptance Criteria
 
-1. WHEN 用户触发 CSV 导出且有 Pro 权限 THEN System SHALL 生成 CSV、消耗使用次数、返回结果
-2. WHEN 用户没有 Pro 权限 THEN System SHALL 返回 Pro 提示并显示 Pro 面板
-3. WHEN 输入数据包含特殊字符 THEN System SHALL 正确转义并生成有效 CSV
-4. WHEN 用户达到使用次数限制 THEN System SHALL 优先显示限制提示
+1. WHEN 用户按下鼠标左键并拖动 THEN THE Integration_Test_Suite SHALL 验证 Selection_Box 实时显示且跟随鼠标移动
+2. WHEN 用户释放鼠标完成框选 THEN THE Integration_Test_Suite SHALL 验证 Result_Panel 自动显示且包含提取结果
+3. WHEN 用户点击 Result_Panel 的关闭按钮 THEN THE Integration_Test_Suite SHALL 验证面板消失且 Selection_Box 清除
+4. WHEN 用户按下快捷键（Ctrl+Shift+X）THEN THE Integration_Test_Suite SHALL 验证插件功能被触发
+5. WHEN 用户连续进行多次框选操作 THEN THE Integration_Test_Suite SHALL 验证每次操作都正确处理且不会相互干扰
 
-### 需求 6：使用次数管理集成测试
+### Requirement 6: 消息通信协议测试
 
-**用户故事：** 作为开发者，我想验证使用次数管理在多个操作中的一致性，以确保限制策略正确执行。
+**User Story:** 作为测试工程师，我希望测试 Content 和 Background 的消息通信，以确保三层架构正确实现。
 
-#### 验收标准
+#### Acceptance Criteria
 
-1. WHEN 用户连续执行多个操作 THEN System SHALL 正确累计使用次数
-2. WHEN 操作失败或被阻止 THEN System SHALL NOT 消耗使用次数
-3. WHEN 跨天执行操作 THEN System SHALL 重置使用次数统计
-4. WHEN 使用次数达到上限 THEN System SHALL 阻止所有需要消耗次数的操作
+1. WHEN Content 发送 REQUEST_ACTION 消息 THEN THE Integration_Test_Suite SHALL 验证 Background 收到消息且 action 类型正确
+2. WHEN Background 返回 ACTION_RESULT 消息 THEN THE Integration_Test_Suite SHALL 验证 Content 收到消息且包含 status 和 uiAction
+3. WHEN ACTION_RESULT 的 status 为 'ok' THEN THE Integration_Test_Suite SHALL 验证 Content 执行对应的 uiAction 且 UI 正确更新
+4. WHEN ACTION_RESULT 的 status 为 'limited' THEN THE Integration_Test_Suite SHALL 验证 Content 显示限制提示且不消耗 Trial_Count
+5. WHEN Background 处理消息时发生异常 THEN THE Integration_Test_Suite SHALL 验证返回兜底格式的 ACTION_RESULT 且 Content 显示错误信息
 
-### 需求 7：Pro 权限检查集成测试
+### Requirement 7: 错误处理和边界情况测试
 
-**用户故事：** 作为开发者，我想验证 Pro 权限检查在不同功能中的一致性，以确保权限控制正确。
+**User Story:** 作为测试工程师，我希望测试错误处理和边界情况，以确保插件在异常情况下稳定运行。
 
-#### 验收标准
+#### Acceptance Criteria
 
-1. WHEN 用户没有 Pro 权限且触发 Pro 功能 THEN System SHALL 返回 Pro 提示
-2. WHEN 用户有 Pro 权限且触发 Pro 功能 THEN System SHALL 正常执行功能
-3. WHEN Pro 权限状态改变 THEN System SHALL 立即反映在后续操作中
-4. WHEN 同时检查使用次数和 Pro 权限 THEN System SHALL 按正确优先级处理
+1. WHEN 测试页面包含格式错误的 HTML THEN THE Integration_Test_Suite SHALL 验证插件不会崩溃且返回合理结果
+2. WHEN 用户框选超大区域（超过 10000 个元素）THEN THE Integration_Test_Suite SHALL 验证插件能处理或返回性能警告
+3. WHEN 插件的 storage 数据损坏 THEN THE Integration_Test_Suite SHALL 验证插件使用默认值且不影响核心功能
+4. WHEN 网络请求失败（如导出到云端）THEN THE Integration_Test_Suite SHALL 验证插件显示错误提示且允许重试
+5. WHEN 用户在页面加载完成前尝试使用插件 THEN THE Integration_Test_Suite SHALL 验证插件等待页面就绪或显示提示
 
-### 需求 8：错误处理和降级集成测试
+### Requirement 8: 测试辅助工具完善
 
-**用户故事：** 作为开发者，我想验证系统在异常情况下的错误处理和降级行为，以确保系统的健壮性。
+**User Story:** 作为测试工程师，我希望有完善的测试辅助工具，以便快速编写和维护测试用例。
 
-#### 验收标准
+#### Acceptance Criteria
 
-1. WHEN Background 层处理消息时抛出异常 THEN System SHALL 返回兜底响应
-2. WHEN Content 层接收到格式错误的响应 THEN System SHALL 优雅降级
-3. WHEN chrome.storage 不可用 THEN System SHALL 降级到内存存储
-4. WHEN 多个错误同时发生 THEN System SHALL 返回最相关的错误信息
+1. THE Test_Helper SHALL 提供模拟鼠标框选的函数（指定起点和终点坐标）
+2. THE Test_Helper SHALL 提供等待 Result_Panel 显示的函数（支持超时配置）
+3. THE Test_Helper SHALL 提供设置用户权限的函数（切换 Free_User 和 Pro_User）
+4. THE Test_Helper SHALL 提供清空 storage 数据的函数（用于测试隔离）
+5. THE Test_Helper SHALL 提供验证消息通信的函数（捕获和断言 REQUEST_ACTION 和 ACTION_RESULT）
 
-### 需求 9：UI Action 执行集成测试
+### Requirement 9: 测试页面生成器完善
 
-**用户故事：** 作为开发者，我想验证 Content 层正确执行 Background 层下发的 UI Action，以确保 UI 决策权在 Background。
+**User Story:** 作为测试工程师，我希望有灵活的测试页面生成器，以便创建各种测试场景。
 
-#### 验收标准
+#### Acceptance Criteria
 
-1. WHEN Background 返回 SHOW_RESULT_PANEL THEN Content 层 SHALL 显示结果面板
-2. WHEN Background 返回 SHOW_LIMIT_PANEL THEN Content 层 SHALL 显示限制提示面板
-3. WHEN Background 返回 SHOW_PRO_PANEL THEN Content 层 SHALL 显示 Pro 提示面板
-4. WHEN uiData 包含完整信息 THEN Content 层 SHALL 正确渲染所有数据
+1. THE Test_Fixture SHALL 提供生成简单文本页面的函数（支持自定义文本内容）
+2. THE Test_Fixture SHALL 提供生成表格页面的函数（支持指定行列数和单元格内容）
+3. THE Test_Fixture SHALL 提供生成复杂 HTML 页面的函数（包含嵌套标签、特殊字符、多种元素）
+4. THE Test_Fixture SHALL 提供生成空白页面的函数（用于测试边界情况）
+5. THE Test_Fixture SHALL 支持动态注入 CSS 和 JavaScript（用于模拟真实网页环境）
 
-### 需求 10：设置管理集成测试
+### Requirement 10: 测试执行和报告
 
-**用户故事：** 作为用户，我想验证设置更新能够正确影响系统行为，以确保设置功能正常工作。
+**User Story:** 作为测试工程师，我希望测试执行流程清晰且报告详细，以便快速定位问题。
 
-#### 验收标准
+#### Acceptance Criteria
 
-1. WHEN 用户更新设置 THEN System SHALL 持久化设置到 storage
-2. WHEN 设置更新后 THEN 后续操作 SHALL 使用新设置
-3. WHEN 设置包含无效值 THEN System SHALL 使用默认值
-4. WHEN 设置在多个层间共享 THEN System SHALL 保持设置一致性
+1. WHEN 运行 `npm run test:integration` THEN THE Integration_Test_Suite SHALL 自动构建插件并启动测试服务器
+2. WHEN 测试失败 THEN THE Integration_Test_Suite SHALL 生成截图和追踪文件（保存在 test-results 目录）
+3. WHEN 测试完成 THEN THE Integration_Test_Suite SHALL 输出测试报告（包含通过率、失败原因、执行时间）
+4. THE Integration_Test_Suite SHALL 支持无头模式（`npm run test:integration:headless`）以便快速验证
+5. THE Integration_Test_Suite SHALL 支持调试模式（`npm run test:integration:debug`）以便逐步调试
+6. THE Integration_Test_Suite SHALL 支持 UI 模式（`npm run test:integration:ui`）以便可视化查看测试过程
 
-### 需求 11：并发操作集成测试
-
-**用户故事：** 作为开发者，我想验证系统在并发操作下的行为，以确保状态管理的正确性。
-
-#### 验收标准
-
-1. WHEN 多个操作同时触发 THEN System SHALL 正确处理每个操作
-2. WHEN 并发操作修改同一状态 THEN System SHALL 保持状态一致性
-3. WHEN 并发操作消耗使用次数 THEN System SHALL 正确累计次数
-4. WHEN 并发操作中有失败 THEN System SHALL 不影响其他操作
-
-### 需求 12：测试基础设施
-
-**用户故事：** 作为开发者，我想要完善的集成测试基础设施，以便高效编写和维护集成测试。
-
-#### 验收标准
-
-1. THE System SHALL 提供集成测试辅助函数库
-2. THE System SHALL 提供端到端测试场景构建工具
-3. THE System SHALL 提供消息通信模拟工具
-4. THE System SHALL 提供测试数据生成工具
-5. THE System SHALL 支持异步操作的测试
