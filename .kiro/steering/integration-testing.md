@@ -4,39 +4,19 @@ inclusion: always
 
 # 集成测试规范
 
-## 测试策略
-- **所有集成测试必须在真实浏览器中运行**
-- 使用 Playwright 进行端到端测试，获取真实测试结果
-- 测试真实的用户交互场景和插件行为
+## 核心原则
+- **真实浏览器测试**：使用 Playwright，不用 mock
+- **完整用户流程**：测试真实交互场景和插件行为
 
-## 测试工具
-- **Playwright MCP Server**：通过 MCP 协议控制浏览器
-- **测试命令**：`npm run test:integration`
-- **调试模式**：`npm run test:integration:debug`
-- **UI 模式**：`npm run test:integration:ui`
+## 测试命令
+- `npm run test:integration` - 编译并测试
+- `npm run test:integration:headless` - 无头模式
+- `npm run test:integration:debug` - 调试模式
+- `npm run test:integration:ui` - UI 模式
 
-## 测试结构
-```
-src/__test__/integration/
-├── fixtures/          # 测试页面生成器
-├── helpers/           # 测试辅助工具
-└── *.test.ts         # 集成测试文件
-```
-
-## 测试场景
-1. **基础功能**：文本提取、表格检测、数据导出
-2. **用户交互**：选择、复制、快捷键、多次操作
-3. **错误处理**：空数据、格式错误、边界情况
-4. **性能测试**：大数据量、并发操作
-
-## 测试原则
-- 测试真实浏览器环境，不使用 mock
-- 验证完整的用户交互流程
-- 检查 UI 渲染和用户反馈
-- 确保插件在各种场景下稳定运行
+## 测试路径
+`test/integration/` - 所有集成测试文件
 
 ## 注意事项
-- 集成测试需要先构建插件：`npm run build`
-- 测试服务器自动启动（配置在 package.json 的 playwright 字段）
-- 测试失败时会生成截图和追踪文件
-- 配置已统一到 package.json，与 Jest 保持一致
+- 测试前需构建：`npm run build`
+- 测试服务器自动启动（package.json 配置）

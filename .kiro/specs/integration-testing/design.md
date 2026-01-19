@@ -628,11 +628,11 @@ interface TableTestData {
     "test:integration:ui": "playwright test --ui"
   },
   "playwright": {
-    "testDir": "src/__test__/integration",
+    "testDir": "test/integration",
     "testMatch": "**/*.test.ts",
     "workers": 1,
     "reporter": [
-      ["html", { "outputFolder": "src/__test__/coverage/integration-report" }],
+      ["html", { "outputFolder": "test/report/coverage/integration-report" }],
       ["list"]
     ],
     "use": {
@@ -657,7 +657,7 @@ interface TableTestData {
     "webServer": {
       "command": "python3 -m http.server 3000",
       "port": 3000,
-      "cwd": "src/__test__/integration/fixtures/test-server",
+      "cwd": "test/integration/fixtures/test-server",
       "reuseExistingServer": true,
       "timeout": 10000
     }
@@ -691,7 +691,7 @@ test('Property 1: 文本提取正确性', async ({ page }) => {
 ### 测试套件结构
 
 ```
-src/__test__/integration/
+test/integration/
 ├── fixtures/
 │   ├── test-pages.ts          # 页面生成器（扩展）
 │   └── test-data.ts           # 测试数据生成器（新增）
@@ -731,7 +731,7 @@ src/__test__/integration/
 
 1. **日常开发**：`npm run test:integration`（自动构建 + 运行测试）
 2. **快速验证**：`npm run test:integration:headless`（无头模式，假设已构建）
-3. **查看报告**：`src/__test__/coverage/integration-report/index.html`
+3. **查看报告**：`test/report/coverage/integration-report/index.html`
 4. **调试失败**：`npm run test:integration:debug`（打开浏览器逐步调试）
 5. **可视化分析**：`npm run test:integration:ui`（使用 Playwright UI 查看测试过程）
 
@@ -786,7 +786,7 @@ fc.integer({ min: 0, max: 10 })
 ### 测试报告
 
 测试完成后生成：
-- HTML 报告：`src/__test__/coverage/integration-report/index.html`
+- HTML 报告：`test/report/coverage/integration-report/index.html`
 - 截图：失败测试的截图（自动生成）
 - 追踪文件：`trace.zip`（可在 Playwright Trace Viewer 中查看）
 - 视频：失败测试的视频（可选）
@@ -805,7 +805,7 @@ CI 环境配置：
   uses: actions/upload-artifact@v3
   with:
     name: playwright-report
-    path: src/__test__/coverage/integration-report/
+    path: test/report/coverage/integration-report/
 ```
 
 注意：CI 环境使用 `test:integration:headless` 命令，需要先手动构建插件或在 CI 配置中添加构建步骤。

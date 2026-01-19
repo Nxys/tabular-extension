@@ -13,7 +13,7 @@
   - _需求：8.1-8.5_
 
 - [ ] 1.1 扩展 ExtensionHelper - 框选操作
-  - 在 `src/__test__/integration/helpers/extension-helper.ts` 中添加 dragSelection() 函数
+  - 在 `test/integration/helpers/extension-helper.ts` 中添加 dragSelection() 函数
   - 实现鼠标按下、移动、释放的模拟
   - 支持指定起点和终点坐标
   - _需求：8.1_
@@ -26,7 +26,7 @@
   - _需求：8.2_
 
 - [ ] 1.3 创建 MessageSpy 类
-  - 创建 `src/__test__/integration/helpers/message-spy.ts`
+  - 创建 `test/integration/helpers/message-spy.ts`
   - 实现 start() 方法（开始监听消息）
   - 实现 stop() 方法（停止监听）
   - 实现 getMessages() 方法（获取所有消息）
@@ -37,7 +37,7 @@
   - _需求：8.5_
 
 - [ ] 1.4 创建 StorageHelper 工具函数
-  - 创建 `src/__test__/integration/helpers/storage-helper.ts`
+  - 创建 `test/integration/helpers/storage-helper.ts`
   - 实现 setProUser() 函数（设置为 Pro 用户）
   - 实现 setFreeUser() 函数（设置为 Free 用户）
   - 实现 setTrialCount() 函数（设置试用次数）
@@ -52,7 +52,7 @@
   - _需求：9.1-9.5_
 
 - [ ] 2.1 扩展 TestPages - 特殊字符页面
-  - 在 `src/__test__/integration/fixtures/test-pages.ts` 中添加 generateSpecialCharPage() 函数
+  - 在 `test/integration/fixtures/test-pages.ts` 中添加 generateSpecialCharPage() 函数
   - 支持 HTML 实体、Unicode、Emoji
   - 支持可选参数控制包含哪些特殊字符
   - _需求：9.3_
@@ -71,7 +71,7 @@
   - _需求：9.4_
 
 - [ ] 2.4 创建 TestData 数据生成器
-  - 创建 `src/__test__/integration/fixtures/test-data.ts`
+  - 创建 `test/integration/fixtures/test-data.ts`
   - 实现 generateRandomTableData() 函数（随机表格数据）
   - 实现 generateSpecialCharTableData() 函数（特殊字符表格）
   - 实现 generateOverLimitTableData() 函数（超过限制的表格）
@@ -84,7 +84,7 @@
   - _需求：4.1-4.5_
 
 - [ ] 3.1 创建 Pro 功能测试文件
-  - 创建 `src/__test__/integration/pro-features.test.ts`
+  - 创建 `test/integration/pro-features.test.ts`
   - 配置测试环境（beforeEach 清空 storage）
   - _需求：4.1-4.5_
 
@@ -127,7 +127,7 @@
   - _需求：6.1-6.5_
 
 - [ ] 4.1 创建消息协议测试文件
-  - 创建 `src/__test__/integration/message-protocol.test.ts`
+  - 创建 `test/integration/message-protocol.test.ts`
   - 配置 MessageSpy 监听
   - _需求：6.1-6.5_
 
@@ -173,7 +173,7 @@
   - _需求：1.1-1.5, 2.1-2.5, 3.1-3.5_
 
 - [ ] 5.1 重构简单文本提取测试
-  - 更新 `src/__test__/integration/basic-functionality.test.ts`
+  - 更新 `test/integration/basic-functionality.test.ts`
   - 使用新的 dragSelection() 和 waitForResultPanel()
   - 测试提取的文本与原始文本一致
   - _需求：1.1_
@@ -242,7 +242,7 @@
   - _需求：5.1-5.5_
 
 - [ ] 6.1 重构 Selection_Box 跟随测试
-  - 更新 `src/__test__/integration/user-interactions.test.ts`
+  - 更新 `test/integration/user-interactions.test.ts`
   - 使用 dragSelection() 模拟拖动
   - 测试 Selection_Box 实时跟随
   - _需求：5.1_
@@ -272,7 +272,7 @@
   - _需求：7.1-7.5_
 
 - [ ] 7.1 重构格式错误 HTML 测试
-  - 更新 `src/__test__/integration/error-handling.test.ts`
+  - 更新 `test/integration/error-handling.test.ts`
   - 测试插件不崩溃
   - 测试返回合理结果
   - _需求：7.1_

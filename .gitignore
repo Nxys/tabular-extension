@@ -4,4 +4,4 @@
 node_modules
 build/dist
 build/extension.zip
-src/__test__/coverage
+test/report

@@ -12,8 +12,8 @@
  * - 纯函数实现，无副作用
  */
 
-import { advancedClean, basicClean } from './cleaner.js';
-import type { CleaningRules } from './cleaner.js';
+import { advancedClean, basicClean } from './cleaner';
+import type { CleaningRules } from './cleaner';
 
 /**
  * 导出格式类型

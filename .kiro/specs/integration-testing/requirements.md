@@ -139,7 +139,7 @@
 #### Acceptance Criteria
 
 1. WHEN 运行 `npm run test:integration` THEN THE Integration_Test_Suite SHALL 自动构建插件并启动测试服务器
-2. WHEN 测试失败 THEN THE Integration_Test_Suite SHALL 生成截图和追踪文件（保存在 test-results 目录）
+2. WHEN 测试失败 THEN THE Integration_Test_Suite SHALL 生成截图和追踪文件（保存在 test/report/test-results 目录）
 3. WHEN 测试完成 THEN THE Integration_Test_Suite SHALL 输出测试报告（包含通过率、失败原因、执行时间）
 4. THE Integration_Test_Suite SHALL 支持无头模式（`npm run test:integration:headless`）以便快速验证
 5. THE Integration_Test_Suite SHALL 支持调试模式（`npm run test:integration:debug`）以便逐步调试

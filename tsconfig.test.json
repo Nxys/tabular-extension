@@ -1,0 +1,16 @@
+{
+  "extends": "tsconfig.json",
+  "compilerOptions": {
+    // 关闭 verbatimModuleSyntax 以支持 Jest 的 CommonJS 环境
+    "verbatimModuleSyntax": false,
+    // Jest 需要 CommonJS 模块
+    "module": "CommonJS",
+    "esModuleInterop": true,
+    // 允许从根目录导入
+    "rootDir": "../..",
+    "baseUrl": "../.."
+  },
+  "include": [
+    "../**/*"
+  ]
+}

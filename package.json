@@ -45,7 +45,7 @@
     "preset": "ts-jest",
     "testEnvironment": "jsdom",
     "setupFilesAfterEnv": [
-      "<rootDir>/src/__test__/setup.ts"
+      "<rootDir>/test/setup.ts"
     ],
     "moduleNameMapper": {
       "^(\\.{1,2}/.*)\\.js$": "$1"
@@ -54,17 +54,17 @@
       "^.+\\.tsx?$": [
         "ts-jest",
         {
-          "tsconfig": "src/__test__/tsconfig.json"
+          "tsconfig": "tsconfig.test.json"
         }
       ]
     },
     "testMatch": [
-      "**/src/**/__test__/**/*.test.ts"
+      "test/unit/**/*.test.ts"
     ],
-    "coverageDirectory": "src/__test__/coverage",
+    "coverageDirectory": "test/report/coverage",
     "coveragePathIgnorePatterns": [
       "/node_modules/",
-      "/__test__/"
+      "/test/"
     ],
     "coverageThreshold": {
       "global": {
@@ -91,46 +91,6 @@
         "lines": 100,
         "statements": 100
       }
-    }
-  },
-  "playwright": {
-    "testDir": "src/__test__/integration",
-    "testMatch": "**/*.test.ts",
-    "fullyParallel": true,
-    "forbidOnly": true,
-    "retries": 0,
-    "workers": 1,
-    "reporter": [
-      ["html", { "outputFolder": "src/__test__/coverage/integration-report" }],
-      ["list"]
-    ],
-    "use": {
-      "baseURL": "http://localhost:3000",
-      "trace": "on-first-retry",
-      "screenshot": "only-on-failure",
-      "video": "retain-on-failure"
-    },
-    "projects": [
-      {
-        "name": "chromium-extension",
-        "use": {
-          "channel": "chrome",
-          "launchOptions": {
-            "args": [
-              "--disable-extensions-except=./build/dist",
-              "--load-extension=./build/dist",
-              "--disable-web-security"
-            ]
-          }
-        }
-      }
-    ],
-    "webServer": {
-      "command": "python3 -m http.server 3000",
-      "port": 3000,
-      "cwd": "src/__test__/integration/fixtures/test-server",
-      "reuseExistingServer": true,
-      "timeout": 10000
     }
   }
 }
