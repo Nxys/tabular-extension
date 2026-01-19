@@ -1,255 +1,217 @@
-# 集成测试基础设施
+# E2E 集成测试
 
-本目录包含集成测试的基础设施，用于测试 Background 层、Content 层和 Shared 层之间的协同工作。
+本目录包含基于 Playwright 的端到端集成测试，所有测试在真实浏览器环境中运行。
 
 ## 目录结构
 
 ```
 integration/
-├── helpers.ts              # 集成测试辅助函数库
-├── scenarios.ts            # 端到端场景构建器
-├── messaging.ts            # 消息通信模拟器
-├── generators.ts           # 测试数据生成器
-├── infrastructure.test.ts  # 基础设施验证测试
-└── README.md              # 本文件
+├── fixtures/              # 测试固件
+│   ├── test-pages.ts     # 测试页面生成器
+│   └── test-server/      # 测试服务器静态文件
+│       └── index.html    # 测试页面
+├── helpers/              # 测试辅助工具
+│   └── extension-helper.ts  # 插件测试辅助函数
+├── basic-functionality.test.ts    # 基础功能测试
+├── user-interactions.test.ts      # 用户交互测试
+├── error-handling.test.ts         # 错误处理测试
+├── demo.test.ts                   # 演示测试
+└── README.md            # 本文件
 ```
 
-## 核心模块
+## 测试策略
 
-### 1. 辅助函数库 (helpers.ts)
+### 真实浏览器测试
+- 所有测试在真实 Chrome 浏览器中运行
+- 加载实际构建的插件扩展
+- 测试真实的用户交互和 DOM 操作
+- 验证完整的消息通信流程
 
-提供集成测试常用的辅助函数：
+### 测试覆盖
+1. **基础功能测试** (`basic-functionality.test.ts`)
+   - 文本提取
+   - 表格检测
+   - 复杂表格处理
+   - 嵌套表格
+   - 不规则表格
 
-- `sendRequestAction(action, data)` - 模拟 Content 层发送消息到 Background 层
-- `simulateUserAction(action, data, options)` - 模拟完整的用户交互流程
-- `setupTestState(state)` - 设置测试环境状态
-- `cleanupTestState()` - 清理测试环境
-- `waitForAsync(ms)` - 等待异步操作完成
-- `validateMessageFormat(message, type)` - 验证消息格式
+2. **用户交互测试** (`user-interactions.test.ts`)
+   - 复制功能
+   - 导出 CSV
+   - 键盘快捷键
+   - 多次选择
+   - 快速连续操作
+   - 页面滚动
+   - 动态内容
 
-**使用示例：**
-
-```typescript
-import { sendRequestAction, setupTestState, cleanupTestState } from './helpers';
-
-// 设置测试状态
-await setupTestState({
-  usageCount: 5,
-  hasPro: true,
-});
-
-// 发送请求
-const response = await sendRequestAction('text-extract', '测试文本');
-
-// 清理测试环境
-await cleanupTestState();
-```
-
-### 2. 场景构建器 (scenarios.ts)
-
-提供预定义的测试场景：
-
-- `createTextExtractionScenario(text)` - 创建文本提取场景
-- `createTableDetectionScenario(table, hasPro)` - 创建表格检测场景
-- `createUsageLimitScenario(currentUsage, action)` - 创建使用次数限制场景
-- `createConcurrentScenario(actions)` - 创建并发操作场景
-
-**使用示例：**
-
-```typescript
-import { createTextExtractionScenario } from './scenarios';
-
-const scenario = createTextExtractionScenario('测试文本');
-expect(scenario.expectedResult.status).toBe('ok');
-```
-
-### 3. 消息通信模拟器 (messaging.ts)
-
-提供消息拦截和历史记录功能：
-
-- `setMessageInterceptor(interceptor)` - 设置消息拦截器
-- `clearMessageInterceptor()` - 清除消息拦截器
-- `getMessageHistory()` - 获取消息历史
-- `clearMessageHistory()` - 清除消息历史
-
-**使用示例：**
-
-```typescript
-import { setMessageInterceptor, getMessageHistory } from './messaging';
-
-// 设置拦截器
-setMessageInterceptor({
-  onRequest: (msg) => console.log('请求:', msg),
-  onResponse: (res) => console.log('响应:', res),
-});
-
-// 获取历史
-const history = getMessageHistory();
-console.log('请求数量:', history.requests.length);
-```
-
-### 4. 测试数据生成器 (generators.ts)
-
-提供随机数据和边界值生成：
-
-- `generateRandomText(length)` - 生成随机文本
-- `generateRandomTable(rows, cols)` - 生成随机表格
-- `generateBoundaryText()` - 生成边界值文本
-- `generateBoundaryTable()` - 生成边界值表格
-
-**使用示例：**
-
-```typescript
-import { generateRandomText, generateBoundaryText } from './generators';
-
-// 生成随机文本
-const text = generateRandomText(100);
-
-// 生成边界值
-const boundary = generateBoundaryText();
-console.log('空文本:', boundary.empty);
-console.log('长文本长度:', boundary.long.length);
-```
-
-## 测试编写指南
-
-### 基本测试结构
-
-```typescript
-import { createChromeMock, resetChromeMock } from '../mocks/chrome';
-import { sendRequestAction, setupTestState, cleanupTestState } from './helpers';
-
-// 设置 chrome mock
-beforeAll(() => {
-  (global as any).chrome = createChromeMock();
-});
-
-// 每个测试前重置状态
-beforeEach(async () => {
-  resetChromeMock();
-  await cleanupTestState();
-});
-
-describe('功能测试', () => {
-  test('应该正确处理请求', async () => {
-    // Arrange - 准备测试数据
-    await setupTestState({ usageCount: 0, hasPro: false });
-    
-    // Act - 执行操作
-    const response = await sendRequestAction('text-extract', '测试');
-    
-    // Assert - 验证结果
-    expect(response.status).toBe('ok');
-    expect(response.uiAction).toBe('SHOW_RESULT_PANEL');
-  });
-});
-```
-
-### 测试原则
-
-1. **真实模块交互** - 使用真实的 Background 和 Content 模块，最小化 mock
-2. **状态隔离** - 每个测试独立，使用 beforeEach 重置状态
-3. **异步处理** - 正确处理异步操作，使用 async/await
-4. **清晰断言** - 使用明确的断言，验证关键行为
-
-### 常见测试模式
-
-#### 1. 端到端流程测试
-
-```typescript
-test('文本提取完整流程', async () => {
-  await setupTestState({ usageCount: 0 });
-  
-  const response = await sendRequestAction('text-extract', '测试文本');
-  
-  expect(response.status).toBe('ok');
-  expect(response.uiData?.text).toBe('测试文本');
-  
-  // 验证使用次数增加
-  const storage = await chrome.storage.local.get('usageCount');
-  expect(storage.usageCount).toBe(1);
-});
-```
-
-#### 2. 权限检查测试
-
-```typescript
-test('无 Pro 权限时应该阻止操作', async () => {
-  await setupTestState({ hasPro: false });
-  
-  const response = await sendRequestAction('table-detect', [['A', 'B']]);
-  
-  expect(response.status).toBe('blocked');
-  expect(response.uiAction).toBe('SHOW_PRO_PANEL');
-});
-```
-
-#### 3. 使用次数限制测试
-
-```typescript
-test('达到限制时应该阻止操作', async () => {
-  await setupTestState({ usageCount: 10 });
-  
-  const response = await sendRequestAction('text-extract', '测试');
-  
-  expect(response.status).toBe('limited');
-  expect(response.uiAction).toBe('SHOW_LIMIT_PANEL');
-});
-```
-
-#### 4. 并发操作测试
-
-```typescript
-test('应该正确处理并发操作', async () => {
-  await setupTestState({ usageCount: 0 });
-  
-  const promises = [
-    sendRequestAction('text-extract', '文本1'),
-    sendRequestAction('text-extract', '文本2'),
-    sendRequestAction('text-extract', '文本3'),
-  ];
-  
-  const responses = await Promise.all(promises);
-  
-  responses.forEach(response => {
-    expect(response.status).toBe('ok');
-  });
-});
-```
+3. **错误处理测试** (`error-handling.test.ts`)
+   - 空表格
+   - 格式错误
+   - 超大表格
+   - 特殊字符
+   - 网络错误
+   - 内存压力
+   - DOM 变化
+   - 权限错误
 
 ## 运行测试
 
+### 前置条件
 ```bash
-# 运行所有集成测试
-npm test -- src/__test__/integration
+# 1. 构建插件
+npm run build
+
+# 2. 安装 Playwright 浏览器（首次运行）
+npx playwright install chromium
+```
+
+### 运行命令
+```bash
+# 运行所有 E2E 测试
+npm run test:e2e
 
 # 运行特定测试文件
-npm test -- src/__test__/integration/infrastructure.test.ts
+npm run test:e2e -- basic-functionality.test.ts
 
-# 运行测试并查看覆盖率
-npm test -- --coverage src/__test__/integration
+# 调试模式（打开浏览器）
+npm run test:e2e:debug
+
+# UI 模式（交互式测试）
+npm run test:e2e:ui
+
+# 在 CI 环境运行
+CI=1 npm run test:e2e
+```
+
+### 配置说明
+Playwright 配置已统一到 `package.json` 中的 `playwright` 字段，与 Jest 配置保持一致的风格。
+
+### 使用 Playwright MCP 测试
+```bash
+# 通过 MCP 协议手动测试
+# 1. 确保 Playwright MCP Server 已配置
+# 2. 使用 Kiro 的 Playwright 工具进行交互式测试
+```
+
+## 测试辅助工具
+
+### extension-helper.ts
+提供插件测试的辅助函数：
+- `waitForExtensionLoad()` - 等待插件加载
+- `createTestPage()` - 创建测试页面
+- `selectText()` - 模拟文本选择
+- `selectTable()` - 模拟表格选择
+- `waitForPanel()` - 等待插件面板显示
+- `isPanelVisible()` - 检查面板可见性
+- `clickPanelButton()` - 点击面板按钮
+- `getPanelText()` - 获取面板文本
+- `getClipboardContent()` - 获取剪贴板内容
+
+### test-pages.ts
+提供测试页面生成器：
+- `generateTablePage()` - 生成表格测试页面
+- `generateComplexTablePage()` - 生成复杂表格页面
+- `generateTextPage()` - 生成文本测试页面
+- `generateMixedContentPage()` - 生成混合内容页面
+
+## 测试原则
+
+### 1. 真实环境
+- 不使用 mock，测试真实的浏览器行为
+- 加载实际构建的插件
+- 测试真实的 DOM 操作和事件
+
+### 2. 完整流程
+- 测试从用户交互到 UI 反馈的完整流程
+- 验证 Content 和 Background 的消息通信
+- 检查 UI 渲染和用户反馈
+
+### 3. 边界情况
+- 测试空数据、错误数据
+- 测试极限情况（大数据量、高频操作）
+- 测试异常场景（网络错误、权限问题）
+
+### 4. 架构遵循
+- 验证三层架构的正确实现
+- 确保 Content 层无业务逻辑
+- 验证消息协议的正确使用
+
+## 调试技巧
+
+### 1. 查看浏览器
+```bash
+# 使用 headed 模式查看浏览器
+npm run test:e2e:debug
+```
+
+### 2. 截图和视频
+测试失败时自动生成：
+- 截图：`src/__test__/coverage/e2e-report/`
+- 视频：仅在失败时保留
+- 追踪：`trace.zip` 可在 Playwright Trace Viewer 中查看
+
+### 3. 控制台日志
+```typescript
+// 在测试中监听控制台
+page.on('console', msg => console.log('浏览器:', msg.text()));
+```
+
+### 4. 断点调试
+```typescript
+// 在测试中添加断点
+await page.pause(); // 暂停执行，打开 Playwright Inspector
 ```
 
 ## 注意事项
 
-1. **Chrome API Mock** - 所有测试都需要在 beforeAll 中设置 chrome mock
-2. **状态清理** - 每个测试后必须清理状态，避免测试间相互影响
-3. **异步操作** - 所有涉及 storage 或消息传递的操作都是异步的
-4. **真实模块** - 集成测试应该使用真实的模块，而不是 mock
-5. **测试隔离** - 每个测试应该独立，不依赖其他测试的执行顺序
+1. **构建要求**：运行测试前必须先构建插件 (`npm run build`)
+2. **端口占用**：测试服务器使用 3000 端口，确保端口未被占用
+3. **浏览器版本**：使用 Playwright 管理的 Chromium 版本
+4. **并发限制**：CI 环境使用单 worker，本地可并发
+5. **超时设置**：默认超时 30 秒，可在配置中调整
 
-## 下一步
+## CI/CD 集成
 
-基础设施已经就绪，可以开始编写具体的集成测试：
+```yaml
+# GitHub Actions 示例
+- name: Install dependencies
+  run: npm ci
 
-1. 消息通信集成测试
-2. 文本提取端到端流程测试
-3. 表格检测端到端流程测试
-4. 列对齐端到端流程测试
-5. CSV 导出端到端流程测试
-6. 使用次数管理集成测试
-7. Pro 权限检查集成测试
-8. 错误处理和降级集成测试
-9. UI Action 执行集成测试
-10. 设置管理集成测试
-11. 并发操作集成测试
+- name: Install Playwright
+  run: npx playwright install --with-deps chromium
+
+- name: Build extension
+  run: npm run build
+
+- name: Run E2E tests
+  run: npm run test:e2e
+  env:
+    CI: true
+
+- name: Upload test results
+  if: always()
+  uses: actions/upload-artifact@v3
+  with:
+    name: playwright-report
+    path: src/__test__/coverage/e2e-report/
+```
+
+## 常见问题
+
+### Q: 测试失败提示找不到插件？
+A: 确保先运行 `npm run build` 构建插件。
+
+### Q: 端口 3000 被占用？
+A: 修改 `package.json` 中 `playwright.webServer` 的端口配置。
+
+### Q: 浏览器未安装？
+A: 运行 `npx playwright install chromium`。
+
+### Q: 测试超时？
+A: 检查网络连接，或增加 `package.json` 中 `playwright` 配置的超时时间。
+
+## 参考资料
+
+- [Playwright 文档](https://playwright.dev/)
+- [Chrome 扩展测试指南](https://developer.chrome.com/docs/extensions/mv3/testing/)
+- [项目架构规范](../../../docs/STRUCTURE.md)
