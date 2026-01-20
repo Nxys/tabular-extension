@@ -11,6 +11,7 @@ inclusion: always
 ## 语言
 - AI 回复、注释、文档用中文
 - 代码命名用英文驼峰
+- 源码、测试使用TypeScript，不要使用JavaScript
 
 ## TypeScript
 - 严格模式，禁用 `any`（特殊情况需注释）

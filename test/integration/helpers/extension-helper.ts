@@ -20,10 +20,28 @@ export async function waitForExtensionLoad(context: BrowserContext): Promise<voi
 
 /**
  * 创建测试页面并写入内容
+ * 注意：使用 HTTP 服务器而不是 setContent，以确保 content script 正确注入
  */
 export async function createTestPage(page: Page, htmlContent: string): Promise<void> {
-  await page.setContent(htmlContent);
+  // 生成唯一的测试页面文件名
+  const timestamp = Date.now();
+  const filename = `test-page-${timestamp}.html`;
+  const filepath = `test/integration/fixtures/test-server/${filename}`;
+  
+  // 写入 HTML 文件
+  const fs = await import('fs/promises');
+  await fs.writeFile(filepath, htmlContent, 'utf-8');
+  
+  // 导航到测试页面
+  await page.goto(`http://localhost:3000/${filename}`);
   await page.waitForLoadState('domcontentloaded');
+  
+  // 等待 content script 加载（检查全局变量）
+  await page.waitForFunction(() => {
+    return typeof (window as any).tabular !== 'undefined';
+  }, { timeout: 10000 });
+  
+  // 清理：测试完成后删除文件（使用 page.context().on('close') 或在测试结束时手动清理）
 }
 
 /**

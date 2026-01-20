@@ -136,7 +136,44 @@ export function generateTextPage(content: string): string {
         <div class="selectable" id="test-text">
             ${content}
         </div>
-        <p>这是页面上的其他内容，不应该被选中。</p>
+        <p>这是页面上的其他内容，不应要被选中。</p>
+    </div>
+</body>
+</html>`;
+}
+
+/**
+ * 生成多行文本测试页面
+ * 用于测试换行符和格式保留
+ */
+export function generateMultilineTextPage(): string {
+  return `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多行文本测试页面</title>
+    <style>
+        .test-content { margin: 20px; line-height: 1.6; }
+        .multiline-text { 
+            background-color: #f0f8ff; 
+            padding: 15px; 
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-content">
+        <h1>多行文本提取测试</h1>
+        <div class="multiline-text" id="multiline-text">第一行文本
+第二行文本
+第三行文本
+
+第五行文本（前面有空行）</div>
+        <p>这是页面上的其他内容。</p>
     </div>
 </body>
 </html>`;

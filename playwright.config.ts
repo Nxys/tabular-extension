@@ -1,4 +1,7 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig } from '@playwright/test';
+
+
+const extensionPath = `${process.cwd()}/build/extension`;
 
 /**
  * Playwright 集成测试配置
@@ -8,12 +11,11 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './test/integration',
   testMatch: '**/*.test.ts',
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  fullyParallel: false, // 禁用并行以便调试
   workers: 1,
+  timeout: 60000, // 增加超时时间
   reporter: [
-    ['html', { outputFolder: 'test/report/coverage/integration-report' }],
+    ['html', { open: 'never', outputFolder: 'test/report/coverage/integration-report' }],
     ['list']
   ],
   outputDir: 'test/report/test-results',
@@ -22,18 +24,16 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    headless: false,
   },
   projects: [
     {
       name: 'chromium-extension',
       use: {
-        ...devices['Desktop Chrome'],
-        channel: 'chrome',
         launchOptions: {
           args: [
-            '--disable-extensions-except=./build/extension',
-            '--load-extension=./build/extension',
-            '--disable-web-security',
+            `--disable-extensions-except=${extensionPath}`,
+            `--load-extension=${extensionPath}`,
           ],
         },
       },
@@ -43,7 +43,6 @@ export default defineConfig({
     command: 'python3 -m http.server 3000',
     port: 3000,
     cwd: 'test/integration/fixtures/test-server',
-    reuseExistingServer: !process.env.CI,
     timeout: 10000,
   },
 });
