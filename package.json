@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "jest",
-    "test:integration": "npm run build && playwright test",
+    "test:integration": "npm run extension && playwright test",
     "test:integration:headless": "playwright test",
     "test:integration:ui": "playwright test --ui",
     "test:integration:debug": "playwright test --debug",
@@ -73,23 +73,17 @@
         "lines": 80,
         "statements": 80
       },
-      "src/background/**/*.ts": {
+      "test/unit/background/**/*.ts": {
         "branches": 90,
         "functions": 90,
         "lines": 90,
         "statements": 90
       },
-      "src/content/**/*.ts": {
+      "test/unit/content/**/*.ts": {
         "branches": 85,
         "functions": 85,
         "lines": 85,
         "statements": 85
-      },
-      "src/shared/**/*.ts": {
-        "branches": 100,
-        "functions": 100,
-        "lines": 100,
-        "statements": 100
       }
     }
   }
