@@ -26,12 +26,11 @@
     "types": ["chrome", "jest", "jsdom"]
   },
   "include": [
-    "src/**/*",
-    "*.js"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",
     "build",
-    "test"
+    "tests"
   ]
 }

@@ -7,12 +7,14 @@ import { Page, BrowserContext, Locator } from '@playwright/test';
 
 /**
  * 等待插件加载完成
+ * 注意：使用自定义 fixtures/index.ts 时，插件会自动加载
  */
 export async function waitForExtensionLoad(context: BrowserContext): Promise<void> {
-  // 等待 background script 加载
-  await context.waitForEvent('page', { 
-    predicate: page => page.url().includes('chrome-extension://') 
-  });
+  // 等待 Service Worker 加载
+  let [background] = context.serviceWorkers();
+  if (!background) {
+    background = await context.waitForEvent('serviceworker');
+  }
   
   // 额外等待确保插件完全初始化
   await new Promise(resolve => setTimeout(resolve, 1000));
@@ -26,7 +28,7 @@ export async function createTestPage(page: Page, htmlContent: string): Promise<v
   // 生成唯一的测试页面文件名
   const timestamp = Date.now();
   const filename = `test-page-${timestamp}.html`;
-  const filepath = `test/integration/fixtures/test-server/${filename}`;
+  const filepath = `tests/integration/fixtures/test-server/${filename}`;
   
   // 写入 HTML 文件
   const fs = await import('fs/promises');

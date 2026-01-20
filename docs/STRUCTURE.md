@@ -5,7 +5,7 @@
 ```
 ./
 ├─ src/                   # 📝 源码（开发，包含图标资源）
-├─ test/                  # 🧪 测试（单元测试）
+├─ tests/                  # 🧪 测试（单元测试）
 ├─ build/                 # 🔧 构建（编译打包）
 └─ docs/                  # 📚 文档（说明指南）
 ```
@@ -141,10 +141,10 @@ src/
 - 设置变更处理
 - 状态查询和显示
 
-## 🧪 测试目录（test/）
+## 🧪 测试目录（tests/）
 
 ```
-test/
+tests/
 ├─ setup.ts                      # 测试配置（Jest + jsdom）
 ├─ structure.test.ts             # 结构测试（文件组织验证）
 ├─ manifest.test.ts              # 清单测试（Manifest v3 验证）
@@ -401,7 +401,7 @@ npm run release       # 完整流程
 
 ### 文件命名规范
 
-- 测试文件：与源文件同名，后缀 `.test.ts`，放在 `test/` 目录
+- 测试文件：与源文件同名，后缀 `.test.ts`，放在 `tests/` 目录
 - 类型定义：集中在 `shared/types.ts`
 - 常量定义：跨模块常量集中在 `shared/constants.ts`，业务常量放在对应的业务模块中
 - 样式文件：`content.css`

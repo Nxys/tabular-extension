@@ -13,7 +13,7 @@
   - _需求：8.1-8.5_
 
 - [x] 1.1 扩展 ExtensionHelper - 框选操作
-  - 在 `test/integration/helpers/extension-helper.ts` 中添加 dragSelection() 函数
+  - 在 `tests/integration/helpers/extension-helper.ts` 中添加 dragSelection() 函数
   - 实现鼠标按下、移动、释放的模拟
   - 支持指定起点和终点坐标
   - _需求：8.1_
@@ -26,7 +26,7 @@
   - _需求：8.2_
 
 - [x] 1.3 创建 MessageSpy 类
-  - 创建 `test/integration/helpers/message-spy.ts`
+  - 创建 `tests/integration/helpers/message-spy.ts`
   - 实现 start() 方法（开始监听消息）
   - 实现 stop() 方法（停止监听）
   - 实现 getMessages() 方法（获取所有消息）
@@ -37,7 +37,7 @@
   - _需求：8.5_
 
 - [x] 1.4 创建 StorageHelper 工具函数
-  - 创建 `test/integration/helpers/storage-helper.ts`
+  - 创建 `tests/integration/helpers/storage-helper.ts`
   - 实现 setProUser() 函数（设置为 Pro 用户）
   - 实现 setFreeUser() 函数（设置为 Free 用户）
   - 实现 setTrialCount() 函数（设置试用次数）
@@ -52,7 +52,7 @@
   - _需求：9.1-9.5_
 
 - [x] 2.1 扩展 TestPages - 特殊字符页面
-  - 在 `test/integration/fixtures/test-pages.ts` 中添加 generateSpecialCharPage() 函数
+  - 在 `tests/integration/fixtures/test-pages.ts` 中添加 generateSpecialCharPage() 函数
   - 支持 HTML 实体、Unicode、Emoji
   - 支持可选参数控制包含哪些特殊字符
   - _需求：9.3_
@@ -71,7 +71,7 @@
   - _需求：9.4_
 
 - [x] 2.4 创建 TestData 数据生成器
-  - 创建 `test/integration/fixtures/test-data.ts`
+  - 创建 `tests/integration/fixtures/test-data.ts`
   - 实现 generateRandomTableData() 函数（随机表格数据）
   - 实现 generateSpecialCharTableData() 函数（特殊字符表格）
   - 实现 generateOverLimitTableData() 函数（超过限制的表格）
@@ -84,7 +84,7 @@
   - _需求：4.1-4.5_
 
 - [x] 3.1 创建 Pro 功能测试文件
-  - 创建 `test/integration/pro-features.test.ts`
+  - 创建 `tests/integration/pro-features.test.ts`
   - 配置测试环境（beforeEach 清空 storage）
   - _需求：4.1-4.5_
 
@@ -127,7 +127,7 @@
   - _需求：6.1-6.5_
 
 - [x] 4.1 创建消息协议测试文件
-  - 创建 `test/integration/message-protocol.test.ts`
+  - 创建 `tests/integration/message-protocol.test.ts`
   - 配置 MessageSpy 监听
   - _需求：6.1-6.5_
 
@@ -174,7 +174,7 @@
   - 注意：basic-functionality.test.ts 已存在，需要根据新的辅助函数和测试固件进行重构
 
 - [-] 5.1 重构简单文本提取测试
-  - 更新 `test/integration/basic-functionality.test.ts`
+  - 更新 `tests/integration/basic-functionality.test.ts`
   - 使用新的 dragSelection() 和 waitForResultPanel()
   - 测试提取的文本与原始文本一致
   - _需求：1.1_
@@ -244,7 +244,7 @@
   - 注意：user-interactions.test.ts 已存在，需要根据新的辅助函数进行重构
 
 - [ ] 6.1 重构 Selection_Box 跟随测试
-  - 更新 `test/integration/user-interactions.test.ts`
+  - 更新 `tests/integration/user-interactions.test.ts`
   - 使用 dragSelection() 模拟拖动
   - 测试 Selection_Box 实时跟随
   - _需求：5.1_
@@ -275,7 +275,7 @@
   - 注意：error-handling.test.ts 已存在，需要根据新的辅助函数进行重构
 
 - [ ] 7.1 重构格式错误 HTML 测试
-  - 更新 `test/integration/error-handling.test.ts`
+  - 更新 `tests/integration/error-handling.test.ts`
   - 测试插件不崩溃
   - 测试返回合理结果
   - _需求：7.1_
@@ -307,91 +307,91 @@
   - _需求：所有需求_
 
 - [ ] 8.1 编写属性测试 1：文本提取正确性
-  - 创建 `test/integration/properties/text-extraction.property.test.ts`
+  - 创建 `tests/integration/properties/text-extraction.property.test.ts`
   - 使用 fc.string() 生成随机文本
   - 验证提取的文本与原始文本一致
   - **验证：需求 1.1, 1.2, 1.5**
 
 - [ ] 8.2 编写属性测试 2：特殊字符处理正确性
-  - 创建 `test/integration/properties/special-chars.property.test.ts`
+  - 创建 `tests/integration/properties/special-chars.property.test.ts`
   - 使用 fc.unicodeString() 生成特殊字符
   - 验证特殊字符正确解码
   - **验证：需求 1.3, 3.3**
 
 - [ ] 8.3 编写属性测试 3：表格结构识别正确性
-  - 创建 `test/integration/properties/table-detection.property.test.ts`
+  - 创建 `tests/integration/properties/table-detection.property.test.ts`
   - 使用 fc.array() 生成随机表格数据
   - 验证表格结构正确识别
   - **验证：需求 2.1, 2.2, 2.4**
 
 - [ ] 8.4 编写属性测试 4：非表格内容不误判
-  - 创建 `test/integration/properties/non-table-detection.property.test.ts`
+  - 创建 `tests/integration/properties/non-table-detection.property.test.ts`
   - 生成非表格 HTML 结构
   - 验证不误判为表格
   - **验证：需求 2.5**
 
 - [ ] 8.5 编写属性测试 5：导出格式正确性
-  - 创建 `test/integration/properties/export-format.property.test.ts`
+  - 创建 `tests/integration/properties/export-format.property.test.ts`
   - 使用 generateRandomTableData() 生成数据
   - 验证 CSV/Excel 格式正确
   - **验证：需求 3.1, 3.2, 3.3**
 
 - [ ] 8.6 编写属性测试 6：行数限制策略正确性
-  - 创建 `test/integration/properties/row-limit.property.test.ts`
+  - 创建 `tests/integration/properties/row-limit.property.test.ts`
   - 使用 fc.integer() 生成随机行数
   - 验证 Free 用户限制和 Pro 用户无限制
   - **验证：需求 4.1, 4.2**
 
 - [ ] 8.7 编写属性测试 7：试用次数管理正确性
-  - 创建 `test/integration/properties/trial-count.property.test.ts`
+  - 创建 `tests/integration/properties/trial-count.property.test.ts`
   - 使用 fc.integer() 生成初始试用次数
   - 验证 Free 用户递减和 Pro 用户不变
   - **验证：需求 4.3, 4.5**
 
 - [ ] 8.8 编写属性测试 8：Selection_Box 跟随正确性
-  - 创建 `test/integration/properties/selection-box.property.test.ts`
+  - 创建 `tests/integration/properties/selection-box.property.test.ts`
   - 使用 fc.tuple() 生成随机坐标
   - 验证 Selection_Box 准确跟随
   - **验证：需求 5.1**
 
 - [ ] 8.9 编写属性测试 9：Result_Panel 显示正确性
-  - 创建 `test/integration/properties/result-panel.property.test.ts`
+  - 创建 `tests/integration/properties/result-panel.property.test.ts`
   - 生成随机框选内容
   - 验证面板自动显示且结果正确
   - **验证：需求 5.2**
 
 - [ ] 8.10 编写属性测试 10：连续操作隔离性
-  - 创建 `test/integration/properties/continuous-operations.property.test.ts`
+  - 创建 `tests/integration/properties/continuous-operations.property.test.ts`
   - 使用 fc.array() 生成操作序列
   - 验证每次操作独立且正确
   - **验证：需求 5.5**
 
 - [ ] 8.11 编写属性测试 11：消息通信往返正确性
-  - 创建 `test/integration/properties/message-protocol.property.test.ts`
+  - 创建 `tests/integration/properties/message-protocol.property.test.ts`
   - 生成随机用户操作
   - 验证消息格式正确
   - **验证：需求 6.1, 6.2**
 
 - [ ] 8.12 编写属性测试 12：UI 响应正确性
-  - 创建 `test/integration/properties/ui-response.property.test.ts`
+  - 创建 `tests/integration/properties/ui-response.property.test.ts`
   - 生成随机 ACTION_RESULT
   - 验证 Content 无条件执行 uiAction
   - **验证：需求 6.3, 6.4**
 
 - [ ] 8.13 编写属性测试 13：异常兜底正确性
-  - 创建 `test/integration/properties/error-fallback.property.test.ts`
+  - 创建 `tests/integration/properties/error-fallback.property.test.ts`
   - 模拟 Background 异常
   - 验证返回兜底 ACTION_RESULT
   - **验证：需求 6.5**
 
 - [ ] 8.14 编写属性测试 14：错误 HTML 容错性
-  - 创建 `test/integration/properties/malformed-html.property.test.ts`
+  - 创建 `tests/integration/properties/malformed-html.property.test.ts`
   - 生成格式错误的 HTML
   - 验证插件不崩溃
   - **验证：需求 7.1**
 
 - [ ] 8.15 编写属性测试 15：Storage 损坏容错性
-  - 创建 `test/integration/properties/storage-corruption.property.test.ts`
+  - 创建 `tests/integration/properties/storage-corruption.property.test.ts`
   - 生成损坏的 storage 数据
   - 验证使用默认值且功能正常
   - **验证：需求 7.3**

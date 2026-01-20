@@ -6,7 +6,7 @@
 const config = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
-  setupFilesAfterEnv: ['<rootDir>/test/setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
@@ -18,9 +18,9 @@ const config = {
       },
     ],
   },
-  testMatch: ['**/test/unit/**/*.test.ts'],
-  coverageDirectory: 'test/report/coverage',
-  coveragePathIgnorePatterns: ['/node_modules/', '/test/'],
+  testMatch: ['**/tests/unit/**/*.test.ts'],
+  coverageDirectory: 'tests/report/coverage',
+  coveragePathIgnorePatterns: ['/node_modules/', '/tests/'],
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts'],
   coverageThreshold: {
     global: {

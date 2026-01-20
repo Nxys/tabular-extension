@@ -154,7 +154,7 @@ src/
 ├── popup.html            # 弹出窗口 HTML
 ├── content.css           # 样式文件（CSS 变量 + 媒体查询）
 ├── manifest.json         # 扩展配置（Manifest v3）
-└── test/                 # 测试文件（39 个测试用例）
+└── tests/                 # 测试文件（39 个测试用例）
 ```
 
 详细结构说明请参考 [STRUCTURE.md](./STRUCTURE.md)

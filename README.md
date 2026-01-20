@@ -318,7 +318,7 @@ npm run zip
 
 ### 架构约束
 - **依赖关系**：Background 和 Content 都依赖 Shared，但 Background 和 Content 之间禁止相互依赖
-- **文件命名**：测试文件与源文件同名，后缀 `.test.ts`，放在 `test/` 目录
+- **文件命名**：测试文件与源文件同名，后缀 `.test.ts`，放在 `tests/` 目录
 - **类型定义**：所有跨层类型定义集中在 `shared/types.ts`
 - **常量定义**：跨层常量定义在 `shared/constants.ts`，业务常量定义在对应的业务模块中（如 usage.ts 中的 maxPerDay）
 - **样式管理**：所有 Content 层的样式集中在 `content.css` 中

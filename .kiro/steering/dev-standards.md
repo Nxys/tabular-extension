@@ -21,7 +21,7 @@ inclusion: always
 ## 测试
 - 命令：`npm test`，无需`--run`参数
 - 覆盖率：Background ≥90%，Content ≥85%
-- 路径：`test/unit/模块/文件名.test.ts`
+- 路径：`tests/unit/模块/文件名.test.ts`
 - 不自动添加测试（除非用户要求）
 
 ## 修改代码

@@ -15,7 +15,7 @@ inclusion: always
 - `npm run test:integration:ui` - UI 模式
 
 ## 测试路径
-`test/integration/` - 所有集成测试文件
+`tests/integration/` - 所有集成测试文件
 
 ## 注意事项
 - 测试前需构建：`npm run build`
