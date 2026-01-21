@@ -18,6 +18,10 @@ inclusion: always
 - 导出项必须有中文 JSDoc
 - 遵循 ESLint
 
+## 构建插件
+- 不要使用 `npm run build` 进行构建
+- `npm run extension` 直接生成插件到 `build/extension`
+
 ## 测试
 - 命令：`npm test`，无需`--run`参数
 - 覆盖率：Background ≥90%，Content ≥85%

@@ -422,3 +422,302 @@ export function generateShadowDOMPage(): string {
 </body>
 </html>`;
 }
+
+/**
+ * 生成包含嵌套 HTML 标签的文本页面
+ * 用于测试提取纯文本时是否正确去除所有 HTML 标签
+ */
+export function generateNestedTagsPage(): string {
+  return `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>嵌套标签测试页面</title>
+    <style>
+        .test-content { margin: 20px; line-height: 1.6; }
+        .nested-content { 
+            background-color: #f0f8ff; 
+            padding: 15px; 
+            margin: 10px 0;
+        }
+        strong { font-weight: bold; }
+        em { font-style: italic; }
+        .highlight { background-color: yellow; }
+    </style>
+</head>
+<body>
+    <div class="test-content">
+        <h1>嵌套标签提取测试</h1>
+        <div class="nested-content" id="nested-tags">
+            这是<strong>加粗的<em>斜体的<span class="highlight">高亮的</span>文本</em>内容</strong>，
+            包含<a href="#">链接<span>中的<b>嵌套</b>标签</span></a>，
+            以及<div>块级<p>元素<span>中的<i>多层</i>嵌套</span>标签</p></div>。
+        </div>
+        <p>这是页面上的其他内容。</p>
+    </div>
+</body>
+</html>`;
+}
+
+/**
+ * 生成包含格式错误 HTML 的页面
+ * 用于测试插件的容错能力
+ * 包括：未闭合标签、错误嵌套、缺少必要属性等
+ */
+export function generateMalformedHTMLPage(): string {
+  return `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>格式错误 HTML 测试页面</title>
+    <style>
+        .test-content { margin: 20px; }
+        table { border-collapse: collapse; margin: 10px 0; }
+        td, th { border: 1px solid #ccc; padding: 8px; }
+    </style>
+</head>
+<body>
+    <div class="test-content">
+        <h1>格式错误 HTML 测试</h1>
+        
+        <!-- 未闭合的标签 -->
+        <div id="unclosed-tags">
+            <p>这是一个段落
+            <span>这是一个未闭合的 span
+            <strong>这是未闭合的 strong
+        </div>
+        
+        <!-- 错误嵌套的标签 -->
+        <div id="wrong-nesting">
+            <p>段落开始<div>块级元素错误嵌套在段落中</p></div>
+            <b><i>粗体和斜体</b></i>
+        </div>
+        
+        <!-- 格式错误的表格 -->
+        <table id="malformed-table">
+            <tr>
+                <td>正常单元格</td>
+                <td>未闭合单元格
+            </tr>
+            <tr>
+                <td>第二行第一列
+                <td>第二行第二列</td>
+            <!-- 缺少 </tr> -->
+            <tr>
+                <th>表头在错误位置
+                <td>混合使用 th 和 td</td>
+            </tr>
+        </table>
+        
+        <!-- 空标签和自闭合标签 -->
+        <div id="empty-tags">
+            <p></p>
+            <span></span>
+            <div><br><hr></div>
+        </div>
+        
+        <!-- 特殊字符未转义 -->
+        <div id="unescaped-chars">
+            <p>未转义的字符: < > & " '</p>
+        </div>
+        
+        <!-- 错误的属性 -->
+        <div id="invalid-attrs">
+            <table border="invalid" cellspacing="abc">
+                <tr>
+                    <td colspan="not-a-number">错误的 colspan</td>
+                    <td rowspan="-1">负数 rowspan</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>`;
+}
+
+/**
+ * 生成包含非表格内容的页面
+ * 用于测试系统不会将非表格结构误判为表格
+ * 包括：列表、div 布局、段落、卡片布局等
+ */
+export function generateNonTableContentPage(): string {
+  return `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>非表格内容测试页面</title>
+    <style>
+        .test-content { margin: 20px; }
+        
+        /* 列表样式 */
+        .list-container { 
+            background-color: #f5f5f5; 
+            padding: 15px; 
+            margin: 10px 0;
+        }
+        ul, ol { margin: 10px 0; padding-left: 20px; }
+        li { margin: 5px 0; }
+        
+        /* Div 布局样式 */
+        .grid-layout {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .grid-item {
+            background-color: #e8f4f8;
+            padding: 15px;
+            border: 1px solid #ccc;
+        }
+        
+        /* 卡片布局样式 */
+        .card-container {
+            display: flex;
+            gap: 15px;
+            margin: 10px 0;
+        }
+        .card {
+            flex: 1;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card-title { font-weight: bold; margin-bottom: 8px; }
+        .card-content { color: #666; }
+        
+        /* 段落样式 */
+        .paragraph-container {
+            background-color: #f9f9f9;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        p { margin: 10px 0; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="test-content">
+        <h1>非表格内容测试</h1>
+        
+        <!-- 无序列表 -->
+        <div class="list-container" id="unordered-list">
+            <h3>产品特性（无序列表）</h3>
+            <ul>
+                <li>高性能处理器</li>
+                <li>长续航电池</li>
+                <li>轻薄便携设计</li>
+                <li>全高清显示屏</li>
+            </ul>
+        </div>
+        
+        <!-- 有序列表 -->
+        <div class="list-container" id="ordered-list">
+            <h3>安装步骤（有序列表）</h3>
+            <ol>
+                <li>下载安装包</li>
+                <li>运行安装程序</li>
+                <li>按照向导完成安装</li>
+                <li>重启计算机</li>
+            </ol>
+        </div>
+        
+        <!-- Div 网格布局 -->
+        <div id="grid-layout">
+            <h3>产品信息（网格布局）</h3>
+            <div class="grid-layout">
+                <div class="grid-item">
+                    <strong>产品名称</strong><br>
+                    笔记本电脑
+                </div>
+                <div class="grid-item">
+                    <strong>价格</strong><br>
+                    ¥5,999
+                </div>
+                <div class="grid-item">
+                    <strong>库存</strong><br>
+                    15 台
+                </div>
+                <div class="grid-item">
+                    <strong>品牌</strong><br>
+                    ThinkPad
+                </div>
+                <div class="grid-item">
+                    <strong>型号</strong><br>
+                    X1 Carbon
+                </div>
+                <div class="grid-item">
+                    <strong>颜色</strong><br>
+                    黑色
+                </div>
+            </div>
+        </div>
+        
+        <!-- 卡片布局 -->
+        <div id="card-layout">
+            <h3>团队成员（卡片布局）</h3>
+            <div class="card-container">
+                <div class="card">
+                    <div class="card-title">张三</div>
+                    <div class="card-content">
+                        职位：前端工程师<br>
+                        经验：5年<br>
+                        技能：React, Vue, TypeScript
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">李四</div>
+                    <div class="card-content">
+                        职位：后端工程师<br>
+                        经验：7年<br>
+                        技能：Node.js, Python, Go
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">王五</div>
+                    <div class="card-content">
+                        职位：UI设计师<br>
+                        经验：4年<br>
+                        技能：Figma, Sketch, Photoshop
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 段落文本 -->
+        <div class="paragraph-container" id="paragraphs">
+            <h3>产品描述（段落）</h3>
+            <p>这是一款高性能的商务笔记本电脑，专为专业人士设计。</p>
+            <p>采用最新的处理器技术，提供卓越的性能和能效比。</p>
+            <p>轻薄的机身设计，让您随时随地高效工作。</p>
+            <p>配备全高清显示屏，呈现清晰细腻的画面。</p>
+        </div>
+        
+        <!-- Div 布局（类似表格但不是表格） -->
+        <div id="div-table-like">
+            <h3>规格参数（Div 布局）</h3>
+            <div style="display: flex; border: 1px solid #ccc; padding: 8px; background: #f5f5f5;">
+                <div style="flex: 1; font-weight: bold;">处理器</div>
+                <div style="flex: 2;">Intel Core i7-12700H</div>
+            </div>
+            <div style="display: flex; border: 1px solid #ccc; border-top: none; padding: 8px;">
+                <div style="flex: 1; font-weight: bold;">内存</div>
+                <div style="flex: 2;">16GB DDR4</div>
+            </div>
+            <div style="display: flex; border: 1px solid #ccc; border-top: none; padding: 8px;">
+                <div style="flex: 1; font-weight: bold;">存储</div>
+                <div style="flex: 2;">512GB SSD</div>
+            </div>
+            <div style="display: flex; border: 1px solid #ccc; border-top: none; padding: 8px;">
+                <div style="flex: 1; font-weight: bold;">显卡</div>
+                <div style="flex: 2;">NVIDIA RTX 3060</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
+}
