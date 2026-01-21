@@ -5,3 +5,4 @@ node_modules
 build/dist
 build/extension.zip
 tests/report
+test-page-*.html

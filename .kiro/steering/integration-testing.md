@@ -9,8 +9,7 @@ inclusion: always
 - **完整用户流程**：测试真实交互场景和插件行为
 
 ## 测试命令
-- `npm run test:integration` - 编译并测试
-- `npm run test:integration:headless` - 无头模式
+- `npm run test:integration` - 测试
 - `npm run test:integration:debug` - 调试模式
 - `npm run test:integration:ui` - UI 模式
 

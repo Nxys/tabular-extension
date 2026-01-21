@@ -27,14 +27,14 @@
         │                       │
 ┌───────▼────────┐    ┌────────▼────────┐
 │  Test Suites   │    │  Test Fixtures  │
-│  *.test.ts     │◄───┤  test-pages.ts  │
+│  *.test.ts     │◄───┤     pages.ts    │
 └───────┬────────┘    └─────────────────┘
         │
         │ uses
         │
 ┌───────▼────────┐
 │  Test Helpers  │
-│extension-helper│
+│    extension   │
 └───────┬────────┘
         │
         │ controls
@@ -65,13 +65,13 @@
    - 错误处理测试 (error-handling.test.ts)
 
 2. **Test Helpers Layer** - 测试辅助层
-   - extension-helper.ts：封装插件操作
-   - message-spy.ts：消息通信监听 - 新增
-   - storage-helper.ts：Storage 操作 - 新增
+   - helpers/extension.ts：封装插件操作
+   - helpers/message.ts：消息通信监听 - 新增
+   - helpers/storage.ts：Storage 操作 - 新增
 
 3. **Test Fixtures Layer** - 测试固件层
-   - test-pages.ts：页面生成器
-   - test-data.ts：测试数据生成 - 新增
+   - pages.ts：页面生成器
+   - data.ts：测试数据生成 - 新增
 
 4. **Browser Layer** - 浏览器层
    - 真实 Chrome 浏览器
@@ -657,7 +657,7 @@ interface TableTestData {
     "webServer": {
       "command": "python3 -m http.server 3000",
       "port": 3000,
-      "cwd": "tests/integration/fixtures/test-server",
+      "cwd": "tests/integration/fixtures/server",
       "reuseExistingServer": true,
       "timeout": 10000
     }
@@ -693,12 +693,12 @@ test('Property 1: 文本提取正确性', async ({ page }) => {
 ```
 tests/integration/
 ├── fixtures/
-│   ├── test-pages.ts          # 页面生成器（扩展）
-│   └── test-data.ts           # 测试数据生成器（新增）
+│   ├── pages.ts               # 页面生成器（扩展）
+│   └── data.ts                # 测试数据生成器（新增）
 ├── helpers/
-│   ├── extension-helper.ts    # 插件操作辅助（扩展）
-│   ├── message-spy.ts         # 消息监听器（新增）
-│   └── storage-helper.ts      # Storage 操作（新增）
+│   ├── extension.ts           # 插件操作辅助（扩展）
+│   ├── message.ts             # 消息监听器（新增）
+│   └── storage.ts             # Storage 操作（新增）
 ├── basic-functionality.test.ts      # 基础功能测试（重构）
 ├── user-interactions.test.ts        # 用户交互测试（重构）
 ├── pro-features.test.ts             # Pro 功能测试（新增）

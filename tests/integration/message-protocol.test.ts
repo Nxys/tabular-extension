@@ -4,15 +4,16 @@ import {
   dragSelection,
   waitForResultPanel,
   waitForAsync
-} from './helpers/extension-helper';
+} from './helpers/extension';
 import {
   setProUser,
   setFreeUser,
   setTrialCount,
-  clearStorage
-} from './helpers/storage-helper';
-import { MessageSpy } from './helpers/message-spy';
-import { generateLargeTablePage } from './fixtures/test-pages';
+  clearStorage,
+  enablePlugin
+} from './helpers/storage';
+import { MessageSpy } from './helpers/message';
+import { generateLargeTablePage } from './fixtures/pages';
 
 /**
  * 消息通信协议测试套件
@@ -32,6 +33,7 @@ test.describe('消息通信协议测试', () => {
 
   test.beforeEach(async ({ page }) => {
     // 每个测试前清空 storage，确保测试隔离
+    // 注意：enablePlugin 已在 createTestPage 中自动调用
     await clearStorage(page);
     
     // 初始化消息监听器

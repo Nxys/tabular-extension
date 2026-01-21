@@ -4,16 +4,59 @@ import type { AdvancedFeature } from '../../../src/shared/types';
 /**
  * Storage 操作辅助工具
  * 用于在集成测试中操作插件的 chrome.storage.local 数据
+ * 
+ * 注意：chrome.storage API 只能在插件上下文中使用，
+ * 因此我们需要通过 background service worker 来访问
  */
 
+/**
+ * 在 background service worker 中执行代码
+ * @param page Playwright Page 对象
+ * @param fn 要执行的函数
+ */
+async function executeInBackground<T>(page: Page, fn: () => T | Promise<T>): Promise<T> {
+  const context = page.context();
+  const [background] = context.serviceWorkers();
+  
+  if (!background) {
+    throw new Error('Background service worker not found');
+  }
+  
+  return await background.evaluate(fn);
+}
 
+/**
+ * 开启插件功能
+ * @param page Playwright Page 对象
+ */
+export async function enablePlugin(page: Page): Promise<void> {
+  await executeInBackground(page, () => {
+    return chrome.storage.local.set({ 'enabled': true });
+  });
+  
+  // 等待设置生效
+  await page.waitForTimeout(500);
+}
+
+/**
+ * 关闭插件功能
+ * @param page Playwright Page 对象
+ */
+export async function disablePlugin(page: Page): Promise<void> {
+  await executeInBackground(page, () => {
+    return chrome.storage.local.set({ 'enabled': false });
+  });
+  
+  // 等待设置生效
+  await page.waitForTimeout(500);
+}
 
 /**
  * 设置用户为 Pro 用户
  * @param page Playwright Page 对象
  */
 export async function setProUser(page: Page): Promise<void> {
-  await page.evaluate(() => {
+  await executeInBackground(page, () => {
     const proState = {
       isPro: true,
       signature: 'test-signature',
@@ -34,7 +77,7 @@ export async function setProUser(page: Page): Promise<void> {
  * @param page Playwright Page 对象
  */
 export async function setFreeUser(page: Page): Promise<void> {
-  await page.evaluate(() => {
+  await executeInBackground(page, () => {
     const proState = {
       isPro: false,
       signature: '',
@@ -60,7 +103,14 @@ export async function setTrialCount(
   feature: AdvancedFeature,
   count: number
 ): Promise<void> {
-  await page.evaluate(({ feature, count }) => {
+  const context = page.context();
+  const [background] = context.serviceWorkers();
+  
+  if (!background) {
+    throw new Error('Background service worker not found');
+  }
+  
+  await background.evaluate(({ feature, count }) => {
     // 根据次数计算对应的 seed 和 entropy
     // 使用反向计算确保 deriveRemaining 返回期望的次数
     const normalized = count / 3.5;
@@ -91,7 +141,14 @@ export async function getTrialCount(
   page: Page,
   feature: AdvancedFeature
 ): Promise<number> {
-  return await page.evaluate((feature) => {
+  const context = page.context();
+  const [background] = context.serviceWorkers();
+  
+  if (!background) {
+    throw new Error('Background service worker not found');
+  }
+  
+  return await background.evaluate((feature) => {
     const key = `state_${feature}`;
     
     return chrome.storage.local.get([key]).then((result) => {
@@ -114,7 +171,7 @@ export async function getTrialCount(
  * @param page Playwright Page 对象
  */
 export async function clearStorage(page: Page): Promise<void> {
-  await page.evaluate(() => {
+  await executeInBackground(page, () => {
     return chrome.storage.local.clear();
   });
 }
@@ -125,7 +182,7 @@ export async function clearStorage(page: Page): Promise<void> {
  * @returns 所有存储的数据
  */
 export async function getStorageData(page: Page): Promise<Record<string, unknown>> {
-  return await page.evaluate(() => {
+  return await executeInBackground(page, () => {
     return chrome.storage.local.get(null);
   });
 }

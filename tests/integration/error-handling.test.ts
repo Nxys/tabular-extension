@@ -8,7 +8,11 @@ import {
   getPanelText,
   getConsoleErrors,
   waitForAsync 
-} from './helpers/extension-helper';
+} from './helpers/extension';
+import {
+  enablePlugin,
+  clearStorage
+} from './helpers/storage';
 
 /**
  * 错误处理测试
@@ -16,6 +20,12 @@ import {
  */
 
 test.describe('错误处理测试', () => {
+  
+  test.beforeEach(async ({ page }) => {
+    // 每个测试前清空 storage，确保测试隔离
+    // 注意：enablePlugin 已在 createTestPage 中自动调用
+    await clearStorage(page);
+  });
   
   test('应该处理空表格', async ({ page }) => {
     const htmlContent = `

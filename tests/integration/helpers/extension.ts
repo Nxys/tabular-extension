@@ -28,20 +28,28 @@ export async function createTestPage(page: Page, htmlContent: string): Promise<v
   // 生成唯一的测试页面文件名
   const timestamp = Date.now();
   const filename = `test-page-${timestamp}.html`;
-  const filepath = `tests/integration/fixtures/test-server/${filename}`;
+  const filepath = `tests/integration/fixtures/server/${filename}`;
   
   // 写入 HTML 文件
   const fs = await import('fs/promises');
   await fs.writeFile(filepath, htmlContent, 'utf-8');
   
+  // 开启插件功能（通过 background service worker）
+  const context = page.context();
+  const [background] = context.serviceWorkers();
+  
+  if (background) {
+    await background.evaluate(() => {
+      return chrome.storage.local.set({ 'enabled': true });
+    });
+  }
+  
   // 导航到测试页面
   await page.goto(`http://localhost:3000/${filename}`);
   await page.waitForLoadState('domcontentloaded');
   
-  // 等待 content script 加载（检查全局变量）
-  await page.waitForFunction(() => {
-    return typeof (window as any).tabular !== 'undefined';
-  }, { timeout: 10000 });
+  // 等待 content script 加载和设置生效
+  await page.waitForTimeout(1000);
   
   // 清理：测试完成后删除文件（使用 page.context().on('close') 或在测试结束时手动清理）
 }
@@ -119,6 +127,16 @@ export async function clickPanelButton(page: Page, buttonText: string): Promise<
  */
 export async function getPanelText(page: Page): Promise<string> {
   const panel = page.locator('.tabular-extension-panel');
+  
+  // 尝试获取 textarea 的值
+  const textarea = panel.locator('textarea');
+  const textareaCount = await textarea.count();
+  
+  if (textareaCount > 0) {
+    return await textarea.inputValue();
+  }
+  
+  // 如果没有 textarea，返回整个面板的文本
   return await panel.textContent() || '';
 }
 

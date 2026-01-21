@@ -9,12 +9,16 @@ import {
   pressShortcut,
   getClipboardContent,
   waitForAsync 
-} from './helpers/extension-helper';
+} from './helpers/extension';
+import {
+  enablePlugin,
+  clearStorage
+} from './helpers/storage';
 import { 
   generateTablePage, 
   generateTextPage, 
   generateMixedContentPage 
-} from './fixtures/test-pages';
+} from './fixtures/pages';
 
 /**
  * 用户交互测试
@@ -22,6 +26,12 @@ import {
  */
 
 test.describe('用户交互测试', () => {
+  
+  test.beforeEach(async ({ page }) => {
+    // 每个测试前清空 storage，确保测试隔离
+    // 注意：enablePlugin 已在 createTestPage 中自动调用
+    await clearStorage(page);
+  });
   
   test('应该支持复制功能', async ({ page }) => {
     const testText = '这是要复制的测试文本';

@@ -10,13 +10,17 @@ import {
   waitForAsync,
   dragSelection,
   waitForResultPanel
-} from './helpers/extension-helper';
+} from './helpers/extension';
+import { 
+  enablePlugin,
+  clearStorage
+} from './helpers/storage';
 import { 
   generateTablePage, 
   generateTextPage, 
   generateComplexTablePage,
   generateMultilineTextPage
-} from './fixtures/test-pages';
+} from './fixtures/pages';
 
 /**
  * 基础功能测试

@@ -29,7 +29,7 @@ export default defineConfig({
   webServer: {
     command: 'python3 -m http.server 3000',
     port: 3000,
-    cwd: 'tests/integration/fixtures/test-server',
+    cwd: 'tests/integration/fixtures/server',
     timeout: 10000,
   },
 });

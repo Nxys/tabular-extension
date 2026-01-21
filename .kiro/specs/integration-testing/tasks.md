@@ -7,13 +7,13 @@
 ## 任务
 
 - [x] 1. 完善测试辅助工具（Test Helpers）
-  - 扩展 extension-helper.ts
-  - 创建 message-spy.ts
-  - 创建 storage-helper.ts
+  - 扩展 helpers/extension.ts
+  - 创建 helpers/message.ts
+  - 创建 helpers/storage.ts
   - _需求：8.1-8.5_
 
 - [x] 1.1 扩展 ExtensionHelper - 框选操作
-  - 在 `tests/integration/helpers/extension-helper.ts` 中添加 dragSelection() 函数
+  - 在 `tests/integration/helpers/extension.ts` 中添加 dragSelection() 函数
   - 实现鼠标按下、移动、释放的模拟
   - 支持指定起点和终点坐标
   - _需求：8.1_
@@ -26,7 +26,7 @@
   - _需求：8.2_
 
 - [x] 1.3 创建 MessageSpy 类
-  - 创建 `tests/integration/helpers/message-spy.ts`
+  - 创建 `tests/integration/helpers/message.ts`
   - 实现 start() 方法（开始监听消息）
   - 实现 stop() 方法（停止监听）
   - 实现 getMessages() 方法（获取所有消息）
@@ -37,22 +37,27 @@
   - _需求：8.5_
 
 - [x] 1.4 创建 StorageHelper 工具函数
-  - 创建 `tests/integration/helpers/storage-helper.ts`
+  - 创建 `tests/integration/helpers/storage.ts`
+  - 实现 enablePlugin() 函数（开启插件功能）- 通过 background service worker 访问 chrome.storage
+  - 实现 disablePlugin() 函数（关闭插件功能）
   - 实现 setProUser() 函数（设置为 Pro 用户）
   - 实现 setFreeUser() 函数（设置为 Free 用户）
   - 实现 setTrialCount() 函数（设置试用次数）
   - 实现 getTrialCount() 函数（获取试用次数）
   - 实现 clearStorage() 函数（清空所有数据）
   - 实现 getStorageData() 函数（获取完整数据）
+  - 修改 createTestPage() 在页面加载时自动开启插件功能
+  - 修改 getPanelText() 正确获取 textarea 的值
+  - 所有 storage 操作通过 background service worker 执行
   - _需求：8.3, 8.4_
 
 - [x] 2. 扩展测试固件（Test Fixtures）
-  - 扩展 test-pages.ts
-  - 创建 test-data.ts
+  - 扩展 fixtures/pages.ts
+  - 创建 fixtures/data.ts
   - _需求：9.1-9.5_
 
 - [x] 2.1 扩展 TestPages - 特殊字符页面
-  - 在 `tests/integration/fixtures/test-pages.ts` 中添加 generateSpecialCharPage() 函数
+  - 在 `tests/integration/fixtures/pages.ts` 中添加 generateSpecialCharPage() 函数
   - 支持 HTML 实体、Unicode、Emoji
   - 支持可选参数控制包含哪些特殊字符
   - _需求：9.3_
@@ -71,7 +76,7 @@
   - _需求：9.4_
 
 - [x] 2.4 创建 TestData 数据生成器
-  - 创建 `tests/integration/fixtures/test-data.ts`
+  - 创建 `tests/integration/fixtures/data.ts`
   - 实现 generateRandomTableData() 函数（随机表格数据）
   - 实现 generateSpecialCharTableData() 函数（特殊字符表格）
   - 实现 generateOverLimitTableData() 函数（超过限制的表格）

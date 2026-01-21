@@ -49,13 +49,13 @@ npm run test:integration:debug
 tests/integration/
 ├── fixtures/
 │   ├── index.ts             # 自定义 test fixture（插件加载）
-│   ├── test-pages.ts        # 测试页面生成器
-│   ├── test-data.ts         # 测试数据生成器
-│   └── test-server/         # HTTP 测试服务器
+│   ├── server/              # HTTP 测试服务器
+│   ├── data.ts              # 测试数据生成器
+│   └── pages.ts             # 测试页面生成器
 ├── helpers/
-│   ├── extension-helper.ts  # 插件操作辅助函数
-│   ├── message-spy.ts       # 消息监听工具
-│   └── storage-helper.ts    # Storage 操作工具
+│   ├── extension.ts         # 插件操作辅助函数
+│   ├── message.ts           # 消息监听工具
+│   └── storage.ts           # Storage 操作工具
 └── *.test.ts                # 测试文件
 ```
 
@@ -90,7 +90,7 @@ test('测试内容脚本', async ({ page }) => {
 
 ## 测试辅助工具
 
-### extension-helper.ts
+### helpers/extension.ts
 
 提供插件操作的辅助函数：
 
@@ -103,7 +103,7 @@ test('测试内容脚本', async ({ page }) => {
 - `selectText()` - 模拟文本选择
 - `selectTable()` - 模拟表格选择
 
-### storage-helper.ts
+### helpers/storage.ts
 
 提供 Storage 操作的辅助函数：
 
@@ -113,7 +113,7 @@ test('测试内容脚本', async ({ page }) => {
 - `getTrialCount()` - 获取试用次数
 - `clearStorage()` - 清空所有数据
 
-### message-spy.ts
+### helpers/message.ts
 
 提供消息监听的辅助类：
 

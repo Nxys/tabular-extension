@@ -4,8 +4,15 @@
  */
 
 import { test, expect } from './fixtures';
+import { enablePlugin, clearStorage } from './helpers/storage';
 
 test.describe('插件加载测试', () => {
+  
+  test.beforeEach(async ({ page }) => {
+    // 每个测试前清空 storage，确保测试隔离
+    // 注意：enablePlugin 已在 createTestPage 中自动调用
+    await clearStorage(page);
+  });
   
   test('应该成功加载插件并获取 Extension ID', async ({ context, extensionId }) => {
     // 验证 extensionId 存在且格式正确
