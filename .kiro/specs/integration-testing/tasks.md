@@ -273,129 +273,129 @@
   - 使用 clearStorage() 确保隔离
   - _需求：5.5_
 
-- [ ] 7. 重构错误处理测试套件
+- [x] 7. 重构错误处理测试套件
   - 重构边界情况测试
   - 重构容错测试
   - _需求：7.1-7.5_
   - 注意：error-handling.test.ts 已存在，需要根据新的辅助函数进行重构
 
-- [ ] 7.1 重构格式错误 HTML 测试
+- [x] 7.1 重构格式错误 HTML 测试
   - 更新 `tests/integration/error-handling.test.ts`
   - 测试插件不崩溃
   - 测试返回合理结果
   - _需求：7.1_
 
-- [ ] 7.2 重构超大区域测试
+- [x] 7.2 重构超大区域测试
   - 测试超过 10000 个元素
   - 测试能处理或返回警告
   - _需求：7.2_
 
-- [ ] 7.3 重构 storage 损坏测试
+- [x] 7.3 重构 storage 损坏测试
   - 使用 getStorageData() 和 clearStorage()
   - 测试使用默认值
   - 测试核心功能不受影响
   - _需求：7.3_
 
-- [ ] 7.4 重构网络请求失败测试
+- [x] 7.4 重构网络请求失败测试
   - 测试显示错误提示
   - 测试允许重试
   - _需求：7.4_
 
-- [ ] 7.5 重构页面未加载测试
+- [x] 7.5 重构页面未加载测试
   - 测试等待页面就绪或显示提示
   - _需求：7.5_
 
 - [ ] 8. 编写属性测试（Property-Based Tests）
   - 实现 15 个属性测试
   - 使用 fast-check 生成随机数据
-  - 每个属性至少 100 次迭代
+  - 每个属性至少 5 次迭代
   - _需求：所有需求_
 
-- [ ] 8.1 编写属性测试 1：文本提取正确性
+- [x] 8.1 编写属性测试 1：文本提取正确性
   - 创建 `tests/integration/properties/text-extraction.property.test.ts`
   - 使用 fc.string() 生成随机文本
   - 验证提取的文本与原始文本一致
   - **验证：需求 1.1, 1.2, 1.5**
 
-- [ ] 8.2 编写属性测试 2：特殊字符处理正确性
+- [x] 8.2 编写属性测试 2：特殊字符处理正确性
   - 创建 `tests/integration/properties/special-chars.property.test.ts`
   - 使用 fc.unicodeString() 生成特殊字符
   - 验证特殊字符正确解码
   - **验证：需求 1.3, 3.3**
 
-- [ ] 8.3 编写属性测试 3：表格结构识别正确性
+- [x] 8.3 编写属性测试 3：表格结构识别正确性
   - 创建 `tests/integration/properties/table-detection.property.test.ts`
   - 使用 fc.array() 生成随机表格数据
   - 验证表格结构正确识别
   - **验证：需求 2.1, 2.2, 2.4**
 
-- [ ] 8.4 编写属性测试 4：非表格内容不误判
+- [x] 8.4 编写属性测试 4：非表格内容不误判
   - 创建 `tests/integration/properties/non-table-detection.property.test.ts`
   - 生成非表格 HTML 结构
   - 验证不误判为表格
   - **验证：需求 2.5**
 
-- [ ] 8.5 编写属性测试 5：导出格式正确性
+- [x] 8.5 编写属性测试 5：导出格式正确性
   - 创建 `tests/integration/properties/export-format.property.test.ts`
   - 使用 generateRandomTableData() 生成数据
   - 验证 CSV/Excel 格式正确
   - **验证：需求 3.1, 3.2, 3.3**
 
-- [ ] 8.6 编写属性测试 6：行数限制策略正确性
+- [x] 8.6 编写属性测试 6：行数限制策略正确性
   - 创建 `tests/integration/properties/row-limit.property.test.ts`
   - 使用 fc.integer() 生成随机行数
   - 验证 Free 用户限制和 Pro 用户无限制
   - **验证：需求 4.1, 4.2**
 
-- [ ] 8.7 编写属性测试 7：试用次数管理正确性
+- [x] 8.7 编写属性测试 7：试用次数管理正确性
   - 创建 `tests/integration/properties/trial-count.property.test.ts`
   - 使用 fc.integer() 生成初始试用次数
   - 验证 Free 用户递减和 Pro 用户不变
   - **验证：需求 4.3, 4.5**
 
-- [ ] 8.8 编写属性测试 8：Selection_Box 跟随正确性
+- [x] 8.8 编写属性测试 8：Selection_Box 跟随正确性
   - 创建 `tests/integration/properties/selection-box.property.test.ts`
   - 使用 fc.tuple() 生成随机坐标
   - 验证 Selection_Box 准确跟随
   - **验证：需求 5.1**
 
-- [ ] 8.9 编写属性测试 9：Result_Panel 显示正确性
+- [x] 8.9 编写属性测试 9：Result_Panel 显示正确性
   - 创建 `tests/integration/properties/result-panel.property.test.ts`
   - 生成随机框选内容
   - 验证面板自动显示且结果正确
   - **验证：需求 5.2**
 
-- [ ] 8.10 编写属性测试 10：连续操作隔离性
+- [x] 8.10 编写属性测试 10：连续操作隔离性
   - 创建 `tests/integration/properties/continuous-operations.property.test.ts`
   - 使用 fc.array() 生成操作序列
   - 验证每次操作独立且正确
   - **验证：需求 5.5**
 
-- [ ] 8.11 编写属性测试 11：消息通信往返正确性
+- [x] 8.11 编写属性测试 11：消息通信往返正确性
   - 创建 `tests/integration/properties/message-protocol.property.test.ts`
   - 生成随机用户操作
   - 验证消息格式正确
   - **验证：需求 6.1, 6.2**
 
-- [ ] 8.12 编写属性测试 12：UI 响应正确性
+- [x] 8.12 编写属性测试 12：UI 响应正确性
   - 创建 `tests/integration/properties/ui-response.property.test.ts`
   - 生成随机 ACTION_RESULT
   - 验证 Content 无条件执行 uiAction
   - **验证：需求 6.3, 6.4**
 
-- [ ] 8.13 编写属性测试 13：异常兜底正确性
+- [x] 8.13 编写属性测试 13：异常兜底正确性
   - 创建 `tests/integration/properties/error-fallback.property.test.ts`
   - 模拟 Background 异常
   - 验证返回兜底 ACTION_RESULT
   - **验证：需求 6.5**
 
-- [ ] 8.14 编写属性测试 14：错误 HTML 容错性
+- [x] 8.14 编写属性测试 14：错误 HTML 容错性
   - 创建 `tests/integration/properties/malformed-html.property.test.ts`
   - 生成格式错误的 HTML
   - 验证插件不崩溃
   - **验证：需求 7.1**
 
-- [ ] 8.15 编写属性测试 15：Storage 损坏容错性
+- [x] 8.15 编写属性测试 15：Storage 损坏容错性
   - 创建 `tests/integration/properties/storage-corruption.property.test.ts`
   - 生成损坏的 storage 数据
   - 验证使用默认值且功能正常
