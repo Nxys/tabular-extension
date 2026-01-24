@@ -13,16 +13,27 @@ import type { AdvancedFeature } from '../../../src/shared/types';
  * 在 background service worker 中执行代码
  * @param page Playwright Page 对象
  * @param fn 要执行的函数
+ * @param arg 传递给函数的参数（可选）
  */
-async function executeInBackground<T>(page: Page, fn: () => T | Promise<T>): Promise<T> {
+async function executeInBackground<T, A = void>(
+  page: Page,
+  fn: A extends void ? () => T | Promise<T> : (arg: A) => T | Promise<T>,
+  arg?: A
+): Promise<T> {
   const context = page.context();
-  const [background] = context.serviceWorkers();
+  let background = context.serviceWorkers()[0];
   
+  // 如果 service worker 不存在，等待它加载
   if (!background) {
-    throw new Error('Background service worker not found');
+    try {
+      background = await context.waitForEvent('serviceworker', { timeout: 5000 });
+    } catch (error) {
+      throw new Error('Background service worker not found after waiting');
+    }
   }
   
-  return await background.evaluate(fn);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return await background.evaluate(fn as any, arg);
 }
 
 /**
@@ -103,32 +114,33 @@ export async function setTrialCount(
   feature: AdvancedFeature,
   count: number
 ): Promise<void> {
-  const context = page.context();
-  const [background] = context.serviceWorkers();
-  
-  if (!background) {
-    throw new Error('Background service worker not found');
-  }
-  
-  await background.evaluate(({ feature, count }) => {
-    // 根据次数计算对应的 seed 和 entropy
-    // 使用反向计算确保 deriveRemaining 返回期望的次数
-    const normalized = count / 3.5;
-    const hash = Math.floor(normalized * 0xffffffff) >>> 0;
-    
-    // 简单的 XOR 分解
-    const seed = hash >>> 0;
-    const entropy = hash >>> 0;
-    
-    const state = {
-      seed,
-      entropy,
-      timestamp: Date.now()
-    };
-    
-    const key = `state_${feature}`;
-    return chrome.storage.local.set({ [key]: state });
-  }, { feature, count });
+  await executeInBackground(
+    page,
+    ({ feature, count }) => {
+      // 根据次数反向计算 seed 和 entropy
+      // deriveRemaining 逻辑：Math.max(0, Math.floor((hash / 0xffffffff) * 3.5))
+      // 要得到 count，需要：(hash / 0xffffffff) * 3.5 >= count
+      // 即：hash >= (count / 3.5) * 0xffffffff
+      
+      const normalized = (count + 0.5) / 3.5; // 加 0.5 确保向上取整
+      const hash = Math.floor(normalized * 0xffffffff) >>> 0;
+      
+      // seed ^ entropy = hash
+      // 简单实现：seed = hash, entropy = 0
+      const seed = hash >>> 0;
+      const entropy = 0;
+      
+      const state = {
+        seed,
+        entropy,
+        timestamp: Date.now()
+      };
+      
+      const key = `state_${feature}`;
+      return chrome.storage.local.set({ [key]: state });
+    },
+    { feature, count }
+  );
 }
 
 /**
@@ -141,29 +153,26 @@ export async function getTrialCount(
   page: Page,
   feature: AdvancedFeature
 ): Promise<number> {
-  const context = page.context();
-  const [background] = context.serviceWorkers();
-  
-  if (!background) {
-    throw new Error('Background service worker not found');
-  }
-  
-  return await background.evaluate((feature) => {
-    const key = `state_${feature}`;
-    
-    return chrome.storage.local.get([key]).then((result) => {
-      const state = result[key];
+  return await executeInBackground(
+    page,
+    (feature) => {
+      const key = `state_${feature}`;
       
-      if (!state) {
-        return 0;
-      }
-      
-      // 使用与 usage.ts 相同的派生逻辑
-      const hash = (state.seed ^ state.entropy) >>> 0;
-      const normalized = hash / 0xffffffff;
-      return Math.max(0, Math.floor(normalized * 3.5));
-    });
-  }, feature);
+      return chrome.storage.local.get([key]).then((result) => {
+        const state = result[key];
+        
+        if (!state) {
+          return 0;
+        }
+        
+        // 使用与 usage.ts 相同的派生逻辑
+        const hash = (state.seed ^ state.entropy) >>> 0;
+        const normalized = hash / 0xffffffff;
+        return Math.max(0, Math.floor(normalized * 3.5));
+      });
+    },
+    feature
+  );
 }
 
 /**

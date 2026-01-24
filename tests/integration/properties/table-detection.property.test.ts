@@ -11,7 +11,7 @@
  */
 
 import { test, expect } from '../fixtures';
-import { createTestPage, selectTable, waitForResultPanel, getPanelTableData } from '../helpers/extension';
+import { createTestPage, waitForResultPanel, getPanelText, dragSelection } from '../helpers/extension';
 import { clearStorage, enablePlugin } from '../helpers/storage';
 
 test.describe('Property 3: 表格结构识别正确性', () => {
@@ -44,14 +44,33 @@ test.describe('Property 3: 表格结构识别正确性', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
 
-    // 使用 selectTable 选择表格
-    await selectTable(page, '#test-table');
+    // 获取表格元素的位置并使用 dragSelection
+    const tableElement = page.locator('#test-table');
+    const boundingBox = await tableElement.boundingBox();
+    
+    if (!boundingBox) {
+      throw new Error('无法获取表格元素的位置');
+    }
+    
+    // 使用 dragSelection 进行框选
+    const startX = boundingBox.x + 5;
+    const startY = boundingBox.y + 5;
+    const endX = boundingBox.x + boundingBox.width - 5;
+    const endY = boundingBox.y + boundingBox.height - 5;
+    
+    await dragSelection(page, startX, startY, endX, endY);
 
     await waitForResultPanel(page);
-    const extractedData = await getPanelTableData(page);
+    const panelText = await getPanelText(page);
 
-    // 验证表格结构正确
-    expect(extractedData.length).toBeGreaterThan(0);
+    // 验证表格结构正确 - 面板应该包含表格数据
+    expect(panelText.length).toBeGreaterThan(0);
+    expect(panelText).toContain('姓名');
+    expect(panelText).toContain('年龄');
+    expect(panelText).toContain('张三');
+    expect(panelText).toContain('25');
+    expect(panelText).toContain('李四');
+    expect(panelText).toContain('30');
   });
 
   test('带表头的表格应正确识别', async ({ page }) => {
@@ -76,12 +95,35 @@ test.describe('Property 3: 表格结构识别正确性', () => {
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1000);
 
-    await selectTable(page, '#test-table');
+    // 获取表格元素的位置并使用 dragSelection
+    const tableElement = page.locator('#test-table');
+    const boundingBox = await tableElement.boundingBox();
+    
+    if (!boundingBox) {
+      throw new Error('无法获取表格元素的位置');
+    }
+    
+    // 使用 dragSelection 进行框选
+    const startX = boundingBox.x + 5;
+    const startY = boundingBox.y + 5;
+    const endX = boundingBox.x + boundingBox.width - 5;
+    const endY = boundingBox.y + boundingBox.height - 5;
+    
+    await dragSelection(page, startX, startY, endX, endY);
 
     await waitForResultPanel(page);
-    const extractedData = await getPanelTableData(page);
+    const panelText = await getPanelText(page);
 
     // 验证表格包含表头和数据行
-    expect(extractedData.length).toBeGreaterThan(0);
+    expect(panelText.length).toBeGreaterThan(0);
+    expect(panelText).toContain('姓名');
+    expect(panelText).toContain('年龄');
+    expect(panelText).toContain('城市');
+    expect(panelText).toContain('张三');
+    expect(panelText).toContain('25');
+    expect(panelText).toContain('北京');
+    expect(panelText).toContain('李四');
+    expect(panelText).toContain('30');
+    expect(panelText).toContain('上海');
   });
 });

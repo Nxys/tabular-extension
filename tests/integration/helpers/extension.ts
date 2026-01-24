@@ -265,8 +265,9 @@ export async function getRowLimitInfo(
 ): Promise<{ limited: boolean; current: number; max: number }> {
   const panelText = await getPanelText(page);
   
-  // 检查是否有限制提示
-  const limitMatch = panelText.match(/仅展示前\s*(\d+)\s*行.*共\s*(\d+)\s*行/);
+  // 检查是否有限制提示（支持多种格式）
+  const limitMatch = panelText.match(/仅展示前\s*(\d+)\s*行.*共\s*(\d+)\s*行/) ||
+                     panelText.match(/前\s*(\d+)\s*行.*共\s*(\d+)\s*行/);
   
   if (limitMatch) {
     return {
@@ -276,11 +277,13 @@ export async function getRowLimitInfo(
     };
   }
 
-  // 如果没有限制提示，尝试获取实际行数
-  const tableData = await getPanelTableData(page);
+  // 如果没有限制提示，计算实际行数
+  const lines = panelText.split('\n').filter(line => line.trim().length > 0);
+  const rowCount = lines.length;
+  
   return {
     limited: false,
-    current: tableData.length,
-    max: tableData.length
+    current: rowCount,
+    max: rowCount
   };
 }

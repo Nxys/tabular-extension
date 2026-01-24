@@ -29,14 +29,14 @@ test.describe('插件加载测试', () => {
 
   test('应该能够访问插件的 Popup 页面', async ({ page, extensionId }) => {
     // 跳转到插件的弹出页
-    await page.goto(`chrome-extension://${extensionId}/popup.html`);
+    await page.goto(`chrome-extension://${extensionId}/popup/popup.html`);
     
     // 等待页面加载
     await page.waitForLoadState('domcontentloaded');
     
-    // 验证页面标题
-    const title = await page.title();
-    expect(title).toBeTruthy();
+    // 验证页面内容（检查标题文本）
+    const headerText = await page.textContent('.header .title');
+    expect(headerText).toBe('框选复制');
   });
 
   test('应该能够在测试页面中注入 Content Script', async ({ page }) => {
