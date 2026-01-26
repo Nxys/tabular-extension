@@ -173,25 +173,56 @@ test.describe('用户交互测试', () => {
   });
   
   test('应该支持复制功能', async ({ page }) => {
-    const testText = '这是要复制的测试文本';
-    const htmlContent = generateTextPage(testText);
+    const testText = '这是要复制的测试文本，内容足够长以便于框选操作';
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>复制功能测试</title></head>
+<body>
+    <div id="test-text" style="padding: 20px; margin: 20px; border: 1px solid #ccc; min-width: 300px; min-height: 100px;">
+        ${testText}
+    </div>
+</body>
+</html>`;
     await createTestPage(page, htmlContent);
     
-    // 选择文本
-    await selectText(page, '#test-text');
-    await waitForPanel(page);
+    // 使用框选操作而不是原生文本选择
+    const textElement = page.locator('#test-text');
+    const box = await textElement.boundingBox();
     
-    // 点击复制按钮
-    try {
-      await clickPanelButton(page, '复制');
-      await waitForAsync();
+    expect(box).not.toBeNull();
+    
+    if (box) {
+      // 执行框选操作（确保框选区域足够大）
+      await dragSelection(
+        page, 
+        box.x + 10, 
+        box.y + 10, 
+        box.x + box.width - 10, 
+        box.y + box.height - 10
+      );
+      await waitForPanel(page);
       
-      // 验证剪贴板内容（如果有权限）
-      const clipboardContent = await getClipboardContent(page);
-      expect(clipboardContent).toContain(testText);
-    } catch {
-      // 如果没有复制按钮或权限问题，跳过验证
-      console.log('复制功能测试跳过：可能是权限问题');
+      // 点击复制按钮前先授予剪贴板权限
+      await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+      
+      // 点击复制按钮（注意：点击后面板会关闭）
+      await clickPanelButton(page, '复制');
+      
+      // 等待复制操作完成和面板关闭
+      await waitForAsync(500);
+      
+      // 验证剪贴板内容
+      const clipboardContent = await page.evaluate(async () => {
+        try {
+          return await navigator.clipboard.readText();
+        } catch {
+          return '';
+        }
+      });
+      
+      // 验证内容（使用更宽松的匹配，因为可能有空格或换行符）
+      expect(clipboardContent.trim()).toContain(testText.trim());
     }
   });
 
@@ -473,8 +504,8 @@ test.describe('用户交互测试', () => {
     await selectTable(page, '#bottom-table');
     await waitForAsync();
     
-    // 检查面板是否正常显示
-    const panelVisible = await page.locator('.tabular-panel').isVisible();
+    // 检查面板是否正常显示（使用正确的选择器）
+    const panelVisible = await page.locator('.tabular-extension-panel').isVisible();
     expect(panelVisible).toBe(true);
   });
 
@@ -484,12 +515,16 @@ test.describe('用户交互测试', () => {
 <html>
 <head><title>动态内容测试</title></head>
 <body>
-    <div id="dynamic-content">初始内容</div>
+    <div id="dynamic-content" style="padding: 20px;">初始内容</div>
     <button id="add-table">添加表格</button>
     <script>
         document.getElementById('add-table').onclick = function() {
             document.getElementById('dynamic-content').innerHTML = 
-                '<table id="dynamic-table"><tr><td>动态</td><td>表格</td></tr></table>';
+                '<table id="dynamic-table" style="border-collapse: collapse; width: 300px;">' +
+                '<tr><td style="border: 1px solid #ccc; padding: 10px;">动态</td><td style="border: 1px solid #ccc; padding: 10px;">表格</td></tr>' +
+                '<tr><td style="border: 1px solid #ccc; padding: 10px;">数据1</td><td style="border: 1px solid #ccc; padding: 10px;">数据2</td></tr>' +
+                '<tr><td style="border: 1px solid #ccc; padding: 10px;">数据3</td><td style="border: 1px solid #ccc; padding: 10px;">数据4</td></tr>' +
+                '</table>';
         };
     </script>
 </body>
@@ -499,14 +534,28 @@ test.describe('用户交互测试', () => {
     
     // 点击按钮添加动态表格
     await page.click('#add-table');
-    await waitForAsync();
+    await waitForAsync(1000); // 等待DOM更新
     
-    // 选择动态添加的表格
-    await selectTable(page, '#dynamic-table');
-    await waitForAsync();
+    // 获取动态表格的位置并框选
+    const table = page.locator('#dynamic-table');
+    const tableBox = await table.boundingBox();
     
-    // 检查插件是否能处理动态内容
-    const panelVisible = await page.locator('.tabular-panel').isVisible();
-    expect(panelVisible).toBe(true);
+    expect(tableBox).not.toBeNull();
+    
+    if (tableBox) {
+      // 使用 dragSelection 框选整个表格区域
+      await dragSelection(
+        page,
+        tableBox.x + 5,
+        tableBox.y + 5,
+        tableBox.x + tableBox.width - 5,
+        tableBox.y + tableBox.height - 5
+      );
+      await waitForAsync(1000);
+      
+      // 检查插件是否能处理动态内容（使用正确的选择器）
+      const panelVisible = await page.locator('.tabular-extension-panel').isVisible();
+      expect(panelVisible).toBe(true);
+    }
   });
 });
