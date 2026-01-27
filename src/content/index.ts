@@ -85,6 +85,24 @@ class Tabular {
       };
       chrome.runtime.onMessage.addListener(this.messageListener as (message: any, sender: any, sendResponse: (response?: any) => void) => void);
     }
+
+    // 监听 storage 变化（用于测试环境和其他场景）
+    if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
+      chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName === 'local') {
+          const updates: Partial<PluginSettings> = {};
+          if (changes.enabled) {
+            updates.enabled = changes.enabled.newValue;
+          }
+          if (changes.panelPosition) {
+            updates.panelPosition = changes.panelPosition.newValue;
+          }
+          if (Object.keys(updates).length > 0) {
+            this.applySettings(updates);
+          }
+        }
+      });
+    }
   }
 
   /**

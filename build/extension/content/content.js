@@ -894,6 +894,22 @@
         };
         chrome.runtime.onMessage.addListener(this.messageListener);
       }
+      if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
+        chrome.storage.onChanged.addListener((changes, areaName) => {
+          if (areaName === "local") {
+            const updates = {};
+            if (changes.enabled) {
+              updates.enabled = changes.enabled.newValue;
+            }
+            if (changes.panelPosition) {
+              updates.panelPosition = changes.panelPosition.newValue;
+            }
+            if (Object.keys(updates).length > 0) {
+              this.applySettings(updates);
+            }
+          }
+        });
+      }
     }
     /**
      * 鼠标按下事件

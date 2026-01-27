@@ -34,6 +34,13 @@ export async function createTestPage(page: Page, htmlContent: string): Promise<v
   const fs = await import('fs/promises');
   await fs.writeFile(filepath, htmlContent, 'utf-8');
   
+  // 导航到测试页面（先加载页面，让 content script 注入）
+  await page.goto(`http://localhost:3000/${filename}`);
+  await page.waitForLoadState('domcontentloaded');
+  
+  // 等待 content script 完全加载
+  await page.waitForTimeout(500);
+  
   // 开启插件功能（通过 background service worker）
   const context = page.context();
   const [background] = context.serviceWorkers();
@@ -44,12 +51,8 @@ export async function createTestPage(page: Page, htmlContent: string): Promise<v
     });
   }
   
-  // 导航到测试页面
-  await page.goto(`http://localhost:3000/${filename}`);
-  await page.waitForLoadState('domcontentloaded');
-  
-  // 等待 content script 加载和设置生效
-  await page.waitForTimeout(1000);
+  // 等待 storage 变化事件触发并生效
+  await page.waitForTimeout(500);
   
   // 清理：测试完成后删除文件（使用 page.context().on('close') 或在测试结束时手动清理）
 }
