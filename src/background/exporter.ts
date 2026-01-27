@@ -12,13 +12,9 @@
  * - 纯函数实现，无副作用
  */
 
+import type { ExportFormat } from '../shared/types';
 import { advancedClean, basicClean } from './cleaner';
 import type { CleaningRules } from './cleaner';
-
-/**
- * 导出格式类型
- */
-export type ExportFormat = 'csv' | 'excel';
 
 /**
  * 导出选项接口

@@ -13,12 +13,12 @@
  * - 架构演进：这是阶段性集中实现，未来可迁移至专用文案模块
  */
 
-import type { ExtensionMessage, RequestActionMessage, ActionResultMessage, AdvancedFeature } from '../shared/types';
+import type { ExtensionMessage, RequestActionMessage, ActionResultMessage, AdvancedFeature, ExportFormat } from '../shared/types';
 import { checkUsage, consumeUsage, record, checkTrial, evolveTrial, authorize, getAllTrials } from './usage';
 import { allow } from './pro';
 import { getSettings, updateSettings } from './settings';
 import { advancedClean, type CleaningRules } from './cleaner';
-import { toCSV, exportData, type ExportFormat } from './exporter';
+import { toCSV, exportData } from './exporter';
 
 /**
  * 消息监听器
