@@ -87,8 +87,15 @@ const DEFAULT_CONFIG: TableDetectionConfig = {
  */
 const FRAMEWORK_SIGNATURES: Record<UIFramework, FrameworkSignature> = {
   'ant-design': {
-    classPatterns: [/^ant-table/, /^ant-table-wrapper/],
-    containerSelectors: ['.ant-table-container', '.ant-table-content'],
+    classPatterns: [/^ant-table/, /^ant-table-wrapper/, /^ant-spin-nested-loading/],
+    containerSelectors: [
+      '.ant-spin-nested-loading',
+      '.ant-spin-container', 
+      '.ant-table-wrapper',
+      '.ant-table-container', 
+      '.ant-table-content',
+      '.ant-table'
+    ],
     auxiliaryRowPatterns: [/ant-table-placeholder/, /ant-table-measure-row/],
     fixedColumnPatterns: [/ant-table-cell-fix-left/, /ant-table-cell-fix-right/]
   },
@@ -155,16 +162,23 @@ const FRAMEWORK_SIGNATURES: Record<UIFramework, FrameworkSignature> = {
  * @returns 识别到的表格列表
  */
 export function scanTables(config: TableDetectionConfig = DEFAULT_CONFIG): TableInfo[] {
+  const tables: TableInfo[] = [];
+  
   try {
-    const tables: TableInfo[] = [];
     const processedTables = new WeakSet<HTMLTableElement>();  // 避免重复检测
     
-    // 1. 识别所有 <table> 元素（包括嵌套在容器中的）
+    // 1. 直接识别所有 <table> 元素
     const htmlTables = document.querySelectorAll('table');
+    
     for (const table of htmlTables) {
       try {
         // 避免重复检测
         if (processedTables.has(table)) {
+          continue;
+        }
+        
+        // 排除插件自己的 UI 元素
+        if (isPluginElement(table)) {
           continue;
         }
         
@@ -174,106 +188,167 @@ export function scanTables(config: TableDetectionConfig = DEFAULT_CONFIG): Table
           processedTables.add(table);
         }
       } catch (error) {
-        console.error('[TableDetector] Error detecting HTML table:', {
-          element: table.tagName,
-          className: table.className,
-          error: error instanceof Error ? error.message : String(error)
-        });
         // 静默失败：跳过该表格，继续识别其他表格
       }
     }
     
-    // 2. 如果启用了嵌套穿透，使用框架特征库查找嵌套表格
+    // 2. 如果启用了嵌套穿透，使用特征查找可能被隐藏的表格
     if (config.penetrateNesting) {
-      // 收集所有框架的容器选择器
-      const allContainerSelectors = new Set<string>();
-      const knownFrameworks: UIFramework[] = [
-        'ant-design', 'element-ui', 'element-plus', 'arco-design',
-        'naive-ui', 'vuetify', 'material-ui', 'bootstrap', 'semantic-ui'
-      ];
+      // 查找所有可能包含表格的容器（基于特征而非类名）
+      const potentialContainers = findPotentialTableContainers();
       
-      for (const framework of knownFrameworks) {
-        const signature = getFrameworkSignature(framework);
-        signature.containerSelectors.forEach(selector => {
-          allContainerSelectors.add(selector);
-        });
-      }
-      
-      // 遍历所有容器选择器，查找嵌套表格
-      for (const selector of allContainerSelectors) {
+      for (const container of potentialContainers) {
         try {
-          const containers = document.querySelectorAll(selector);
+          // 排除插件自己的 UI 元素
+          if (isPluginElement(container)) {
+            continue;
+          }
           
-          for (const container of containers) {
-            // 在容器内查找 <table> 元素
-            const nestedTables = container.querySelectorAll('table');
-            
-            for (const table of nestedTables) {
-              try {
-                // 避免重复检测
-                if (processedTables.has(table)) {
-                  continue;
-                }
-                
-                const tableInfo = detectHTMLTable(table, config);
-                if (tableInfo) {
-                  tables.push(tableInfo);
-                  processedTables.add(table);
-                }
-              } catch (error) {
-                console.error('[TableDetector] Error detecting nested table:', {
-                  element: table.tagName,
-                  className: table.className,
-                  containerSelector: selector,
-                  error: error instanceof Error ? error.message : String(error)
-                });
-                // 静默失败：跳过该表格，继续识别其他表格
+          // 在容器内查找 <table> 元素
+          const nestedTables = container.querySelectorAll('table');
+          
+          for (const table of nestedTables) {
+            try {
+              // 避免重复检测
+              if (processedTables.has(table)) {
+                continue;
               }
+              
+              // 排除插件自己的 UI 元素
+              if (isPluginElement(table)) {
+                continue;
+              }
+              
+              const tableInfo = detectHTMLTable(table, config);
+              if (tableInfo) {
+                tables.push(tableInfo);
+                processedTables.add(table);
+              }
+            } catch (error) {
+              // 静默失败：跳过该表格，继续识别其他表格
             }
           }
         } catch (error) {
-          console.error('[TableDetector] Error processing container selector:', {
-            selector,
-            error: error instanceof Error ? error.message : String(error)
-          });
-          // 静默失败：跳过该选择器，继续处理其他选择器
+          // 静默失败：跳过该容器，继续处理其他容器
         }
       }
     }
     
-    // 3. 识别 div/span 实现的表格
-    // 扫描所有可能的容器元素
-    const candidates = document.querySelectorAll('div, section, article');
-    for (const candidate of candidates) {
-      try {
-        // 跳过已经识别为 <table> 的元素的子元素
-        if (isInsideHTMLTable(candidate)) {
-          continue;
-        }
-        
-        const tableInfo = detectDivTable(candidate as HTMLElement, config);
-        if (tableInfo) {
-          tables.push(tableInfo);
-        }
-      } catch (error) {
-        console.error('[TableDetector] Error detecting div table:', {
-          element: candidate.tagName,
-          className: (candidate as HTMLElement).className,
-          error: error instanceof Error ? error.message : String(error)
-        });
-        // 静默失败：跳过该元素，继续识别其他元素
-      }
-    }
+    // 注意：暂时禁用 div/span 表格检测，因为误识别率太高
+    // 只检测真正的 <table> 元素
+    // 
+    // 3. 识别 div/span 实现的表格（已禁用）
+    // const candidates = document.querySelectorAll('div, section, article');
+    // for (const candidate of candidates) {
+    //   try {
+    //     if (isInsideHTMLTable(candidate)) {
+    //       continue;
+    //     }
+    //     if (isPluginElement(candidate)) {
+    //       continue;
+    //     }
+    //     const tableInfo = detectDivTable(candidate as HTMLElement, config);
+    //     if (tableInfo) {
+    //       tables.push(tableInfo);
+    //     }
+    //   } catch (error) {
+    //     // 静默失败
+    //   }
+    // }
     
     return tables;
   } catch (error) {
-    console.error('[TableDetector] Fatal error scanning tables:', {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
+    console.error('[TableDetector] Fatal error scanning tables:', error);
     // 降级策略：返回空数组
     return [];
   }
+}
+
+/**
+ * 查找可能包含表格的容器
+ * 
+ * 基于特征识别，而非写死的类名：
+ * 1. 容器应该是块级元素
+ * 2. 容器应该有合理的尺寸（不是 0x0）
+ * 3. 容器内部包含 <table> 元素
+ * 4. 容器可能有 overflow 属性（表格容器常用于滚动）
+ * 
+ * @returns 可能包含表格的容器列表
+ */
+function findPotentialTableContainers(): HTMLElement[] {
+  const containers: HTMLElement[] = [];
+  const processedElements = new WeakSet<Element>();
+  
+  // 优化：只查找包含 table 的元素，而不是遍历所有元素
+  const allTables = document.querySelectorAll('table');
+  
+  for (const table of allTables) {
+    try {
+      // 向上查找最多 10 层父元素
+      let current = table.parentElement;
+      let depth = 0;
+      
+      while (current && depth < 10) {
+        // 避免重复处理
+        if (processedElements.has(current)) {
+          break;
+        }
+        processedElements.add(current);
+        
+        // 跳过 body 和 html
+        if (current === document.body || current === document.documentElement) {
+          break;
+        }
+        
+        // 检查是否可见
+        if (!isVisible(current)) {
+          current = current.parentElement;
+          depth++;
+          continue;
+        }
+        
+        // 检查是否是块级元素
+        const style = window.getComputedStyle(current);
+        const display = style.display;
+        const isBlockLevel = /^(block|flex|grid|table|inline-block)$/.test(display);
+        
+        if (!isBlockLevel) {
+          current = current.parentElement;
+          depth++;
+          continue;
+        }
+        
+        // 检查尺寸（避免 0x0 的容器）
+        const rect = current.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) {
+          current = current.parentElement;
+          depth++;
+          continue;
+        }
+        
+        // 检查是否有 overflow 属性（表格容器的常见特征）
+        const overflow = style.overflow;
+        const overflowX = style.overflowX;
+        const overflowY = style.overflowY;
+        const hasOverflow = /auto|scroll|hidden/.test(overflow) || 
+                           /auto|scroll|hidden/.test(overflowX) || 
+                           /auto|scroll|hidden/.test(overflowY);
+        
+        // 如果有 overflow 属性，添加到结果中
+        if (hasOverflow) {
+          containers.push(current);
+        }
+        
+        current = current.parentElement;
+        depth++;
+      }
+    } catch (error) {
+      // 静默失败：跳过该元素
+      continue;
+    }
+  }
+  
+  return containers;
 }
 
 /**
@@ -309,6 +384,20 @@ export function detectHTMLTable(
     const rows = element.querySelectorAll('tr');
     
     if (rows.length === 0) {
+      return null;
+    }
+    
+    // 严格检查：至少要有一行包含 th 或 td
+    let hasValidCells = false;
+    for (const row of rows) {
+      const cells = row.querySelectorAll('td, th');
+      if (cells.length > 0) {
+        hasValidCells = true;
+        break;
+      }
+    }
+    
+    if (!hasValidCells) {
       return null;
     }
     
@@ -406,13 +495,27 @@ export function detectHTMLTable(
       }
     }
     
-    // 检查有效行数是否符合要求（排除辅助行后）
+    // 严格检查：有效行数必须 >= minRows
     if (validRowCount < config.minRows) {
       return null;
     }
     
-    // 检查列数是否符合要求
+    // 严格检查：列数必须 >= minCols
     if (maxCols < config.minCols) {
+      return null;
+    }
+    
+    // 严格检查：表格不能太小（至少 2x2）
+    if (validRowCount < 2 || maxCols < 2) {
+      return null;
+    }
+    
+    // 严格检查：表格数据不能全为空
+    const hasNonEmptyData = data.some(row => 
+      row.some(cell => cell.trim().length > 0)
+    );
+    
+    if (!hasNonEmptyData) {
       return null;
     }
     
@@ -604,29 +707,8 @@ export function injectExportButton(table: TableInfo, onClick: () => void): void 
       return;
     }
     
-    // 查找最外层可见容器（处理多层嵌套）
-    let targetContainer = table.element;
-    let current = table.element.parentElement;
-    
-    // 向上遍历最多 5 层，查找表格容器
-    for (let depth = 0; depth < 5 && current; depth++) {
-      const className = current.className;
-      
-      // 检查是否是已知的表格容器类名
-      const isTableContainer = 
-        /table-wrapper|table-container|table-content/.test(className) ||
-        /ant-table|el-table|arco-table|n-data-table|v-data-table/.test(className);
-      
-      if (isTableContainer) {
-        targetContainer = current;
-        // 继续向上查找，找到最外层容器
-      } else {
-        // 如果不是表格容器，停止向上查找
-        break;
-      }
-      
-      current = current.parentElement;
-    }
+    // 查找最外层可见容器（基于特征而非类名）
+    const targetContainer = findOutermostTableContainer(table.element);
     
     // 检查容器的定位方式，自动设置为 relative
     const computedStyle = window.getComputedStyle(targetContainer);
@@ -653,6 +735,131 @@ export function injectExportButton(table: TableInfo, onClick: () => void): void 
       error: error instanceof Error ? error.message : String(error)
     });
     // 静默失败：不影响其他功能
+  }
+}
+
+/**
+ * 查找最外层表格容器
+ * 
+ * 基于特征识别，而非写死的类名：
+ * 1. 容器必须包含当前表格元素
+ * 2. 容器的尺寸应该接近或略大于表格尺寸
+ * 3. 容器应该是块级元素（display: block/flex/grid）
+ * 4. 容器不应该包含其他无关内容（如多个表格、大量文本）
+ * 
+ * @param tableElement 表格元素
+ * @returns 最外层表格容器
+ */
+function findOutermostTableContainer(tableElement: HTMLElement): HTMLElement {
+  const tableRect = tableElement.getBoundingClientRect();
+  const tableArea = tableRect.width * tableRect.height;
+  
+  let bestContainer = tableElement;
+  let current = tableElement.parentElement;
+  
+  // 向上遍历最多 15 层
+  for (let depth = 0; depth < 15 && current; depth++) {
+    // 跳过 body 和 html
+    if (current === document.body || current === document.documentElement) {
+      break;
+    }
+    
+    // 检查是否是合适的表格容器
+    if (isTableContainer(current, tableElement, tableArea)) {
+      bestContainer = current;
+      // 继续向上查找，找到最外层容器
+    } else {
+      // 如果不符合容器特征，停止向上查找
+      break;
+    }
+    
+    current = current.parentElement;
+  }
+  
+  return bestContainer;
+}
+
+/**
+ * 判断元素是否是表格容器
+ * 
+ * 基于以下特征：
+ * 1. 尺寸特征：容器尺寸应该接近表格尺寸（允许有边距/边框）
+ * 2. 布局特征：容器应该是块级布局
+ * 3. 内容特征：容器主要内容应该是表格（不包含大量其他内容）
+ * 
+ * @param element 候选容器元素
+ * @param tableElement 表格元素
+ * @param tableArea 表格面积
+ * @returns 是否是表格容器
+ */
+function isTableContainer(
+  element: HTMLElement,
+  tableElement: HTMLElement,
+  tableArea: number
+): boolean {
+  try {
+    // 1. 检查可见性
+    if (!isVisible(element)) {
+      return false;
+    }
+    
+    // 2. 检查布局类型（必须是块级元素）
+    const style = window.getComputedStyle(element);
+    const display = style.display;
+    const isBlockLevel = /^(block|flex|grid|table|inline-block)$/.test(display);
+    
+    if (!isBlockLevel) {
+      return false;
+    }
+    
+    // 3. 检查尺寸关系
+    const containerRect = element.getBoundingClientRect();
+    const containerArea = containerRect.width * containerRect.height;
+    
+    // 容器面积不能小于表格面积
+    if (containerArea < tableArea * 0.95) {
+      return false;
+    }
+    
+    // 容器面积不应该远大于表格面积（允许 3 倍以内）
+    // 这可以过滤掉页面主容器等无关元素
+    if (containerArea > tableArea * 3) {
+      return false;
+    }
+    
+    // 4. 检查内容纯度（容器应该主要包含表格）
+    // 统计容器内的直接子元素数量
+    const directChildren = Array.from(element.children);
+    
+    // 如果容器有很多直接子元素（>10），可能不是表格容器
+    if (directChildren.length > 10) {
+      // 检查表格是否是主要内容
+      const tableIsMainContent = directChildren.some(child => 
+        child === tableElement || child.contains(tableElement)
+      );
+      
+      if (!tableIsMainContent) {
+        return false;
+      }
+    }
+    
+    // 5. 检查是否包含多个表格（如果包含多个表格，可能是页面容器）
+    const tablesInContainer = element.querySelectorAll('table');
+    if (tablesInContainer.length > 1) {
+      // 如果有多个表格，检查当前表格是否是唯一的直接子表格
+      const directTables = Array.from(directChildren).filter(child => 
+        child.tagName === 'TABLE' || child.querySelector('table')
+      );
+      
+      if (directTables.length > 1) {
+        return false;
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    // 如果检查过程出错，保守地返回 false
+    return false;
   }
 }
 
@@ -1292,16 +1499,44 @@ function isVisible(element: Element): boolean {
 }
 
 /**
- * 检查元素是否在 <table> 元素内部
+ * 检查元素是否是插件自己的 UI 元素
+ * 
+ * 插件 UI 特征：
+ * - 包含特定的类名（tabular-extension-*）
+ * - 是选择框或面板的子元素
+ * 
+ * @param element 要检查的元素
+ * @returns 是否是插件 UI 元素
  */
-function isInsideHTMLTable(element: Element): boolean {
-  let current: Element | null = element;
-  while (current) {
-    if (current.tagName === 'TABLE') {
+function isPluginElement(element: Element): boolean {
+  // 检查元素自身的类名
+  const className = element.className;
+  if (typeof className === 'string') {
+    // 插件相关的类名前缀
+    if (/^(tabular-extension|table-export-button)/.test(className)) {
       return true;
     }
+  }
+  
+  // 向上查找，检查是否在插件容器内
+  let current: Element | null = element;
+  while (current) {
+    const currentClassName = current.className;
+    if (typeof currentClassName === 'string') {
+      // 检查是否在插件的面板或选择框内
+      if (/^(tabular-extension|selection-box)/.test(currentClassName)) {
+        return true;
+      }
+    }
+    
+    // 到达 body 就停止
+    if (current === document.body) {
+      break;
+    }
+    
     current = current.parentElement;
   }
+  
   return false;
 }
 

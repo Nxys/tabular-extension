@@ -16,6 +16,7 @@
 import { Selection } from './selection';
 import { Panel } from './panel';
 import { collect, layout, format } from './extractor';
+import { scanTables, injectExportButton } from './detector';
 import type { 
   RequestActionMessage, 
   ActionResultMessage, 
@@ -43,6 +44,17 @@ class Tabular {
   private readonly handleKeydownBound = this.handleKeydown.bind(this);
   private messageListener: ((message: unknown, _sender: unknown, sendResponse: (response: unknown) => void) => void) | null = null;
   private settingsReady: Promise<void>;
+  private injectedTables = new WeakSet<HTMLElement>(); // 记录已注入按钮的表格
+  private mutationObserver: MutationObserver | null = null;
+  
+  // 智能延迟和错误处理
+  private failureCount: number = 0;
+  private fallbackMode: boolean = false;
+  private fallbackInterval: ReturnType<typeof setInterval> | null = null;
+  
+  // URL 监听（SPA 路由）
+  private currentURL: string = '';
+  private urlCheckInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     this.selection = new Selection();
@@ -255,6 +267,16 @@ class Tabular {
     if (prevEnabled && !this.settings.enabled) {
       this.selection.clear();
       this.panel.hide();
+      // 移除所有表格导出按钮
+      this.removeAllExportButtons();
+    }
+    
+    // 当被启用时扫描表格
+    if (!prevEnabled && this.settings.enabled) {
+      const delay = this.calculateSmartDelay();
+      setTimeout(() => {
+        this.scanAndInjectTableButtons();
+      }, delay);
     }
 
     if (persist && typeof chrome !== 'undefined' && chrome.storage?.local) {
@@ -345,7 +367,292 @@ class Tabular {
   /**
    * 初始化插件
    */
-  initialize(): void { }
+  initialize(): void {
+    // 等待设置加载完成后，扫描并注入表格导出按钮
+    this.settingsReady.then(() => {
+      // 只在插件启用时才扫描表格
+      if (this.settings.enabled) {
+        // 使用智能延迟替代固定 1s 延迟
+        const delay = this.calculateSmartDelay();
+        
+        setTimeout(() => {
+          this.scanAndInjectTableButtons();
+        }, delay);
+      }
+    });
+    
+    // 启动 URL 监听（SPA 路由切换，每 500ms 检查一次）
+    this.currentURL = window.location.href;
+    this.urlCheckInterval = setInterval(() => {
+      this.checkURLChange();
+    }, 500);
+    
+    // 监听 DOM 变化，动态注入按钮（处理 SPA 页面）
+    // 使用防抖避免频繁触发
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    this.mutationObserver = new MutationObserver((mutations) => {
+      // 检查是否是插件自己的 DOM 变化（避免死循环）
+      if (this.isPluginMutation(mutations)) {
+        return;
+      }
+      
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+      
+      // 从 3000ms 优化到 500ms
+      debounceTimer = setTimeout(() => {
+        this.scanAndInjectTableButtons();
+      }, 500);
+    });
+    
+    this.mutationObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+
+  /**
+   * 检查是否是插件自己的 DOM 变化
+   */
+  private isPluginMutation(mutations: MutationRecord[]): boolean {
+    return mutations.some(mutation => {
+      const target = mutation.target as Element;
+      if (target.className && typeof target.className === 'string') {
+        if (/^(tabular-extension|table-export-button)/.test(target.className)) {
+          return true;
+        }
+      }
+      for (const node of mutation.addedNodes) {
+        if (node instanceof Element) {
+          const className = node.className;
+          if (className && typeof className === 'string') {
+            if (/^(tabular-extension|table-export-button)/.test(className)) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    });
+  }
+  
+  /**
+   * 检查 URL 是否变化
+   */
+  private checkURLChange(): void {
+    const newURL = window.location.href;
+    
+    if (this.currentURL !== newURL) {
+      // 检查是否是主路由变化（忽略 hash 和 query）
+      const oldPath = new URL(this.currentURL).pathname;
+      const newPath = new URL(newURL).pathname;
+      
+      if (oldPath !== newPath) {
+        // 主路由变化：清理旧按钮，重新扫描
+        this.handleRouteChange();
+      }
+      
+      this.currentURL = newURL;
+    }
+  }
+  
+  /**
+   * 处理路由切换
+   */
+  private handleRouteChange(): void {
+    // 清理所有导出按钮
+    this.removeAllExportButtons();
+    
+    // 清空已注入表格记录
+    this.injectedTables = new WeakSet<HTMLElement>();
+    
+    // 延迟重新扫描（使用智能延迟）
+    const delay = this.calculateSmartDelay();
+    setTimeout(() => {
+      this.scanAndInjectTableButtons();
+    }, delay);
+  }
+  
+  /**
+   * 移除所有导出按钮
+   */
+  private removeAllExportButtons(): void {
+    const buttons = document.querySelectorAll('.table-export-button');
+    buttons.forEach(button => button.remove());
+  }
+  
+  /**
+   * 重新启动 MutationObserver
+   */
+  private restartMutationObserver(): void {
+    if (this.mutationObserver) {
+      this.mutationObserver.disconnect();
+    }
+    
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    this.mutationObserver = new MutationObserver((mutations) => {
+      if (this.isPluginMutation(mutations)) {
+        return;
+      }
+      
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+      
+      debounceTimer = setTimeout(() => {
+        this.scanAndInjectTableButtons();
+      }, 500);
+    });
+    
+    this.mutationObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+  
+  /**
+   * 进入降级模式（定时轮询）
+   */
+  private enterFallbackMode(): void {
+    this.fallbackMode = true;
+    
+    // 停止 MutationObserver
+    if (this.mutationObserver) {
+      this.mutationObserver.disconnect();
+    }
+    
+    // 启动定时轮询（每 5 秒）
+    this.fallbackInterval = setInterval(() => {
+      this.scanAndInjectTableButtons();
+    }, 5000);
+    
+    console.warn('[Tabular] Entered fallback mode (polling every 5s)');
+  }
+  
+  /**
+   * 退出降级模式（恢复正常）
+   */
+  private exitFallbackMode(): void {
+    this.fallbackMode = false;
+    
+    // 停止定时轮询
+    if (this.fallbackInterval) {
+      clearInterval(this.fallbackInterval);
+      this.fallbackInterval = null;
+    }
+    
+    // 重新启动 MutationObserver
+    this.restartMutationObserver();
+    
+    console.log('[Tabular] Exited fallback mode');
+  }
+  
+  /**
+   * 检测页面中的表格 UI 框架
+   * 检查 body 类名中是否包含已知框架特征
+   */
+  private detectPageFrameworks(): boolean {
+    const frameworkPatterns = [
+      /ant-table/,      // Ant Design
+      /el-table/,       // Element UI
+      /arco-table/,     // Arco Design
+      /n-data-table/,   // Naive UI
+      /v-data-table/,   // Vuetify
+      /MuiTable/        // Material-UI
+    ];
+    
+    const bodyClassName = document.body.className;
+    return frameworkPatterns.some(pattern => pattern.test(bodyClassName));
+  }
+  
+  /**
+   * 计算智能延迟时间
+   * 根据页面框架特征调整延迟：有框架 200ms，无框架 500ms
+   */
+  private calculateSmartDelay(): number {
+    const hasKnownFramework = this.detectPageFrameworks();
+    return hasKnownFramework ? 200 : 500;
+  }
+  
+  /**
+   * 扫描页面表格并注入导出按钮
+   */
+  private scanAndInjectTableButtons(): void {
+    // 检查插件是否启用
+    if (!this.settings.enabled) {
+      return;
+    }
+    
+    try {
+      const tables = scanTables();
+      
+      let injectedCount = 0;
+      for (const table of tables) {
+        // 检查是否已经注入过（使用 WeakSet）
+        if (this.injectedTables.has(table.element)) {
+          continue;
+        }
+        
+        // 检查是否已经有按钮（双重保险）
+        const existingButton = table.element.querySelector('.table-export-button');
+        if (existingButton) {
+          this.injectedTables.add(table.element);
+          continue;
+        }
+        
+        // 排除插件自己的 UI 元素（panel 内的表格）
+        if (this.panel.contains(table.element)) {
+          this.injectedTables.add(table.element);
+          continue;
+        }
+        
+        // 注入按钮
+        injectExportButton(table, async () => {
+          try {
+            // 提取表格数据
+            const tableData = table.data;
+            
+            // 发送表格导出请求到 background（不传递 exportFormat）
+            const result = await this.requestAction('table-export', {
+              table: tableData
+            });
+            
+            // 执行 UI 动作
+            this.executeUIAction(result);
+          } catch (error) {
+            console.error('[Tabular] Table export failed:', error);
+          }
+        });
+        
+        // 标记为已注入
+        this.injectedTables.add(table.element);
+        injectedCount++;
+      }
+      
+      if (injectedCount > 0) {
+        console.log('[Tabular] Injected', injectedCount, 'export buttons');
+      }
+      
+      // 成功：重置失败计数
+      this.failureCount = 0;
+      
+      // 如果处于降级模式，恢复正常模式
+      if (this.fallbackMode) {
+        this.exitFallbackMode();
+      }
+    } catch (error) {
+      console.error('[Tabular] Error scanning tables:', error);
+      
+      // 失败计数 +1
+      this.failureCount++;
+      
+      // 达到阈值（3次），进入降级模式
+      if (this.failureCount >= 3 && !this.fallbackMode) {
+        this.enterFallbackMode();
+      }
+    }
+  }
 
   /**
    * 清理资源
@@ -362,6 +669,24 @@ class Tabular {
       chrome.runtime.onMessage.removeListener(this.messageListener as (message: any, sender: any, sendResponse: (response?: unknown) => void) => void);
     }
     this.messageListener = null;
+    
+    // 断开 MutationObserver
+    if (this.mutationObserver) {
+      this.mutationObserver.disconnect();
+      this.mutationObserver = null;
+    }
+    
+    // 清理 URL 监听
+    if (this.urlCheckInterval) {
+      clearInterval(this.urlCheckInterval);
+      this.urlCheckInterval = null;
+    }
+    
+    // 清理降级模式
+    if (this.fallbackInterval) {
+      clearInterval(this.fallbackInterval);
+      this.fallbackInterval = null;
+    }
   }
 }
 

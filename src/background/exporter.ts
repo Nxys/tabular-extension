@@ -134,24 +134,29 @@ function toCSVBlob(data: string[][]): Blob {
 /**
  * 转换为 Excel 格式
  * 
- * 当前实现：使用 CSV 格式作为简化实现
- * 未来扩展：集成 SheetJS 或类似库实现真正的 Excel 格式
+ * 使用制表符分隔（TSV格式），Excel会自动识别为多列
  * 
  * 注意：
- * - Excel 可以打开 CSV 文件
+ * - 使用制表符（\t）分隔列，Excel会正确识别为多列
+ * - 转义单元格中的制表符和换行符，避免破坏格式
  * - 这是一个简化实现，满足基本需求
  * - 后续可以升级为真正的 .xlsx 格式
  * 
  * @param data - 二维数组表格数据
- * @returns Excel Blob 对象（当前为 CSV 格式）
+ * @returns Excel Blob 对象（TSV格式）
  */
 export function toExcel(data: string[][]): Blob {
-  // 当前简化实现：使用 CSV 格式
-  // Excel 可以直接打开 CSV 文件
-  const csvContent = toCSV(data);
+  // 使用制表符分隔（Excel会自动识别为多列）
+  const tsvContent = data.map(row => {
+    return row.map(field => {
+      const fieldStr = String(field);
+      // 转义制表符和换行符，避免破坏格式
+      return fieldStr.replace(/\t/g, ' ').replace(/\n/g, ' ').replace(/\r/g, '');
+    }).join('\t');  // 使用制表符分隔
+  }).join('\r\n') + '\r\n';
   
   // 使用 Excel 兼容的 MIME 类型
-  return new Blob([csvContent], { 
+  return new Blob([tsvContent], { 
     type: 'application/vnd.ms-excel;charset=utf-8;' 
   });
 }

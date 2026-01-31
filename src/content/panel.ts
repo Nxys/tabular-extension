@@ -590,11 +590,9 @@ export class Panel {
     const rulesContainer = document.createElement('div');
     rulesContainer.className = `${CSS_CLASS_PREFIX}-dialog-rules`;
     
-    // 规则选项
+    // 规则选项（重构后）
     const rules = [
-      { id: 'removeEmptyLines', label: '去除空行' },
-      { id: 'mergeMultipleLines', label: '合并多行（使用自定义分隔符）' },
-      { id: 'mergeToSingleLine', label: '合并为一行（使用空格分隔）' },
+      { id: 'mergeToSingleLine', label: '合并为一行' },
       { id: 'removeDuplicates', label: '去除重复行' }
     ];
     
@@ -618,33 +616,12 @@ export class Panel {
       rulesContainer.appendChild(ruleItem);
     });
     
-    // 添加互斥逻辑：当选中"合并为一行"时，取消"合并多行"
-    checkboxes.mergeToSingleLine.addEventListener('change', () => {
-      if (checkboxes.mergeToSingleLine.checked) {
-        checkboxes.mergeMultipleLines.checked = false;
-        separatorInput.disabled = true;
-        separatorInput.style.opacity = '0.5';
-      } else {
-        separatorInput.disabled = false;
-        separatorInput.style.opacity = '1';
-      }
-    });
-    
-    // 添加互斥逻辑：当选中"合并多行"时，取消"合并为一行"
-    checkboxes.mergeMultipleLines.addEventListener('change', () => {
-      if (checkboxes.mergeMultipleLines.checked) {
-        checkboxes.mergeToSingleLine.checked = false;
-        separatorInput.disabled = false;
-        separatorInput.style.opacity = '1';
-      }
-    });
-    
-    // 自定义分隔符选项
+    // 自定义分隔符选项（始终可用）
     const separatorItem = document.createElement('div');
     separatorItem.className = `${CSS_CLASS_PREFIX}-dialog-separator-item`;
     
     const separatorLabel = document.createElement('label');
-    separatorLabel.textContent = '自定义分隔符：';
+    separatorLabel.textContent = '自定义分隔符（可选）：';
     
     const separatorInput = document.createElement('input');
     separatorInput.type = 'text';
@@ -680,20 +657,17 @@ export class Panel {
     confirmBtn.onclick = () => {
       // 收集选中的规则
       const selectedRules = {
-        removeEmptyLines: checkboxes.removeEmptyLines.checked,
-        mergeMultipleLines: checkboxes.mergeMultipleLines.checked,
         mergeToSingleLine: checkboxes.mergeToSingleLine.checked,
-        removeDuplicates: checkboxes.removeDuplicates.checked,
-        customSeparator: separatorInput.value || undefined
+        customSeparator: separatorInput.value || undefined,
+        removeDuplicates: checkboxes.removeDuplicates.checked
       };
       
       // 通过回调通知 content 发送请求
-      // 消息格式：{ text, cleaningRules, operation, exportFormat }
       if (this.onActionRequest) {
         this.onActionRequest('advanced-clean', {
           text: textToClean,
           cleaningRules: selectedRules,
-          operation: 'copy'  // 默认为复制操作
+          operation: 'copy'
         });
       }
       

@@ -434,6 +434,7 @@ function parseTextToTable(text: string): string[][] {
  * 功能：
  * - 检查 Pro 权限或试用次数
  * - 解析文本为表格数据或使用提供的表格数据
+ * - 如果没有指定格式，返回 SHOW_EXPORT_DIALOG 让用户选择
  * - 应用清洗规则（如果选择）
  * - 生成导出文件 Blob
  * - 触发浏览器下载
@@ -489,6 +490,19 @@ async function handleTableExport(data: unknown): Promise<ActionResultMessage['pa
         uiAction: 'SHOW_RESULT_PANEL',
         uiData: {
           message: '导出失败：未提供有效的数据'
+        }
+      };
+    }
+    
+    // 如果没有指定格式，返回 SHOW_EXPORT_DIALOG 让用户选择
+    if (!payload.format && !payload.exportFormat) {
+      return {
+        status: 'ok',
+        uiAction: 'SHOW_EXPORT_DIALOG',
+        data: tableData,
+        uiData: {
+          text: tableData.map(row => row.join('\t')).join('\n'),
+          exportFormats: ['csv', 'excel']
         }
       };
     }

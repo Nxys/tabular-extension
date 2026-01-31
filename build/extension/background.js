@@ -335,14 +335,11 @@ function basicClean(data) {
 function advancedClean(data, rules) {
   try {
     let result = [...data];
-    if (rules.removeEmptyLines) {
-      result = result.filter((line) => line.trim().length > 0);
-    }
     if (rules.mergeToSingleLine) {
-      result = [result.join(" ")];
-    } else if (rules.mergeMultipleLines) {
-      const separator = rules.customSeparator !== void 0 ? rules.customSeparator : "\n";
+      const separator = rules.customSeparator !== void 0 ? rules.customSeparator : " ";
       result = [result.join(separator)];
+    } else if (rules.customSeparator !== void 0) {
+      result = [result.join(rules.customSeparator)];
     }
     if (rules.removeDuplicates) {
       const seen = /* @__PURE__ */ new Set();
@@ -412,8 +409,13 @@ function toCSVBlob(data) {
   return new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
 }
 function toExcel(data) {
-  const csvContent = toCSV(data);
-  return new Blob([csvContent], {
+  const tsvContent = data.map((row) => {
+    return row.map((field) => {
+      const fieldStr = String(field);
+      return fieldStr.replace(/\t/g, " ").replace(/\n/g, " ").replace(/\r/g, "");
+    }).join("	");
+  }).join("\r\n") + "\r\n";
+  return new Blob([tsvContent], {
     type: "application/vnd.ms-excel;charset=utf-8;"
   });
 }
@@ -702,6 +704,17 @@ async function handleTableExport(data) {
         uiAction: "SHOW_RESULT_PANEL",
         uiData: {
           message: "\u5BFC\u51FA\u5931\u8D25\uFF1A\u672A\u63D0\u4F9B\u6709\u6548\u7684\u6570\u636E"
+        }
+      };
+    }
+    if (!payload.format && !payload.exportFormat) {
+      return {
+        status: "ok",
+        uiAction: "SHOW_EXPORT_DIALOG",
+        data: tableData,
+        uiData: {
+          text: tableData.map((row) => row.join("	")).join("\n"),
+          exportFormats: ["csv", "excel"]
         }
       };
     }

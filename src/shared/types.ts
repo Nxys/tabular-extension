@@ -96,10 +96,8 @@ export type ExportFormat = 'csv' | 'excel';
  * 清洗规则
  */
 export interface CleaningRules {
-  removeEmptyLines: boolean;      // 去空行
-  mergeMultipleLines: boolean;    // 合并多行
-  customSeparator?: string;       // 自定义分隔符
   mergeToSingleLine: boolean;     // 合并为一行
+  customSeparator?: string;       // 自定义分隔符（始终适用）
   removeDuplicates: boolean;      // 去重
 }
 

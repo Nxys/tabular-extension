@@ -515,9 +515,7 @@
       const rulesContainer = document.createElement("div");
       rulesContainer.className = `${CSS_CLASS_PREFIX}-dialog-rules`;
       const rules = [
-        { id: "removeEmptyLines", label: "\u53BB\u9664\u7A7A\u884C" },
-        { id: "mergeMultipleLines", label: "\u5408\u5E76\u591A\u884C\uFF08\u4F7F\u7528\u81EA\u5B9A\u4E49\u5206\u9694\u7B26\uFF09" },
-        { id: "mergeToSingleLine", label: "\u5408\u5E76\u4E3A\u4E00\u884C\uFF08\u4F7F\u7528\u7A7A\u683C\u5206\u9694\uFF09" },
+        { id: "mergeToSingleLine", label: "\u5408\u5E76\u4E3A\u4E00\u884C" },
         { id: "removeDuplicates", label: "\u53BB\u9664\u91CD\u590D\u884C" }
       ];
       const checkboxes = {};
@@ -535,27 +533,10 @@
         ruleItem.appendChild(labelText);
         rulesContainer.appendChild(ruleItem);
       });
-      checkboxes.mergeToSingleLine.addEventListener("change", () => {
-        if (checkboxes.mergeToSingleLine.checked) {
-          checkboxes.mergeMultipleLines.checked = false;
-          separatorInput.disabled = true;
-          separatorInput.style.opacity = "0.5";
-        } else {
-          separatorInput.disabled = false;
-          separatorInput.style.opacity = "1";
-        }
-      });
-      checkboxes.mergeMultipleLines.addEventListener("change", () => {
-        if (checkboxes.mergeMultipleLines.checked) {
-          checkboxes.mergeToSingleLine.checked = false;
-          separatorInput.disabled = false;
-          separatorInput.style.opacity = "1";
-        }
-      });
       const separatorItem = document.createElement("div");
       separatorItem.className = `${CSS_CLASS_PREFIX}-dialog-separator-item`;
       const separatorLabel = document.createElement("label");
-      separatorLabel.textContent = "\u81EA\u5B9A\u4E49\u5206\u9694\u7B26\uFF1A";
+      separatorLabel.textContent = "\u81EA\u5B9A\u4E49\u5206\u9694\u7B26\uFF08\u53EF\u9009\uFF09\uFF1A";
       const separatorInput = document.createElement("input");
       separatorInput.type = "text";
       separatorInput.className = `${CSS_CLASS_PREFIX}-dialog-separator-input`;
@@ -581,18 +562,15 @@
       confirmBtn.textContent = "\u5E94\u7528\u6E05\u6D17";
       confirmBtn.onclick = () => {
         const selectedRules = {
-          removeEmptyLines: checkboxes.removeEmptyLines.checked,
-          mergeMultipleLines: checkboxes.mergeMultipleLines.checked,
           mergeToSingleLine: checkboxes.mergeToSingleLine.checked,
-          removeDuplicates: checkboxes.removeDuplicates.checked,
-          customSeparator: separatorInput.value || void 0
+          customSeparator: separatorInput.value || void 0,
+          removeDuplicates: checkboxes.removeDuplicates.checked
         };
         if (this.onActionRequest) {
           this.onActionRequest("advanced-clean", {
             text: textToClean,
             cleaningRules: selectedRules,
             operation: "copy"
-            // 默认为复制操作
           });
         }
         overlay.remove();
@@ -726,7 +704,7 @@
   // src/content/extractor.ts
   function collect(selectionRect) {
     const items = [];
-    const visibilityCache = /* @__PURE__ */ new Map();
+    const visibilityCache2 = /* @__PURE__ */ new Map();
     const walker = document.createTreeWalker(
       document.body,
       NodeFilter.SHOW_TEXT,
@@ -735,10 +713,10 @@
           if (!node2.textContent?.trim()) return NodeFilter.FILTER_REJECT;
           const parent = node2.parentElement;
           if (!parent) return NodeFilter.FILTER_REJECT;
-          let visible = visibilityCache.get(parent);
+          let visible = visibilityCache2.get(parent);
           if (visible === void 0) {
             visible = isVisible(parent);
-            visibilityCache.set(parent, visible);
+            visibilityCache2.set(parent, visible);
           }
           return visible ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
         }
@@ -841,6 +819,740 @@
     }
   }
 
+  // src/content/detector.ts
+  var DEFAULT_CONFIG = {
+    minRows: 1,
+    minCols: 2,
+    alignmentThreshold: 5,
+    gridGapTolerance: 10,
+    detectEmptyTables: true,
+    filterAuxiliaryRows: true,
+    detectFixedColumns: true,
+    penetrateNesting: true
+  };
+  var FRAMEWORK_SIGNATURES = {
+    "ant-design": {
+      classPatterns: [/^ant-table/, /^ant-table-wrapper/, /^ant-spin-nested-loading/],
+      containerSelectors: [
+        ".ant-spin-nested-loading",
+        ".ant-spin-container",
+        ".ant-table-wrapper",
+        ".ant-table-container",
+        ".ant-table-content",
+        ".ant-table"
+      ],
+      auxiliaryRowPatterns: [/ant-table-placeholder/, /ant-table-measure-row/],
+      fixedColumnPatterns: [/ant-table-cell-fix-left/, /ant-table-cell-fix-right/]
+    },
+    "element-plus": {
+      classPatterns: [/^el-table__inner-wrapper/, /^el-table__body-wrapper/],
+      containerSelectors: [".el-table__body-wrapper", ".el-table__inner-wrapper"],
+      auxiliaryRowPatterns: [/el-table__empty-text/],
+      fixedColumnPatterns: [/el-table__fixed/, /is-fixed/]
+    },
+    "element-ui": {
+      classPatterns: [/^el-table(?!__)/, /^el-table__(?!inner-wrapper|body-wrapper)/],
+      containerSelectors: [".el-table__body-wrapper", ".el-table__header-wrapper"],
+      auxiliaryRowPatterns: [/el-table__empty-block/],
+      fixedColumnPatterns: [/el-table-fixed-column/, /is-fixed/]
+    },
+    "arco-design": {
+      classPatterns: [/^arco-table/, /^arco-table-/],
+      containerSelectors: [".arco-table-container", ".arco-table-content"],
+      auxiliaryRowPatterns: [/arco-table-empty/, /arco-table-tr-measure/],
+      fixedColumnPatterns: [/arco-table-col-fixed-left/, /arco-table-col-fixed-right/]
+    },
+    "naive-ui": {
+      classPatterns: [/^n-data-table/, /^n-table/],
+      containerSelectors: [".n-data-table-wrapper", ".n-data-table-base-table"],
+      auxiliaryRowPatterns: [/n-data-table-empty/],
+      fixedColumnPatterns: [/n-data-table-td--fixed-left/, /n-data-table-td--fixed-right/]
+    },
+    "vuetify": {
+      classPatterns: [/^v-data-table/, /^v-table/],
+      containerSelectors: [".v-data-table__wrapper", ".v-table__wrapper"],
+      auxiliaryRowPatterns: [/v-data-table__empty-wrapper/],
+      fixedColumnPatterns: [/v-data-table__td--fixed/]
+    },
+    "material-ui": {
+      classPatterns: [/^MuiTable/, /^MuiDataGrid/],
+      containerSelectors: [".MuiTable-root", ".MuiDataGrid-root"],
+      auxiliaryRowPatterns: [/MuiTableRow-empty/],
+      fixedColumnPatterns: [/MuiTableCell--stickyHeader/, /MuiDataGrid-cell--pinnedLeft/]
+    },
+    "bootstrap": {
+      classPatterns: [/^table/, /^table-/],
+      containerSelectors: [".table-responsive"],
+      auxiliaryRowPatterns: [],
+      fixedColumnPatterns: [/table-fixed/]
+    },
+    "semantic-ui": {
+      classPatterns: [/^ui\.table/],
+      containerSelectors: [".ui.table"],
+      auxiliaryRowPatterns: [],
+      fixedColumnPatterns: [/fixed/]
+    },
+    "unknown": {
+      classPatterns: [],
+      containerSelectors: [],
+      auxiliaryRowPatterns: [],
+      fixedColumnPatterns: []
+    }
+  };
+  function scanTables(config = DEFAULT_CONFIG) {
+    const tables = [];
+    try {
+      const processedTables = /* @__PURE__ */ new WeakSet();
+      const htmlTables = document.querySelectorAll("table");
+      for (const table of htmlTables) {
+        try {
+          if (processedTables.has(table)) {
+            continue;
+          }
+          if (isPluginElement(table)) {
+            continue;
+          }
+          const tableInfo = detectHTMLTable(table, config);
+          if (tableInfo) {
+            tables.push(tableInfo);
+            processedTables.add(table);
+          }
+        } catch (error) {
+        }
+      }
+      if (config.penetrateNesting) {
+        const potentialContainers = findPotentialTableContainers();
+        for (const container of potentialContainers) {
+          try {
+            if (isPluginElement(container)) {
+              continue;
+            }
+            const nestedTables = container.querySelectorAll("table");
+            for (const table of nestedTables) {
+              try {
+                if (processedTables.has(table)) {
+                  continue;
+                }
+                if (isPluginElement(table)) {
+                  continue;
+                }
+                const tableInfo = detectHTMLTable(table, config);
+                if (tableInfo) {
+                  tables.push(tableInfo);
+                  processedTables.add(table);
+                }
+              } catch (error) {
+              }
+            }
+          } catch (error) {
+          }
+        }
+      }
+      return tables;
+    } catch (error) {
+      console.error("[TableDetector] Fatal error scanning tables:", error);
+      return [];
+    }
+  }
+  function findPotentialTableContainers() {
+    const containers = [];
+    const processedElements = /* @__PURE__ */ new WeakSet();
+    const allTables = document.querySelectorAll("table");
+    for (const table of allTables) {
+      try {
+        let current = table.parentElement;
+        let depth = 0;
+        while (current && depth < 10) {
+          if (processedElements.has(current)) {
+            break;
+          }
+          processedElements.add(current);
+          if (current === document.body || current === document.documentElement) {
+            break;
+          }
+          if (!isVisible2(current)) {
+            current = current.parentElement;
+            depth++;
+            continue;
+          }
+          const style = window.getComputedStyle(current);
+          const display = style.display;
+          const isBlockLevel = /^(block|flex|grid|table|inline-block)$/.test(display);
+          if (!isBlockLevel) {
+            current = current.parentElement;
+            depth++;
+            continue;
+          }
+          const rect = current.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) {
+            current = current.parentElement;
+            depth++;
+            continue;
+          }
+          const overflow = style.overflow;
+          const overflowX = style.overflowX;
+          const overflowY = style.overflowY;
+          const hasOverflow = /auto|scroll|hidden/.test(overflow) || /auto|scroll|hidden/.test(overflowX) || /auto|scroll|hidden/.test(overflowY);
+          if (hasOverflow) {
+            containers.push(current);
+          }
+          current = current.parentElement;
+          depth++;
+        }
+      } catch (error) {
+        continue;
+      }
+    }
+    return containers;
+  }
+  function detectHTMLTable(element, config = DEFAULT_CONFIG) {
+    try {
+      if (!isVisible2(element)) {
+        return null;
+      }
+      const framework = detectFramework(element);
+      let fixedColumns = [];
+      let hasFixedColumns = false;
+      if (config.detectFixedColumns) {
+        fixedColumns = detectFixedColumns(element, framework);
+        hasFixedColumns = fixedColumns.length > 0;
+      }
+      const data = [];
+      const rows = element.querySelectorAll("tr");
+      if (rows.length === 0) {
+        return null;
+      }
+      let hasValidCells = false;
+      for (const row of rows) {
+        const cells = row.querySelectorAll("td, th");
+        if (cells.length > 0) {
+          hasValidCells = true;
+          break;
+        }
+      }
+      if (!hasValidCells) {
+        return null;
+      }
+      let maxCols = 0;
+      let validRowCount = 0;
+      let hasDataRows = false;
+      const mergedCells = /* @__PURE__ */ new Map();
+      let currentRowIndex = 0;
+      for (const row of rows) {
+        if (config.filterAuxiliaryRows) {
+          const auxiliaryType = isAuxiliaryRow(row, framework);
+          if (auxiliaryType !== null) {
+            continue;
+          }
+        }
+        const cells = row.querySelectorAll("td, th");
+        let rowData = [];
+        if (hasFixedColumns) {
+          rowData = extractRowDataWithFixedColumns(cells, fixedColumns);
+        } else {
+          let colIndex = 0;
+          for (const cell of cells) {
+            const htmlCell = cell;
+            while (mergedCells.get(currentRowIndex)?.has(colIndex)) {
+              const mergedText = mergedCells.get(currentRowIndex)?.get(colIndex) || "";
+              rowData.push(mergedText);
+              colIndex++;
+            }
+            const text = extractCellText(cell);
+            const colspan = parseInt(htmlCell.getAttribute("colspan") || "1", 10);
+            const rowspan = parseInt(htmlCell.getAttribute("rowspan") || "1", 10);
+            rowData.push(text);
+            for (let i = 1; i < colspan; i++) {
+              rowData.push("");
+            }
+            if (rowspan > 1) {
+              for (let r = 1; r < rowspan; r++) {
+                const targetRowIndex = currentRowIndex + r;
+                if (!mergedCells.has(targetRowIndex)) {
+                  mergedCells.set(targetRowIndex, /* @__PURE__ */ new Map());
+                }
+                for (let c = 0; c < colspan; c++) {
+                  mergedCells.get(targetRowIndex)?.set(colIndex + c, text);
+                }
+              }
+            }
+            colIndex += colspan;
+          }
+          while (mergedCells.get(currentRowIndex)?.has(colIndex)) {
+            const mergedText = mergedCells.get(currentRowIndex)?.get(colIndex) || "";
+            rowData.push(mergedText);
+            colIndex++;
+          }
+        }
+        data.push(rowData);
+        maxCols = Math.max(maxCols, rowData.length);
+        validRowCount++;
+        currentRowIndex++;
+        const dataCells = row.querySelectorAll("td");
+        if (dataCells.length > 0) {
+          hasDataRows = true;
+        }
+      }
+      if (validRowCount < config.minRows) {
+        return null;
+      }
+      if (maxCols < config.minCols) {
+        return null;
+      }
+      if (validRowCount < 2 || maxCols < 2) {
+        return null;
+      }
+      const hasNonEmptyData = data.some(
+        (row) => row.some((cell) => cell.trim().length > 0)
+      );
+      if (!hasNonEmptyData) {
+        return null;
+      }
+      const frameworkRules = applyFrameworkRules(element, framework);
+      let isEmpty = false;
+      if (config.detectEmptyTables) {
+        isEmpty = !hasDataRows || (frameworkRules.isEmpty ?? false);
+      }
+      const finalHasFixedColumns = hasFixedColumns || (frameworkRules.hasFixedColumns ?? false);
+      return {
+        element,
+        type: "html-table",
+        rows: validRowCount,
+        // 使用有效行数（排除辅助行）
+        cols: maxCols,
+        data,
+        boundingRect: element.getBoundingClientRect(),
+        isEmpty,
+        hasFixedColumns: finalHasFixedColumns,
+        framework: frameworkRules.framework ?? framework
+      };
+    } catch (error) {
+      console.error("[TableDetector] Error detecting HTML table:", {
+        element: element?.tagName || "unknown",
+        className: element?.className || "unknown",
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : void 0
+      });
+      return null;
+    }
+  }
+  function injectExportButton(table, onClick) {
+    try {
+      const existingButton = table.element.querySelector(".table-export-button");
+      if (existingButton) {
+        return;
+      }
+      const targetContainer = findOutermostTableContainer(table.element);
+      const computedStyle = window.getComputedStyle(targetContainer);
+      if (computedStyle.position === "static") {
+        targetContainer.style.position = "relative";
+      }
+      const button = document.createElement("button");
+      button.className = "table-export-button";
+      button.innerHTML = "\u{1F4CA}";
+      button.title = "\u5BFC\u51FA\u8868\u683C";
+      button.onclick = (e) => {
+        e.stopPropagation();
+        onClick();
+      };
+      targetContainer.appendChild(button);
+    } catch (error) {
+      console.error("[TableDetector] Error injecting export button:", {
+        element: table?.element?.tagName || "unknown",
+        className: table?.element?.className || "unknown",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+  function findOutermostTableContainer(tableElement) {
+    const tableRect = tableElement.getBoundingClientRect();
+    const tableArea = tableRect.width * tableRect.height;
+    let bestContainer = tableElement;
+    let current = tableElement.parentElement;
+    for (let depth = 0; depth < 15 && current; depth++) {
+      if (current === document.body || current === document.documentElement) {
+        break;
+      }
+      if (isTableContainer(current, tableElement, tableArea)) {
+        bestContainer = current;
+      } else {
+        break;
+      }
+      current = current.parentElement;
+    }
+    return bestContainer;
+  }
+  function isTableContainer(element, tableElement, tableArea) {
+    try {
+      if (!isVisible2(element)) {
+        return false;
+      }
+      const style = window.getComputedStyle(element);
+      const display = style.display;
+      const isBlockLevel = /^(block|flex|grid|table|inline-block)$/.test(display);
+      if (!isBlockLevel) {
+        return false;
+      }
+      const containerRect = element.getBoundingClientRect();
+      const containerArea = containerRect.width * containerRect.height;
+      if (containerArea < tableArea * 0.95) {
+        return false;
+      }
+      if (containerArea > tableArea * 3) {
+        return false;
+      }
+      const directChildren = Array.from(element.children);
+      if (directChildren.length > 10) {
+        const tableIsMainContent = directChildren.some(
+          (child) => child === tableElement || child.contains(tableElement)
+        );
+        if (!tableIsMainContent) {
+          return false;
+        }
+      }
+      const tablesInContainer = element.querySelectorAll("table");
+      if (tablesInContainer.length > 1) {
+        const directTables = Array.from(directChildren).filter(
+          (child) => child.tagName === "TABLE" || child.querySelector("table")
+        );
+        if (directTables.length > 1) {
+          return false;
+        }
+      }
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+  function extractRowDataWithFixedColumns(cells, fixedColumns) {
+    if (fixedColumns.length === 0) {
+      const rowData = [];
+      for (const cell of cells) {
+        const text = extractCellText(cell);
+        rowData.push(text);
+      }
+      return rowData;
+    }
+    const cellInfos = [];
+    const fixedColumnIndices = new Set(fixedColumns.map((fc) => fc.index));
+    cells.forEach((cell, index) => {
+      const htmlCell = cell;
+      const text = extractCellText(cell);
+      const rect = htmlCell.getBoundingClientRect();
+      const isFixed = fixedColumnIndices.has(index);
+      cellInfos.push({
+        index,
+        text,
+        x: rect.left,
+        isFixed,
+        position: isFixed ? fixedColumns.find((fc) => fc.index === index)?.position : void 0
+      });
+    });
+    const deduplicatedCells = [];
+    const processedIndices = /* @__PURE__ */ new Set();
+    for (let i = 0; i < cellInfos.length; i++) {
+      if (processedIndices.has(i)) {
+        continue;
+      }
+      const cell = cellInfos[i];
+      const duplicates = [];
+      for (let j = i + 1; j < cellInfos.length; j++) {
+        if (processedIndices.has(j)) {
+          continue;
+        }
+        const otherCell = cellInfos[j];
+        if (cell.text === otherCell.text && Math.abs(cell.x - otherCell.x) < 10) {
+          duplicates.push(j);
+        }
+      }
+      if (duplicates.length > 0) {
+        const allDuplicates = [i, ...duplicates];
+        const fixedIndex = allDuplicates.find((idx) => cellInfos[idx].isFixed);
+        const keepIndex = fixedIndex !== void 0 ? fixedIndex : i;
+        allDuplicates.forEach((idx) => {
+          if (idx !== keepIndex) {
+            processedIndices.add(idx);
+          }
+        });
+        deduplicatedCells.push(cellInfos[keepIndex]);
+        processedIndices.add(keepIndex);
+      } else {
+        deduplicatedCells.push(cell);
+        processedIndices.add(i);
+      }
+    }
+    deduplicatedCells.sort((a, b) => a.x - b.x);
+    return deduplicatedCells.map((cell) => cell.text);
+  }
+  function detectFixedColumns(table, framework) {
+    const fixedColumns = [];
+    try {
+      const firstRow = table.querySelector("tr");
+      if (!firstRow) {
+        return fixedColumns;
+      }
+      const cells = firstRow.querySelectorAll("th, td");
+      let fixedColumnPatterns = [];
+      if (framework && framework !== "unknown") {
+        const signature = getFrameworkSignature(framework);
+        fixedColumnPatterns = signature.fixedColumnPatterns;
+      } else {
+        const allPatterns = [];
+        const knownFrameworks = [
+          "ant-design",
+          "element-ui",
+          "element-plus",
+          "arco-design",
+          "naive-ui",
+          "vuetify",
+          "material-ui",
+          "bootstrap",
+          "semantic-ui"
+        ];
+        for (const fw of knownFrameworks) {
+          const sig = getFrameworkSignature(fw);
+          allPatterns.push(...sig.fixedColumnPatterns);
+        }
+        fixedColumnPatterns = allPatterns;
+      }
+      cells.forEach((cell, index) => {
+        const htmlCell = cell;
+        const className = htmlCell.className;
+        const computedStyle = window.getComputedStyle(htmlCell);
+        let isFixed = false;
+        let position = "left";
+        if (computedStyle.position === "sticky" || computedStyle.position === "fixed") {
+          isFixed = true;
+          const left = computedStyle.left;
+          const right = computedStyle.right;
+          if (right && right !== "auto" && (!left || left === "auto")) {
+            position = "right";
+          } else {
+            position = "left";
+          }
+        }
+        if (!isFixed && fixedColumnPatterns.length > 0) {
+          for (const pattern of fixedColumnPatterns) {
+            if (pattern.test(className)) {
+              isFixed = true;
+              if (className.includes("right") || className.includes("Right")) {
+                position = "right";
+              } else {
+                position = "left";
+              }
+              break;
+            }
+          }
+        }
+        if (isFixed) {
+          fixedColumns.push({
+            index,
+            position,
+            element: htmlCell
+          });
+        }
+      });
+      fixedColumns.sort((a, b) => a.index - b.index);
+    } catch (error) {
+      console.error("[TableDetector] Error detecting fixed columns:", error);
+    }
+    return fixedColumns;
+  }
+  function isAuxiliaryRow(row, framework) {
+    if (row.getAttribute("aria-hidden") === "true") {
+      return "hidden";
+    }
+    const className = row.className;
+    if (framework && framework !== "unknown") {
+      const signature = getFrameworkSignature(framework);
+      for (const pattern of signature.auxiliaryRowPatterns) {
+        if (pattern.test(className)) {
+          if (className.includes("placeholder") || className.includes("empty")) {
+            return "placeholder";
+          }
+          if (className.includes("measure")) {
+            return "measure";
+          }
+          return "placeholder";
+        }
+      }
+    }
+    if (/placeholder|empty-row|no-data/i.test(className)) {
+      return "placeholder";
+    }
+    if (/measure|sizing|layout-row/i.test(className)) {
+      return "measure";
+    }
+    const cells = row.querySelectorAll("td");
+    if (cells.length > 0) {
+      if (cells.length === 1) {
+        const text = cells[0].textContent?.trim() || "";
+        if (/^(暂无数据|无数据|没有数据|no data|empty|no records|no results)$/i.test(text)) {
+          return "placeholder";
+        }
+      }
+    }
+    if (typeof process !== "undefined" && false) {
+      return null;
+    }
+    const rect = row.getBoundingClientRect();
+    if (rect.height === 0 && rect.width > 0) {
+      return "zero-height";
+    }
+    return null;
+  }
+  function detectFramework(element) {
+    let current = element;
+    for (let depth = 0; depth < 10 && current; depth++) {
+      const className = current.className;
+      if (!className || typeof className !== "string") {
+        current = current.parentElement;
+        continue;
+      }
+      const frameworkOrder = [
+        "ant-design",
+        "element-plus",
+        // 更具体，优先检查
+        "element-ui",
+        "arco-design",
+        "naive-ui",
+        "vuetify",
+        "material-ui",
+        "bootstrap",
+        "semantic-ui"
+      ];
+      for (const framework of frameworkOrder) {
+        const signature = FRAMEWORK_SIGNATURES[framework];
+        for (const pattern of signature.classPatterns) {
+          if (pattern.test(className)) {
+            return framework;
+          }
+        }
+      }
+      current = current.parentElement;
+    }
+    return "unknown";
+  }
+  function getFrameworkSignature(framework) {
+    return FRAMEWORK_SIGNATURES[framework];
+  }
+  function applyFrameworkRules(table, framework) {
+    const result = {
+      framework
+    };
+    if (framework === "unknown") {
+      return result;
+    }
+    const signature = getFrameworkSignature(framework);
+    if (signature.auxiliaryRowPatterns.length > 0) {
+      const rows = table.querySelectorAll("tr");
+      let hasDataRows = false;
+      let hasAuxiliaryRows = false;
+      for (const row of rows) {
+        const rowClassName = row.className;
+        const isAuxiliary = signature.auxiliaryRowPatterns.some(
+          (pattern) => pattern.test(rowClassName)
+        );
+        if (isAuxiliary) {
+          hasAuxiliaryRows = true;
+          continue;
+        }
+        const cells = row.querySelectorAll("td");
+        if (cells.length > 0) {
+          for (const cell of cells) {
+            const text = cell.textContent?.trim() || "";
+            if (text && !text.match(/暂无数据|无数据|no data|empty/i)) {
+              hasDataRows = true;
+              break;
+            }
+          }
+        }
+        if (hasDataRows) break;
+      }
+      result.isEmpty = hasAuxiliaryRows && !hasDataRows;
+    }
+    if (signature.fixedColumnPatterns.length > 0) {
+      const cells = table.querySelectorAll("td, th");
+      for (const cell of cells) {
+        const cellClassName = cell.className;
+        const hasFixedColumn = signature.fixedColumnPatterns.some(
+          (pattern) => pattern.test(cellClassName)
+        );
+        if (hasFixedColumn) {
+          result.hasFixedColumns = true;
+          break;
+        }
+      }
+    }
+    return result;
+  }
+  function extractCellText(cell) {
+    let text = cell.textContent || "";
+    text = text.replace(/\s+/g, " ");
+    text = text.trim();
+    return text;
+  }
+  var visibilityCache = /* @__PURE__ */ new WeakMap();
+  function isVisible2(element) {
+    const cached = visibilityCache.get(element);
+    if (cached !== void 0) {
+      return cached;
+    }
+    const style = window.getComputedStyle(element);
+    if (style.display === "none") {
+      visibilityCache.set(element, false);
+      return false;
+    }
+    if (style.visibility === "hidden") {
+      visibilityCache.set(element, false);
+      return false;
+    }
+    if (style.opacity === "0") {
+      visibilityCache.set(element, false);
+      return false;
+    }
+    const rect = element.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      if (typeof process !== "undefined" && false) {
+      } else {
+        visibilityCache.set(element, false);
+        return false;
+      }
+    }
+    const parent = element.parentElement;
+    if (parent && parent !== document.body) {
+      const parentVisible = isVisible2(parent);
+      if (!parentVisible) {
+        visibilityCache.set(element, false);
+        return false;
+      }
+    }
+    visibilityCache.set(element, true);
+    return true;
+  }
+  function isPluginElement(element) {
+    const className = element.className;
+    if (typeof className === "string") {
+      if (/^(tabular-extension|table-export-button)/.test(className)) {
+        return true;
+      }
+    }
+    let current = element;
+    while (current) {
+      const currentClassName = current.className;
+      if (typeof currentClassName === "string") {
+        if (/^(tabular-extension|selection-box)/.test(currentClassName)) {
+          return true;
+        }
+      }
+      if (current === document.body) {
+        break;
+      }
+      current = current.parentElement;
+    }
+    return false;
+  }
+
   // src/content/index.ts
   var Tabular = class {
     selection;
@@ -858,6 +1570,16 @@
     handleKeydownBound = this.handleKeydown.bind(this);
     messageListener = null;
     settingsReady;
+    injectedTables = /* @__PURE__ */ new WeakSet();
+    // 记录已注入按钮的表格
+    mutationObserver = null;
+    // 智能延迟和错误处理
+    failureCount = 0;
+    fallbackMode = false;
+    fallbackInterval = null;
+    // URL 监听（SPA 路由）
+    currentURL = "";
+    urlCheckInterval = null;
     constructor() {
       this.selection = new Selection();
       this.panel = new Panel();
@@ -1025,6 +1747,13 @@
       if (prevEnabled && !this.settings.enabled) {
         this.selection.clear();
         this.panel.hide();
+        this.removeAllExportButtons();
+      }
+      if (!prevEnabled && this.settings.enabled) {
+        const delay = this.calculateSmartDelay();
+        setTimeout(() => {
+          this.scanAndInjectTableButtons();
+        }, delay);
       }
       if (persist && typeof chrome !== "undefined" && chrome.storage?.local) {
         try {
@@ -1097,6 +1826,221 @@
      * 初始化插件
      */
     initialize() {
+      this.settingsReady.then(() => {
+        if (this.settings.enabled) {
+          const delay = this.calculateSmartDelay();
+          setTimeout(() => {
+            this.scanAndInjectTableButtons();
+          }, delay);
+        }
+      });
+      this.currentURL = window.location.href;
+      this.urlCheckInterval = setInterval(() => {
+        this.checkURLChange();
+      }, 500);
+      let debounceTimer = null;
+      this.mutationObserver = new MutationObserver((mutations) => {
+        if (this.isPluginMutation(mutations)) {
+          return;
+        }
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+        }
+        debounceTimer = setTimeout(() => {
+          this.scanAndInjectTableButtons();
+        }, 500);
+      });
+      this.mutationObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    }
+    /**
+     * 检查是否是插件自己的 DOM 变化
+     */
+    isPluginMutation(mutations) {
+      return mutations.some((mutation) => {
+        const target = mutation.target;
+        if (target.className && typeof target.className === "string") {
+          if (/^(tabular-extension|table-export-button)/.test(target.className)) {
+            return true;
+          }
+        }
+        for (const node of mutation.addedNodes) {
+          if (node instanceof Element) {
+            const className = node.className;
+            if (className && typeof className === "string") {
+              if (/^(tabular-extension|table-export-button)/.test(className)) {
+                return true;
+              }
+            }
+          }
+        }
+        return false;
+      });
+    }
+    /**
+     * 检查 URL 是否变化
+     */
+    checkURLChange() {
+      const newURL = window.location.href;
+      if (this.currentURL !== newURL) {
+        const oldPath = new URL(this.currentURL).pathname;
+        const newPath = new URL(newURL).pathname;
+        if (oldPath !== newPath) {
+          this.handleRouteChange();
+        }
+        this.currentURL = newURL;
+      }
+    }
+    /**
+     * 处理路由切换
+     */
+    handleRouteChange() {
+      this.removeAllExportButtons();
+      this.injectedTables = /* @__PURE__ */ new WeakSet();
+      const delay = this.calculateSmartDelay();
+      setTimeout(() => {
+        this.scanAndInjectTableButtons();
+      }, delay);
+    }
+    /**
+     * 移除所有导出按钮
+     */
+    removeAllExportButtons() {
+      const buttons = document.querySelectorAll(".table-export-button");
+      buttons.forEach((button) => button.remove());
+    }
+    /**
+     * 重新启动 MutationObserver
+     */
+    restartMutationObserver() {
+      if (this.mutationObserver) {
+        this.mutationObserver.disconnect();
+      }
+      let debounceTimer = null;
+      this.mutationObserver = new MutationObserver((mutations) => {
+        if (this.isPluginMutation(mutations)) {
+          return;
+        }
+        if (debounceTimer) {
+          clearTimeout(debounceTimer);
+        }
+        debounceTimer = setTimeout(() => {
+          this.scanAndInjectTableButtons();
+        }, 500);
+      });
+      this.mutationObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    }
+    /**
+     * 进入降级模式（定时轮询）
+     */
+    enterFallbackMode() {
+      this.fallbackMode = true;
+      if (this.mutationObserver) {
+        this.mutationObserver.disconnect();
+      }
+      this.fallbackInterval = setInterval(() => {
+        this.scanAndInjectTableButtons();
+      }, 5e3);
+      console.warn("[Tabular] Entered fallback mode (polling every 5s)");
+    }
+    /**
+     * 退出降级模式（恢复正常）
+     */
+    exitFallbackMode() {
+      this.fallbackMode = false;
+      if (this.fallbackInterval) {
+        clearInterval(this.fallbackInterval);
+        this.fallbackInterval = null;
+      }
+      this.restartMutationObserver();
+      console.log("[Tabular] Exited fallback mode");
+    }
+    /**
+     * 检测页面中的表格 UI 框架
+     * 检查 body 类名中是否包含已知框架特征
+     */
+    detectPageFrameworks() {
+      const frameworkPatterns = [
+        /ant-table/,
+        // Ant Design
+        /el-table/,
+        // Element UI
+        /arco-table/,
+        // Arco Design
+        /n-data-table/,
+        // Naive UI
+        /v-data-table/,
+        // Vuetify
+        /MuiTable/
+        // Material-UI
+      ];
+      const bodyClassName = document.body.className;
+      return frameworkPatterns.some((pattern) => pattern.test(bodyClassName));
+    }
+    /**
+     * 计算智能延迟时间
+     * 根据页面框架特征调整延迟：有框架 200ms，无框架 500ms
+     */
+    calculateSmartDelay() {
+      const hasKnownFramework = this.detectPageFrameworks();
+      return hasKnownFramework ? 200 : 500;
+    }
+    /**
+     * 扫描页面表格并注入导出按钮
+     */
+    scanAndInjectTableButtons() {
+      if (!this.settings.enabled) {
+        return;
+      }
+      try {
+        const tables = scanTables();
+        let injectedCount = 0;
+        for (const table of tables) {
+          if (this.injectedTables.has(table.element)) {
+            continue;
+          }
+          const existingButton = table.element.querySelector(".table-export-button");
+          if (existingButton) {
+            this.injectedTables.add(table.element);
+            continue;
+          }
+          if (this.panel.contains(table.element)) {
+            this.injectedTables.add(table.element);
+            continue;
+          }
+          injectExportButton(table, async () => {
+            try {
+              const tableData = table.data;
+              const result = await this.requestAction("table-export", {
+                table: tableData
+              });
+              this.executeUIAction(result);
+            } catch (error) {
+              console.error("[Tabular] Table export failed:", error);
+            }
+          });
+          this.injectedTables.add(table.element);
+          injectedCount++;
+        }
+        if (injectedCount > 0) {
+          console.log("[Tabular] Injected", injectedCount, "export buttons");
+        }
+        this.failureCount = 0;
+        if (this.fallbackMode) {
+          this.exitFallbackMode();
+        }
+      } catch (error) {
+        console.error("[Tabular] Error scanning tables:", error);
+        this.failureCount++;
+        if (this.failureCount >= 3 && !this.fallbackMode) {
+          this.enterFallbackMode();
+        }
+      }
     }
     /**
      * 清理资源
@@ -1113,6 +2057,18 @@
         chrome.runtime.onMessage.removeListener(this.messageListener);
       }
       this.messageListener = null;
+      if (this.mutationObserver) {
+        this.mutationObserver.disconnect();
+        this.mutationObserver = null;
+      }
+      if (this.urlCheckInterval) {
+        clearInterval(this.urlCheckInterval);
+        this.urlCheckInterval = null;
+      }
+      if (this.fallbackInterval) {
+        clearInterval(this.fallbackInterval);
+        this.fallbackInterval = null;
+      }
     }
   };
   if (!window.tabular) {
