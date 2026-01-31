@@ -1,5 +1,5 @@
 import type { SelectionRect } from '../shared/types';
-import { CSS_CLASS_PREFIX, MIN_SELECTION_SIZE } from '../shared/constants';
+import { CSS_CLASS_PREFIX, MIN_SELECTION_SIZE, Z_INDEX } from '../shared/constants';
 
 /**
  * 选择框组件
@@ -100,7 +100,8 @@ export class Selection {
       left: `${this.startX}px`,
       top: `${this.startY}px`,
       width: '0px',
-      height: '0px'
+      height: '0px',
+      zIndex: String(Z_INDEX.SELECTION_BOX)
     });
 
     document.body.appendChild(this.element);

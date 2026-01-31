@@ -13,7 +13,7 @@
 
 import * as fc from 'fast-check';
 import { setToStorage } from '../../../src/background/storage';
-import { handleActionRequest } from '../../../src/background';
+import { handleActionRequest } from '../../../src/background/handlers';
 import { checkTrial, initializeTrials } from '../../../src/background/usage';
 import type { AdvancedFeature } from '../../../src/shared/types';
 

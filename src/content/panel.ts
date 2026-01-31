@@ -1,4 +1,4 @@
-import { CSS_CLASS_PREFIX } from '../shared/constants';
+import { CSS_CLASS_PREFIX, Z_INDEX } from '../shared/constants';
 import type { PanelPosition } from '../shared/types';
 
 /**
@@ -83,6 +83,7 @@ export class Panel {
     // 创建面板
     this.element = document.createElement('div');
     this.element.className = `${CSS_CLASS_PREFIX}-panel`;
+    this.element.style.zIndex = String(Z_INDEX.PANEL);
     
     // 标题栏
     const header = this.createHeader('📋', '文本预览');
@@ -123,11 +124,11 @@ export class Panel {
     btnWrapper.className = `${CSS_CLASS_PREFIX}-panel-copy-wrapper`;
 
     // 高级清洗按钮
-    const advancedCleanBtn = this.createAdvancedCleanButton();
+    const advancedCleanBtn = this.createAdvancedCleanButton(uiData?.trialRemaining);
     btnWrapper.appendChild(advancedCleanBtn);
 
     // 导出按钮
-    const exportBtn = this.createExportButton();
+    const exportBtn = this.createExportButton(uiData?.trialRemaining);
     btnWrapper.appendChild(exportBtn);
 
     // 复制按钮
@@ -254,7 +255,14 @@ export class Panel {
     message.className = `${CSS_CLASS_PREFIX}-panel-message`;
     // 保留换行符格式
     message.style.whiteSpace = 'pre-line';
-    message.textContent = uiData?.message || '试用次数已用完，升级 Pro 解锁无限使用';
+    
+    // 如果提供了剩余次数，在消息前显示
+    let messageText = uiData?.message || '试用次数已用完，升级 Pro 解锁无限使用';
+    if (uiData?.trialRemaining !== undefined) {
+      messageText = `剩余试用次数：${uiData.trialRemaining}\n\n${messageText}`;
+    }
+    
+    message.textContent = messageText;
 
     messageWrapper.appendChild(message);
 
@@ -396,11 +404,31 @@ export class Panel {
   /**
    * 创建高级清洗按钮
    */
-  private createAdvancedCleanButton(): HTMLButtonElement {
+  private createAdvancedCleanButton(trialRemaining?: number): HTMLButtonElement {
     const btn = document.createElement('button');
     btn.className = `${CSS_CLASS_PREFIX}-panel-advanced-clean-btn`;
-    btn.textContent = '🧹 清洗';
+    
+    // 基础文本
+    let buttonText = '🧹 清洗';
+    
+    // 如果有试用次数信息，显示在按钮上
+    if (trialRemaining !== undefined) {
+      buttonText += ` (剩余 ${trialRemaining} 次)`;
+      
+      // 次数为0时禁用按钮
+      if (trialRemaining === 0) {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+      }
+    }
+    
+    btn.textContent = buttonText;
     btn.onclick = () => {
+      // 次数为0时不响应点击
+      if (trialRemaining === 0) {
+        return;
+      }
       this.showCleaningDialog();
     };
     return btn;
@@ -409,11 +437,31 @@ export class Panel {
   /**
    * 创建导出按钮
    */
-  private createExportButton(): HTMLButtonElement {
+  private createExportButton(trialRemaining?: number): HTMLButtonElement {
     const btn = document.createElement('button');
     btn.className = `${CSS_CLASS_PREFIX}-panel-export-btn`;
-    btn.textContent = '📤 导出';
+    
+    // 基础文本
+    let buttonText = '📤 导出';
+    
+    // 如果有试用次数信息，显示在按钮上
+    if (trialRemaining !== undefined) {
+      buttonText += ` (剩余 ${trialRemaining} 次)`;
+      
+      // 次数为0时禁用按钮
+      if (trialRemaining === 0) {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+      }
+    }
+    
+    btn.textContent = buttonText;
     btn.onclick = () => {
+      // 次数为0时不响应点击
+      if (trialRemaining === 0) {
+        return;
+      }
       this.showExportDialog();
     };
     return btn;
@@ -576,10 +624,18 @@ export class Panel {
     // 创建遮罩层
     const overlay = document.createElement('div');
     overlay.className = `${CSS_CLASS_PREFIX}-dialog-overlay`;
+    overlay.style.zIndex = String(Z_INDEX.DIALOG_OVERLAY);
+    overlay.style.pointerEvents = 'auto';
+    
+    // 阻止遮罩层上的鼠标事件触发框选
+    overlay.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+    });
     
     // 创建弹窗
     const dialog = document.createElement('div');
     dialog.className = `${CSS_CLASS_PREFIX}-dialog`;
+    dialog.style.zIndex = String(Z_INDEX.DIALOG);
     
     // 标题
     const title = document.createElement('div');
@@ -738,10 +794,18 @@ export class Panel {
     // 创建遮罩层
     const overlay = document.createElement('div');
     overlay.className = `${CSS_CLASS_PREFIX}-dialog-overlay`;
+    overlay.style.zIndex = String(Z_INDEX.DIALOG_OVERLAY);
+    overlay.style.pointerEvents = 'auto';
+    
+    // 阻止遮罩层上的鼠标事件触发框选
+    overlay.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+    });
     
     // 创建弹窗
     const dialog = document.createElement('div');
     dialog.className = `${CSS_CLASS_PREFIX}-dialog`;
+    dialog.style.zIndex = String(Z_INDEX.DIALOG);
     
     // 标题
     const title = document.createElement('div');

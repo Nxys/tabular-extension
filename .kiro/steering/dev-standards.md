@@ -1,41 +1,48 @@
 ---
 inclusion: always
 ---
-
 # 开发规范
 
 ## 代码风格
+
 - **完美主义**：追求代码质量和细节，不容忍瑕疵
 - **极简主义**：最小化代码量，删除冗余，保持简洁
 
 ## 语言
-- 回复、注释、文档用中文
+
+- 回复用户的所有对话（包括思考过程）、注释、文档必须使用中文
 - 代码命名用英文驼峰
 - 源码、测试使用TypeScript，不要使用JavaScript
 
 ## TypeScript
+
 - 严格模式，禁用 `any`（特殊情况需注释）
 - 导出项必须有中文 JSDoc
 - 遵循 ESLint
 
 ## 构建插件
+
 - 不要使用 `npm run build` 进行构建
 - `npm run extension` 直接生成插件到 `build/extension`
 
 ## 测试
-- 命令：`npm test`，无需`--run`参数
+
+- 命令：`npm test`，无需 `--run`参数
 - 覆盖率：Background ≥90%，Content ≥85%
 - 路径：`tests/unit/模块/文件名.test.ts`
 - 不自动添加测试（除非用户要求）
 
 ## 修改代码
+
 同步更新：测试、文档
 
 ## 工具
+
 - 用 `getDiagnostics` 检查错误
 - 并行执行 `strReplace`
 
 ## AI 行为
+
 - 简洁回复，完成后 1-2 句总结
 - 并行执行独立操作
 - 不创建总结文件

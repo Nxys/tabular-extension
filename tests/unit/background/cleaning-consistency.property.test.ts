@@ -15,16 +15,12 @@ describe('Property 4: 清洗规则应用一致性', () => {
    * 生成随机清洗规则
    */
   const cleaningRulesArbitrary: fc.Arbitrary<CleaningRules> = fc.record({
-    removeEmptyLines: fc.boolean(),
-    mergeMultipleLines: fc.boolean(),
     customSeparator: fc.option(fc.string({ maxLength: 5 }), { nil: undefined }),
     mergeToSingleLine: fc.boolean(),
     removeDuplicates: fc.boolean()
   }).map(rules => {
     // 确保类型正确：如果 customSeparator 是 undefined，则不设置该属性
     const result: CleaningRules = {
-      removeEmptyLines: rules.removeEmptyLines,
-      mergeMultipleLines: rules.mergeMultipleLines,
       mergeToSingleLine: rules.mergeToSingleLine,
       removeDuplicates: rules.removeDuplicates
     };
@@ -104,11 +100,8 @@ describe('Property 4: 清洗规则应用一致性', () => {
         (data, rules) => {
           const result = advancedClean(data, rules);
 
-          // 如果启用了合并多行，结果应该是单行（无论是否提供分隔符）
-          if (rules.mergeMultipleLines) {
-            expect(result.length).toBeLessThanOrEqual(1);
-          } else if (rules.mergeToSingleLine && !rules.mergeMultipleLines) {
-            // 如果启用了合并为一行（且未被合并多行覆盖），结果应该是单行
+          // 如果启用了合并为一行或提供了自定义分隔符，结果应该是单行
+          if (rules.mergeToSingleLine || rules.customSeparator !== undefined) {
             expect(result.length).toBeLessThanOrEqual(1);
           } else {
             // 否则，结果行数不应该超过原始数据
@@ -120,28 +113,7 @@ describe('Property 4: 清洗规则应用一致性', () => {
     );
   });
 
-  test('对于任何数据，启用去空行后结果不应该包含空行', () => {
-    fc.assert(
-      fc.property(
-        dataArbitrary,
-        (data) => {
-          const rules: CleaningRules = {
-            removeEmptyLines: true,
-            mergeMultipleLines: false,
-            mergeToSingleLine: false,
-            removeDuplicates: false
-          };
-
-          const result = advancedClean(data, rules);
-
-          // 结果中不应该有空行
-          const hasEmptyLine = result.some(line => line.trim().length === 0);
-          expect(hasEmptyLine).toBe(false);
-        }
-      ),
-      { numRuns: 100 }
-    );
-  });
+  // 注意：去空行功能已移除，因为框选时已自动过滤空行
 
   test('对于任何数据，启用去重后结果不应该包含重复行', () => {
     fc.assert(
@@ -149,8 +121,6 @@ describe('Property 4: 清洗规则应用一致性', () => {
         dataArbitrary,
         (data) => {
           const rules: CleaningRules = {
-            removeEmptyLines: false,
-            mergeMultipleLines: false,
             mergeToSingleLine: false,
             removeDuplicates: true
           };
@@ -172,8 +142,6 @@ describe('Property 4: 清洗规则应用一致性', () => {
         fc.array(fc.string({ maxLength: 50 }), { minLength: 1, maxLength: 20 }),
         (data) => {
           const rules: CleaningRules = {
-            removeEmptyLines: false,
-            mergeMultipleLines: false,
             mergeToSingleLine: true,
             removeDuplicates: false
           };
@@ -188,15 +156,13 @@ describe('Property 4: 清洗规则应用一致性', () => {
     );
   });
 
-  test('对于任何数据和分隔符，启用合并多行后结果应该是单行', () => {
+  test('对于任何数据和分隔符，提供自定义分隔符后结果应该是单行', () => {
     fc.assert(
       fc.property(
         fc.array(fc.string({ maxLength: 50 }), { minLength: 1, maxLength: 20 }),
         fc.string({ maxLength: 5 }),
         (data, separator) => {
           const rules: CleaningRules = {
-            removeEmptyLines: false,
-            mergeMultipleLines: true,
             customSeparator: separator,
             mergeToSingleLine: false,
             removeDuplicates: false
@@ -223,19 +189,11 @@ describe('Property 4: 清洗规则应用一致性', () => {
         cleaningRulesArbitrary,
         (data, rules) => {
           // 跳过合并操作（合并会改变数据结构）
-          if (rules.mergeMultipleLines || rules.mergeToSingleLine) {
+          if (rules.mergeToSingleLine || rules.customSeparator !== undefined) {
             return;
           }
 
           const result = advancedClean(data, rules);
-
-          // 清洗后的每一行都应该来自原始数据（或是原始数据的子集）
-          result.forEach(line => {
-            // 如果启用了去空行，空行不应该出现
-            if (rules.removeEmptyLines) {
-              expect(line.trim().length).toBeGreaterThan(0);
-            }
-          });
 
           // 如果启用了去重，结果应该是唯一的
           if (rules.removeDuplicates) {

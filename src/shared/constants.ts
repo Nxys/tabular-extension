@@ -37,3 +37,18 @@ export const DEFAULT_LAYOUT_OPTIONS: LayoutOptions = {
  * 最小有效选择区域尺寸（像素）
  */
 export const MIN_SELECTION_SIZE = 5;
+
+/**
+ * z-index 层级定义
+ * 用于控制插件 UI 元素的显示层级
+ */
+export const Z_INDEX = {
+  /** 框选框层级 */
+  SELECTION_BOX: 9998,
+  /** 主面板层级 */
+  PANEL: 9999,
+  /** 弹窗遮罩层层级 */
+  DIALOG_OVERLAY: 10000,
+  /** 弹窗层级 */
+  DIALOG: 10001
+} as const;

@@ -8,7 +8,7 @@
  */
 
 import { setToStorage } from '../../../src/background/storage';
-import { handleActionRequest } from '../../../src/background';
+import { handleActionRequest } from '../../../src/background/handlers';
 
 describe('行数限制逻辑', () => {
   beforeEach(() => {

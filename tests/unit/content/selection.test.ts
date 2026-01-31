@@ -4,7 +4,7 @@
  */
 
 import { Selection } from '../../../src/content/selection';
-import { CSS_CLASS_PREFIX, MIN_SELECTION_SIZE } from '../../../src/shared/constants';
+import { CSS_CLASS_PREFIX, MIN_SELECTION_SIZE, Z_INDEX } from '../../../src/shared/constants';
 import { mockGetBoundingClientRect, createDOMRect } from '../../mocks/dom';
 
 describe('selection.ts', () => {
@@ -59,6 +59,16 @@ describe('selection.ts', () => {
 
       // Assert
       expect(selection.getIsSelecting()).toBe(true);
+    });
+
+    it('应该使用正确的 z-index', () => {
+      // Arrange & Act
+      selection.start(100, 200);
+
+      // Assert
+      const box = document.querySelector(`.${CSS_CLASS_PREFIX}-box`) as HTMLElement;
+      expect(box.style.zIndex).toBe(String(Z_INDEX.SELECTION_BOX));
+      expect(box.style.zIndex).toBe('9998');
     });
   });
 
@@ -345,6 +355,24 @@ describe('selection.ts', () => {
         selection.clear();
         selection.clear();
       }).not.toThrow();
+    });
+
+    it('应该从 DOM 中完全移除选择框', () => {
+      // Arrange
+      selection.start(100, 100);
+      const boxBefore = document.querySelector(`.${CSS_CLASS_PREFIX}-box`);
+      expect(boxBefore).not.toBeNull();
+      expect(document.body.contains(boxBefore)).toBe(true);
+
+      // Act
+      selection.clear();
+
+      // Assert
+      const boxAfter = document.querySelector(`.${CSS_CLASS_PREFIX}-box`);
+      expect(boxAfter).toBeNull();
+      if (boxBefore) {
+        expect(document.body.contains(boxBefore)).toBe(false);
+      }
     });
   });
 

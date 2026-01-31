@@ -10,7 +10,7 @@
 
 import * as fc from 'fast-check';
 import { setToStorage } from '../../../src/background/storage';
-import { handleActionRequest } from '../../../src/background';
+import { handleActionRequest } from '../../../src/background/handlers';
 
 describe('Property 1: Free 用户行数限制一致性', () => {
   beforeEach(() => {

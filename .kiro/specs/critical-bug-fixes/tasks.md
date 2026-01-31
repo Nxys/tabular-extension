@@ -27,12 +27,12 @@
   - 插件启用时扫描并注入按钮
   - 文件：`src/content/index.ts`
 
-- [ ] 1.4 编写单元测试
+- [x] 1.4 编写单元测试
   - 测试插件禁用时不扫描表格
   - 测试插件禁用时移除已有按钮
   - 文件：`tests/unit/content/index.test.ts`
 
-- [ ] 1.5 编写集成测试
+- [x] 1.5 编写集成测试
   - 测试插件禁用时表格检测不可用
   - 文件：`tests/integration/plugin-state.test.ts`
 
@@ -55,62 +55,62 @@
   - 更新确认按钮的数据收集逻辑
   - 文件：`src/content/panel.ts`
 
-- [ ] 2.4 编写单元测试
+- [x] 2.4 编写单元测试
   - 测试合并为一行 + 自定义分隔符
   - 测试仅使用自定义分隔符
   - 测试去重功能
   - 文件：`tests/unit/background/cleaner.test.ts`
 
-- [ ] 2.5 更新现有测试
+- [x] 2.5 更新现有测试
   - 修改所有使用旧 `CleaningRules` 的测试
   - 确保测试覆盖率不降低
 
 ### 3. 需求3：修复面板框选问题
 
-- [ ] 3.1 定义z-index层级常量
+- [x] 3.1 定义z-index层级常量
   - 在 `src/shared/constants.ts` 中定义 `Z_INDEX` 常量
   - 定义：SELECTION_BOX=9998, PANEL=9999, DIALOG_OVERLAY=10000, DIALOG=10001
   - 文件：`src/shared/constants.ts`
 
-- [ ] 3.2 修改框选框使用正确的z-index
+- [x] 3.2 修改框选框使用正确的z-index
   - 在 `Selection.start()` 方法中设置 `z-index: Z_INDEX.SELECTION_BOX`
   - 文件：`src/content/selection.ts`
 
-- [ ] 3.3 修改面板使用正确的z-index
+- [x] 3.3 修改面板使用正确的z-index
   - 在 `showResult()` 中设置面板 `z-index: Z_INDEX.PANEL`
   - 在 `showCleaningDialog()` 中设置遮罩层和弹窗的z-index
   - 在 `showExportDialog()` 中设置遮罩层和弹窗的z-index
   - 文件：`src/content/panel.ts`
 
-- [ ] 3.4 更新CSS确保z-index一致性
+- [x] 3.4 更新CSS确保z-index一致性
   - 为所有相关类添加z-index样式（使用 `!important`）
   - 文件：`src/content/content.css`
 
-- [ ] 3.5 确保面板显示时清除框选框
+- [x] 3.5 确保面板显示时清除框选框
   - 在 `handleMouseUp()` 中，显示面板前调用 `this.selection.clear()`
   - 文件：`src/content/index.ts`
 
-- [ ] 3.6 确保Selection的clear方法正确移除框选框
+- [x] 3.6 确保Selection的clear方法正确移除框选框
   - 验证 `clear()` 方法正确调用 `this.box.remove()`
   - 文件：`src/content/selection.ts`
 
-- [ ] 3.7 遮罩层显示时禁用框选
+- [x] 3.7 遮罩层显示时禁用框选
   - 在 `showCleaningDialog()` 中为遮罩层添加 `pointer-events: auto`
   - 在 `showExportDialog()` 中为遮罩层添加 `pointer-events: auto`
   - 为遮罩层添加 `mousedown` 事件监听，阻止事件冒泡
   - 文件：`src/content/panel.ts`
 
-- [ ] 3.8 CSS中确保遮罩层阻止交互
+- [x] 3.8 CSS中确保遮罩层阻止交互
   - 为遮罩层添加 `pointer-events: auto !important`
   - 为遮罩层添加 `user-select: none !important`
   - 文件：`src/content/content.css`
 
-- [ ] 3.9 编写单元测试
+- [x] 3.9 编写单元测试
   - 测试框选框使用正确的z-index
   - 测试clear方法移除框选框
   - 文件：`tests/unit/content/selection.test.ts`
 
-- [ ] 3.10 编写集成测试
+- [x] 3.10 编写集成测试
   - 测试面板在框选框之上
   - 测试弹窗在面板之上
   - 测试面板显示时不应该有框选框
@@ -119,37 +119,37 @@
 
 ### 4. 需求4：Pro功能用尽后计数显示修复
 
-- [ ] 4.1 修改 `handleAdvancedClean` 返回最新计数
+- [x] 4.1 修改 `handleAdvancedClean` 返回最新计数
   - 在消耗试用次数后获取最新状态
   - 在 `uiData` 中返回 `trialRemaining`
   - 文件：`src/background/index.ts`
 
-- [ ] 4.2 修改 `handleTableExport` 返回最新计数
+- [x] 4.2 修改 `handleTableExport` 返回最新计数
   - 在消耗试用次数后获取最新状态
   - 在 `uiData` 中返回 `trialRemaining`
   - 文件：`src/background/index.ts`
 
-- [ ] 4.3 修改 `showResult` 方法接收计数参数
+- [x] 4.3 修改 `showResult` 方法接收计数参数
   - 更新 `uiData` 类型定义
   - 将 `trialRemaining` 传递给按钮创建方法
   - 文件：`src/content/panel.ts`
 
-- [ ] 4.4 修改按钮创建方法显示计数
+- [x] 4.4 修改按钮创建方法显示计数
   - 更新 `createAdvancedCleanButton` 显示剩余次数
   - 更新 `createExportButton` 显示剩余次数
   - 次数为0时禁用按钮
   - 文件：`src/content/panel.ts`
 
-- [ ] 4.5 修改 `showTrialExhausted` 显示计数
+- [x] 4.5 修改 `showTrialExhausted` 显示计数
   - 在消息中显示剩余次数（应该是0）
   - 文件：`src/content/panel.ts`
 
-- [ ] 4.6 编写单元测试
+- [x] 4.6 编写单元测试
   - 测试消耗试用次数后返回最新计数
   - 测试试用次数为0时返回blocked状态
   - 文件：`tests/unit/background/advanced-clean-integration.test.ts`
 
-- [ ] 4.7 编写集成测试
+- [x] 4.7 编写集成测试
   - 测试Pro功能用尽后显示正确计数
   - 测试按钮被禁用
   - 文件：`tests/integration/pro-trial-counter.test.ts`

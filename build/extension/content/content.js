@@ -8,6 +8,16 @@
     minHorizontalGap: 10
   };
   var MIN_SELECTION_SIZE = 5;
+  var Z_INDEX = {
+    /** 框选框层级 */
+    SELECTION_BOX: 9998,
+    /** 主面板层级 */
+    PANEL: 9999,
+    /** 弹窗遮罩层层级 */
+    DIALOG_OVERLAY: 1e4,
+    /** 弹窗层级 */
+    DIALOG: 10001
+  };
 
   // src/content/selection.ts
   var Selection = class {
@@ -91,7 +101,8 @@
         left: `${this.startX}px`,
         top: `${this.startY}px`,
         width: "0px",
-        height: "0px"
+        height: "0px",
+        zIndex: String(Z_INDEX.SELECTION_BOX)
       });
       document.body.appendChild(this.element);
     }
@@ -142,6 +153,7 @@
       this.disableTextSelection();
       this.element = document.createElement("div");
       this.element.className = `${CSS_CLASS_PREFIX}-panel`;
+      this.element.style.zIndex = String(Z_INDEX.PANEL);
       const header = this.createHeader("\u{1F4CB}", "\u6587\u672C\u9884\u89C8");
       const previewWrapper = document.createElement("div");
       previewWrapper.className = `${CSS_CLASS_PREFIX}-panel-preview-wrapper`;
@@ -167,9 +179,9 @@
       previewWrapper.appendChild(preview);
       const btnWrapper = document.createElement("div");
       btnWrapper.className = `${CSS_CLASS_PREFIX}-panel-copy-wrapper`;
-      const advancedCleanBtn = this.createAdvancedCleanButton();
+      const advancedCleanBtn = this.createAdvancedCleanButton(uiData?.trialRemaining);
       btnWrapper.appendChild(advancedCleanBtn);
-      const exportBtn = this.createExportButton();
+      const exportBtn = this.createExportButton(uiData?.trialRemaining);
       btnWrapper.appendChild(exportBtn);
       const copyBtn = this.createCopyButton();
       btnWrapper.appendChild(copyBtn);
@@ -246,7 +258,13 @@
       const message = document.createElement("div");
       message.className = `${CSS_CLASS_PREFIX}-panel-message`;
       message.style.whiteSpace = "pre-line";
-      message.textContent = uiData?.message || "\u8BD5\u7528\u6B21\u6570\u5DF2\u7528\u5B8C\uFF0C\u5347\u7EA7 Pro \u89E3\u9501\u65E0\u9650\u4F7F\u7528";
+      let messageText = uiData?.message || "\u8BD5\u7528\u6B21\u6570\u5DF2\u7528\u5B8C\uFF0C\u5347\u7EA7 Pro \u89E3\u9501\u65E0\u9650\u4F7F\u7528";
+      if (uiData?.trialRemaining !== void 0) {
+        messageText = `\u5269\u4F59\u8BD5\u7528\u6B21\u6570\uFF1A${uiData.trialRemaining}
+
+${messageText}`;
+      }
+      message.textContent = messageText;
       messageWrapper.appendChild(message);
       this.element.appendChild(header);
       this.element.appendChild(messageWrapper);
@@ -360,11 +378,23 @@
     /**
      * 创建高级清洗按钮
      */
-    createAdvancedCleanButton() {
+    createAdvancedCleanButton(trialRemaining) {
       const btn = document.createElement("button");
       btn.className = `${CSS_CLASS_PREFIX}-panel-advanced-clean-btn`;
-      btn.textContent = "\u{1F9F9} \u6E05\u6D17";
+      let buttonText = "\u{1F9F9} \u6E05\u6D17";
+      if (trialRemaining !== void 0) {
+        buttonText += ` (\u5269\u4F59 ${trialRemaining} \u6B21)`;
+        if (trialRemaining === 0) {
+          btn.disabled = true;
+          btn.style.opacity = "0.5";
+          btn.style.cursor = "not-allowed";
+        }
+      }
+      btn.textContent = buttonText;
       btn.onclick = () => {
+        if (trialRemaining === 0) {
+          return;
+        }
         this.showCleaningDialog();
       };
       return btn;
@@ -372,11 +402,23 @@
     /**
      * 创建导出按钮
      */
-    createExportButton() {
+    createExportButton(trialRemaining) {
       const btn = document.createElement("button");
       btn.className = `${CSS_CLASS_PREFIX}-panel-export-btn`;
-      btn.textContent = "\u{1F4E4} \u5BFC\u51FA";
+      let buttonText = "\u{1F4E4} \u5BFC\u51FA";
+      if (trialRemaining !== void 0) {
+        buttonText += ` (\u5269\u4F59 ${trialRemaining} \u6B21)`;
+        if (trialRemaining === 0) {
+          btn.disabled = true;
+          btn.style.opacity = "0.5";
+          btn.style.cursor = "not-allowed";
+        }
+      }
+      btn.textContent = buttonText;
       btn.onclick = () => {
+        if (trialRemaining === 0) {
+          return;
+        }
         this.showExportDialog();
       };
       return btn;
@@ -507,8 +549,14 @@
       const textToClean = uiData?.text || this.currentText;
       const overlay = document.createElement("div");
       overlay.className = `${CSS_CLASS_PREFIX}-dialog-overlay`;
+      overlay.style.zIndex = String(Z_INDEX.DIALOG_OVERLAY);
+      overlay.style.pointerEvents = "auto";
+      overlay.addEventListener("mousedown", (e) => {
+        e.stopPropagation();
+      });
       const dialog = document.createElement("div");
       dialog.className = `${CSS_CLASS_PREFIX}-dialog`;
+      dialog.style.zIndex = String(Z_INDEX.DIALOG);
       const title = document.createElement("div");
       title.className = `${CSS_CLASS_PREFIX}-dialog-title`;
       title.textContent = "\u9AD8\u7EA7\u6E05\u6D17\u89C4\u5219";
@@ -621,8 +669,14 @@
       const textToExport = uiData?.text || this.currentText;
       const overlay = document.createElement("div");
       overlay.className = `${CSS_CLASS_PREFIX}-dialog-overlay`;
+      overlay.style.zIndex = String(Z_INDEX.DIALOG_OVERLAY);
+      overlay.style.pointerEvents = "auto";
+      overlay.addEventListener("mousedown", (e) => {
+        e.stopPropagation();
+      });
       const dialog = document.createElement("div");
       dialog.className = `${CSS_CLASS_PREFIX}-dialog`;
+      dialog.style.zIndex = String(Z_INDEX.DIALOG);
       const title = document.createElement("div");
       title.className = `${CSS_CLASS_PREFIX}-dialog-title`;
       title.textContent = "\u9009\u62E9\u5BFC\u51FA\u683C\u5F0F";
@@ -1670,6 +1724,7 @@
         const text = format(lines);
         try {
           const result = await this.requestAction("text-extract", text);
+          this.selection.clear();
           this.executeUIAction(result);
         } catch (error) {
           console.error("Communication with background failed:", error);

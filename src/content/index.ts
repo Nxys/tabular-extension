@@ -170,7 +170,11 @@ class Tabular {
       // 2. 发送 REQUEST_ACTION 到 background
       try {
         const result = await this.requestAction('text-extract', text);
-        // 3. 根据 uiAction 执行 UI 渲染（无条件执行）
+        
+        // 3. 在显示面板前清除框选框
+        this.selection.clear();
+        
+        // 4. 根据 uiAction 执行 UI 渲染（无条件执行）
         this.executeUIAction(result);
       } catch (error) {
         // 通信失败时静默处理，避免影响用户体验

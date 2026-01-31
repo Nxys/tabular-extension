@@ -309,25 +309,6 @@ async function setProState(state) {
   }
 }
 
-// src/background/settings.ts
-var DEFAULT_SETTINGS = {
-  enabled: false,
-  panelPosition: "center"
-};
-async function getSettings() {
-  const enabled = await getFromStorage("enabled", DEFAULT_SETTINGS.enabled);
-  const panelPosition = await getFromStorage("panelPosition", DEFAULT_SETTINGS.panelPosition);
-  return { enabled, panelPosition };
-}
-async function updateSettings(partial) {
-  if (partial.enabled !== void 0) {
-    await setToStorage("enabled", partial.enabled);
-  }
-  if (partial.panelPosition !== void 0) {
-    await setToStorage("panelPosition", partial.panelPosition);
-  }
-}
-
 // src/background/cleaner.ts
 function basicClean(data) {
   return data.map((line) => line.trim());
@@ -423,29 +404,7 @@ function toExcelBlob(data) {
   return toExcel(data);
 }
 
-// src/background/index.ts
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  handleMessage(message).then(sendResponse);
-  return true;
-});
-async function handleMessage(message) {
-  try {
-    if (message.type === "REQUEST_ACTION") {
-      return await handleActionRequest(message.payload);
-    } else {
-      return { error: "Unknown message type" };
-    }
-  } catch (error) {
-    console.error("Message handling error:", error);
-    return {
-      status: "blocked",
-      uiAction: "SHOW_RESULT_PANEL",
-      uiData: {
-        message: "\u64CD\u4F5C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5"
-      }
-    };
-  }
-}
+// src/background/handlers.ts
 async function handleActionRequest(payload) {
   const { action, data } = payload;
   try {
@@ -509,6 +468,10 @@ async function handleTextExtract(data) {
   if (isLimited) {
     uiData.rowLimit = 5;
     uiData.limitMessage = `\u4EC5\u5C55\u793A\u524D 5 \u884C\uFF08\u5171 ${totalRows} \u884C\uFF09\uFF0C\u5347\u7EA7 Pro \u89E3\u9501\u5B8C\u6574\u6570\u636E`;
+  }
+  if (!isPro) {
+    const advancedCleaningTrial = await checkTrial("advanced-cleaning");
+    uiData.trialRemaining = advancedCleaningTrial.remaining;
   }
   const result = {
     status: "ok",
@@ -751,12 +714,14 @@ async function handleTableExport(data) {
             return;
           }
           if (!isPro) {
-            evolveTrial("one-click-export").then(() => {
+            evolveTrial("one-click-export").then(async () => {
+              const updatedTrialState = await checkTrial("one-click-export");
               resolve({
                 status: "ok",
                 uiAction: "SHOW_RESULT_PANEL",
                 uiData: {
-                  message: "\u5BFC\u51FA\u6210\u529F\uFF01\u6587\u4EF6\u5DF2\u4FDD\u5B58\u5230\u4E0B\u8F7D\u6587\u4EF6\u5939\u3002"
+                  message: "\u5BFC\u51FA\u6210\u529F\uFF01\u6587\u4EF6\u5DF2\u4FDD\u5B58\u5230\u4E0B\u8F7D\u6587\u4EF6\u5939\u3002",
+                  trialRemaining: updatedTrialState.remaining
                 }
               });
             });
@@ -838,8 +803,56 @@ async function handleAdvancedClean(data) {
   };
   if (!isPro) {
     await evolveTrial("advanced-cleaning");
+    const updatedTrialState = await checkTrial("advanced-cleaning");
+    result.uiData = {
+      ...result.uiData,
+      trialRemaining: updatedTrialState.remaining
+    };
   }
   return result;
+}
+
+// src/background/settings.ts
+var DEFAULT_SETTINGS = {
+  enabled: false,
+  panelPosition: "center"
+};
+async function getSettings() {
+  const enabled = await getFromStorage("enabled", DEFAULT_SETTINGS.enabled);
+  const panelPosition = await getFromStorage("panelPosition", DEFAULT_SETTINGS.panelPosition);
+  return { enabled, panelPosition };
+}
+async function updateSettings(partial) {
+  if (partial.enabled !== void 0) {
+    await setToStorage("enabled", partial.enabled);
+  }
+  if (partial.panelPosition !== void 0) {
+    await setToStorage("panelPosition", partial.panelPosition);
+  }
+}
+
+// src/background/index.ts
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  handleMessage(message).then(sendResponse);
+  return true;
+});
+async function handleMessage(message) {
+  try {
+    if (message.type === "REQUEST_ACTION") {
+      return await handleActionRequest(message.payload);
+    } else {
+      return { error: "Unknown message type" };
+    }
+  } catch (error) {
+    console.error("Message handling error:", error);
+    return {
+      status: "blocked",
+      uiAction: "SHOW_RESULT_PANEL",
+      uiData: {
+        message: "\u64CD\u4F5C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5"
+      }
+    };
+  }
 }
 chrome.commands.onCommand.addListener(async (command) => {
   if (command === "selection-switch") {

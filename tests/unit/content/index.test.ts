@@ -252,6 +252,94 @@ describe('content/index.ts', () => {
     });
   });
 
+  describe('插件禁用状态', () => {
+    it('应该在插件禁用时不扫描表格', async () => {
+      // Arrange - 设置插件为禁用状态
+      await chrome.storage.local.set({
+        enabled: false,
+        panelPosition: 'center'
+      });
+
+      // 清理全局实例
+      instance.cleanup();
+
+      // 创建包含表格的 DOM
+      document.body.innerHTML = `
+        <table>
+          <thead>
+            <tr><th>列1</th><th>列2</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>数据1</td><td>数据2</td></tr>
+            <tr><td>数据3</td><td>数据4</td></tr>
+          </tbody>
+        </table>
+      `;
+
+      // Act - 创建新实例并初始化
+      const newInstance = new Tabular();
+      newInstance.initialize();
+
+      // 等待初始化和扫描完成
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Assert - 验证没有注入导出按钮
+      const buttons = document.querySelectorAll('.table-export-button');
+      expect(buttons.length).toBe(0);
+
+      // Cleanup
+      newInstance.cleanup();
+    });
+
+    it('应该在插件禁用时移除已有按钮', async () => {
+      // Arrange - 设置插件为启用状态
+      await chrome.storage.local.set({
+        enabled: true,
+        panelPosition: 'center'
+      });
+
+      // 清理全局实例
+      instance.cleanup();
+
+      // 创建包含表格的 DOM
+      document.body.innerHTML = `
+        <table>
+          <thead>
+            <tr><th>列1</th><th>列2</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>数据1</td><td>数据2</td></tr>
+            <tr><td>数据3</td><td>数据4</td></tr>
+          </tbody>
+        </table>
+      `;
+
+      // 创建新实例并初始化
+      const newInstance = new Tabular();
+      newInstance.initialize();
+
+      // 等待初始化和扫描完成
+      await new Promise(resolve => setTimeout(resolve, 600));
+
+      // 验证按钮已注入
+      let buttons = document.querySelectorAll('.table-export-button');
+      expect(buttons.length).toBeGreaterThan(0);
+
+      // Act - 禁用插件
+      await newInstance.applySettings({ enabled: false });
+
+      // 等待清理完成
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // Assert - 验证按钮已被移除
+      buttons = document.querySelectorAll('.table-export-button');
+      expect(buttons.length).toBe(0);
+
+      // Cleanup
+      newInstance.cleanup();
+    });
+  });
+
   describe('设置管理', () => {
     describe('设置初始化', () => {
       it('应该从 chrome.storage 读取设置', async () => {

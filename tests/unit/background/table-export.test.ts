@@ -6,7 +6,7 @@
  * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5
  */
 
-import { handleActionRequest } from '../../../src/background';
+import { handleActionRequest } from '../../../src/background/handlers';
 import { getFromStorage } from '../../../src/background/storage';
 import type { AdvancedFeature } from '../../../src/shared/types';
 
@@ -281,10 +281,8 @@ describe('表格导出功能测试', () => {
           table: testTable,
           exportFormat: 'csv' as const,
           cleaningRules: {
-            removeEmptyLines: true,
-            mergeMultipleLines: false,
             mergeToSingleLine: false,
-            removeDuplicates: false  // 改为 false，因为去重是针对每行内部的
+            removeDuplicates: false
           }
         }
       };
@@ -303,7 +301,7 @@ describe('表格导出功能测试', () => {
   describe('Pro 用户', () => {
     beforeEach(async () => {
       // 设置 Pro 状态（使用加密格式）
-      const { encryptProState } = await import('../crypto');
+      const { encryptProState } = await import('../../../src/background/crypto');
       const proState = {
         isPro: true,
         signature: 'test',

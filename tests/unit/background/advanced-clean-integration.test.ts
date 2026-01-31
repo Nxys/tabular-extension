@@ -4,14 +4,14 @@
  * 测试 advanced-clean Action 的完整流程
  */
 
-import { handleActionRequest } from '../../../src/background';
+import { handleActionRequest } from '../../../src/background/handlers';
 import * as usage from '../../../src/background/usage';
 import * as pro from '../../../src/background/pro';
 
 // Mock 模块
-jest.mock('../usage');
-jest.mock('../pro');
-jest.mock('../storage');
+jest.mock('../../../src/background/usage');
+jest.mock('../../../src/background/pro');
+jest.mock('../../../src/background/storage');
 
 const mockUsage = usage as jest.Mocked<typeof usage>;
 const mockPro = pro as jest.Mocked<typeof pro>;
@@ -40,10 +40,8 @@ describe('高级清洗集成测试', () => {
       const result = await handleActionRequest({
         action: 'advanced-clean',
         data: {
-          text: 'line1\n\nline2\nline2\nline3',
+          text: 'line1\nline2\nline2\nline3',
           cleaningRules: {
-            removeEmptyLines: true,
-            mergeMultipleLines: false,
             mergeToSingleLine: false,
             removeDuplicates: true
           },
@@ -63,8 +61,6 @@ describe('高级清洗集成测试', () => {
         data: {
           text: 'test',
           cleaningRules: {
-            removeEmptyLines: false,
-            mergeMultipleLines: false,
             mergeToSingleLine: false,
             removeDuplicates: false
           },
@@ -83,8 +79,6 @@ describe('高级清洗集成测试', () => {
         data: {
           text: longText,
           cleaningRules: {
-            removeEmptyLines: false,
-            mergeMultipleLines: false,
             mergeToSingleLine: false,
             removeDuplicates: false
           },
@@ -103,10 +97,8 @@ describe('高级清洗集成测试', () => {
       const result = await handleActionRequest({
         action: 'advanced-clean',
         data: {
-          text: 'line1\n\nline2',
+          text: 'line1\nline2',
           cleaningRules: {
-            removeEmptyLines: true,
-            mergeMultipleLines: false,
             mergeToSingleLine: false,
             removeDuplicates: false
           },
@@ -125,8 +117,6 @@ describe('高级清洗集成测试', () => {
         data: {
           text: 'test',
           cleaningRules: {
-            removeEmptyLines: false,
-            mergeMultipleLines: false,
             mergeToSingleLine: false,
             removeDuplicates: false
           },
@@ -137,6 +127,35 @@ describe('高级清洗集成测试', () => {
       expect(mockUsage.evolveTrial).toHaveBeenCalledWith('advanced-cleaning');
     });
 
+    test('应该在消耗试用次数后返回最新计数', async () => {
+      // 清除 beforeEach 中的默认 mock，设置新的返回值
+      // checkTrial 只会被调用一次（在 evolveTrial 之后）
+      mockUsage.checkTrial.mockResolvedValue({
+        allowed: true,
+        remaining: 2,  // 消耗后剩余 2 次
+        feature: 'advanced-cleaning'
+      });
+
+      const result = await handleActionRequest({
+        action: 'advanced-clean',
+        data: {
+          text: 'test',
+          cleaningRules: {
+            mergeToSingleLine: false,
+            removeDuplicates: false
+          },
+          operation: 'copy'
+        }
+      });
+
+      expect(result.status).toBe('ok');
+      expect(result.uiData?.trialRemaining).toBe(2);
+      expect(mockUsage.evolveTrial).toHaveBeenCalledWith('advanced-cleaning');
+      // checkTrial 应该被调用一次（在消耗后获取最新计数）
+      expect(mockUsage.checkTrial).toHaveBeenCalledTimes(1);
+      expect(mockUsage.checkTrial).toHaveBeenCalledWith('advanced-cleaning');
+    });
+
     test('应该受 5 行限制', async () => {
       const longText = Array(10).fill('line').join('\n');
       
@@ -145,8 +164,6 @@ describe('高级清洗集成测试', () => {
         data: {
           text: longText,
           cleaningRules: {
-            removeEmptyLines: false,
-            mergeMultipleLines: false,
             mergeToSingleLine: false,
             removeDuplicates: false
           },
@@ -170,8 +187,6 @@ describe('高级清洗集成测试', () => {
         data: {
           text: 'line1\nline2\nline3',
           cleaningRules: {
-            removeEmptyLines: false,
-            mergeMultipleLines: false,
             mergeToSingleLine: false,
             removeDuplicates: false
           },
@@ -202,8 +217,6 @@ describe('高级清洗集成测试', () => {
         data: {
           text: 'test',
           cleaningRules: {
-            removeEmptyLines: false,
-            mergeMultipleLines: false,
             mergeToSingleLine: false,
             removeDuplicates: false
           },
@@ -220,14 +233,32 @@ describe('高级清洗集成测试', () => {
       expect(result.uiData?.trialRemaining).toBe(0);
     });
 
+    test('应该在试用次数为0时返回blocked状态', async () => {
+      const result = await handleActionRequest({
+        action: 'advanced-clean',
+        data: {
+          text: 'test data',
+          cleaningRules: {
+            mergeToSingleLine: false,
+            removeDuplicates: false
+          },
+          operation: 'copy'
+        }
+      });
+
+      expect(result.status).toBe('blocked');
+      expect(result.uiAction).toBe('SHOW_TRIAL_EXHAUSTED');
+      expect(result.uiData?.trialRemaining).toBe(0);
+      expect(mockUsage.authorize).toHaveBeenCalledWith('advanced-cleaning');
+      expect(mockUsage.checkTrial).toHaveBeenCalledWith('advanced-cleaning');
+    });
+
     test('应该不消耗试用次数', async () => {
       await handleActionRequest({
         action: 'advanced-clean',
         data: {
           text: 'test',
           cleaningRules: {
-            removeEmptyLines: false,
-            mergeMultipleLines: false,
             mergeToSingleLine: false,
             removeDuplicates: false
           },
@@ -240,32 +271,12 @@ describe('高级清洗集成测试', () => {
   });
 
   describe('清洗规则应用', () => {
-    test('应该正确应用去空行规则', async () => {
-      const result = await handleActionRequest({
-        action: 'advanced-clean',
-        data: {
-          text: 'line1\n\nline2\n  \nline3',
-          cleaningRules: {
-            removeEmptyLines: true,
-            mergeMultipleLines: false,
-            mergeToSingleLine: false,
-            removeDuplicates: false
-          },
-          operation: 'copy'
-        }
-      });
-
-      expect(result.data).toBe('line1\nline2\nline3');
-    });
-
     test('应该正确应用去重规则', async () => {
       const result = await handleActionRequest({
         action: 'advanced-clean',
         data: {
           text: 'line1\nline2\nline1\nline3',
           cleaningRules: {
-            removeEmptyLines: false,
-            mergeMultipleLines: false,
             mergeToSingleLine: false,
             removeDuplicates: true
           },
@@ -282,8 +293,6 @@ describe('高级清洗集成测试', () => {
         data: {
           text: 'line1\nline2\nline3',
           cleaningRules: {
-            removeEmptyLines: false,
-            mergeMultipleLines: false,
             mergeToSingleLine: true,
             removeDuplicates: false
           },
@@ -300,8 +309,6 @@ describe('高级清洗集成测试', () => {
         data: {
           text: 'line1\nline2\nline3',
           cleaningRules: {
-            removeEmptyLines: false,
-            mergeMultipleLines: true,
             customSeparator: ', ',
             mergeToSingleLine: false,
             removeDuplicates: false
@@ -317,10 +324,8 @@ describe('高级清洗集成测试', () => {
       const result = await handleActionRequest({
         action: 'advanced-clean',
         data: {
-          text: 'line1\n\nline2\nline2\nline3',
+          text: 'line1\nline2\nline2\nline3',
           cleaningRules: {
-            removeEmptyLines: true,
-            mergeMultipleLines: false,
             mergeToSingleLine: false,
             removeDuplicates: true
           },
