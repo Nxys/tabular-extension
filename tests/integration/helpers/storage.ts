@@ -79,8 +79,15 @@ export async function setProUser(page: Page): Promise<void> {
     };
     
     // 直接存储明文数据（测试环境不需要加密）
-    return chrome.storage.local.set({ 'pro_state': proState });
+    // 同时确保插件启用
+    return chrome.storage.local.set({ 
+      'pro_state': proState,
+      'enabled': true
+    });
   });
+  
+  // 等待设置生效
+  await page.waitForTimeout(200);
 }
 
 /**
@@ -99,8 +106,15 @@ export async function setFreeUser(page: Page): Promise<void> {
       }
     };
     
-    return chrome.storage.local.set({ 'pro_state': proState });
+    // 同时确保插件启用
+    return chrome.storage.local.set({ 
+      'pro_state': proState,
+      'enabled': true
+    });
   });
+  
+  // 等待设置生效
+  await page.waitForTimeout(200);
 }
 
 /**

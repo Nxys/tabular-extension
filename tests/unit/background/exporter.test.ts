@@ -128,8 +128,6 @@ describe('exportData', () => {
     const options: ExportOptions = {
       format: 'csv',
       cleaningRules: {
-        removeEmptyLines: true,
-        mergeMultipleLines: false,
         mergeToSingleLine: false,
         removeDuplicates: false
       }

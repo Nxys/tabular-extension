@@ -360,6 +360,102 @@ describe('panel.ts', () => {
     });
   });
 
+  describe('按钮状态管理', () => {
+    it('应该在无内容时禁用所有按钮', () => {
+      // Arrange & Act
+      panel.showResult({ text: '' });
+
+      // Assert
+      const copyBtn = document.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn`) as HTMLButtonElement;
+      const cleanBtn = document.querySelector(`.${CSS_CLASS_PREFIX}-panel-advanced-clean-btn`) as HTMLButtonElement;
+      const exportBtn = document.querySelector(`.${CSS_CLASS_PREFIX}-panel-export-btn`) as HTMLButtonElement;
+
+      expect(copyBtn.disabled).toBe(true);
+      expect(cleanBtn.disabled).toBe(true);
+      expect(exportBtn.disabled).toBe(true);
+      
+      // 验证视觉反馈
+      expect(copyBtn.style.opacity).toBe('0.5');
+      expect(copyBtn.style.cursor).toBe('not-allowed');
+      expect(cleanBtn.style.opacity).toBe('0.5');
+      expect(cleanBtn.style.cursor).toBe('not-allowed');
+      expect(exportBtn.style.opacity).toBe('0.5');
+      expect(exportBtn.style.cursor).toBe('not-allowed');
+    });
+
+    it('应该在有内容时启用所有按钮', () => {
+      // Arrange & Act
+      panel.showResult({ text: 'Some content' });
+
+      // Assert
+      const copyBtn = document.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn`) as HTMLButtonElement;
+      const cleanBtn = document.querySelector(`.${CSS_CLASS_PREFIX}-panel-advanced-clean-btn`) as HTMLButtonElement;
+      const exportBtn = document.querySelector(`.${CSS_CLASS_PREFIX}-panel-export-btn`) as HTMLButtonElement;
+
+      expect(copyBtn.disabled).toBe(false);
+      expect(cleanBtn.disabled).toBe(false);
+      expect(exportBtn.disabled).toBe(false);
+    });
+
+    it('应该在内容仅为空格时禁用按钮', () => {
+      // Arrange & Act
+      panel.showResult({ text: '   ' });
+
+      // Assert
+      const copyBtn = document.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn`) as HTMLButtonElement;
+      const cleanBtn = document.querySelector(`.${CSS_CLASS_PREFIX}-panel-advanced-clean-btn`) as HTMLButtonElement;
+      const exportBtn = document.querySelector(`.${CSS_CLASS_PREFIX}-panel-export-btn`) as HTMLButtonElement;
+
+      expect(copyBtn.disabled).toBe(true);
+      expect(cleanBtn.disabled).toBe(true);
+      expect(exportBtn.disabled).toBe(true);
+    });
+
+    it('应该在试用次数为0时禁用Pro功能按钮', () => {
+      // Arrange & Act
+      panel.showResult({ text: 'Some content', trialRemaining: 0 });
+
+      // Assert
+      const cleanBtn = document.querySelector(`.${CSS_CLASS_PREFIX}-panel-advanced-clean-btn`) as HTMLButtonElement;
+      const exportBtn = document.querySelector(`.${CSS_CLASS_PREFIX}-panel-export-btn`) as HTMLButtonElement;
+
+      expect(cleanBtn.disabled).toBe(true);
+      expect(exportBtn.disabled).toBe(true);
+      expect(cleanBtn.textContent).toContain('剩余 0 次');
+      expect(exportBtn.textContent).toContain('剩余 0 次');
+    });
+
+    it('应该在无内容且试用次数为0时禁用所有按钮', () => {
+      // Arrange & Act
+      panel.showResult({ text: '', trialRemaining: 0 });
+
+      // Assert
+      const copyBtn = document.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn`) as HTMLButtonElement;
+      const cleanBtn = document.querySelector(`.${CSS_CLASS_PREFIX}-panel-advanced-clean-btn`) as HTMLButtonElement;
+      const exportBtn = document.querySelector(`.${CSS_CLASS_PREFIX}-panel-export-btn`) as HTMLButtonElement;
+
+      expect(copyBtn.disabled).toBe(true);
+      expect(cleanBtn.disabled).toBe(true);
+      expect(exportBtn.disabled).toBe(true);
+    });
+
+    it('应该在有内容且有试用次数时启用所有按钮', () => {
+      // Arrange & Act
+      panel.showResult({ text: 'Some content', trialRemaining: 3 });
+
+      // Assert
+      const copyBtn = document.querySelector(`.${CSS_CLASS_PREFIX}-panel-copy-btn`) as HTMLButtonElement;
+      const cleanBtn = document.querySelector(`.${CSS_CLASS_PREFIX}-panel-advanced-clean-btn`) as HTMLButtonElement;
+      const exportBtn = document.querySelector(`.${CSS_CLASS_PREFIX}-panel-export-btn`) as HTMLButtonElement;
+
+      expect(copyBtn.disabled).toBe(false);
+      expect(cleanBtn.disabled).toBe(false);
+      expect(exportBtn.disabled).toBe(false);
+      expect(cleanBtn.textContent).toContain('剩余 3 次');
+      expect(exportBtn.textContent).toContain('剩余 3 次');
+    });
+  });
+
   describe.skip('复制功能', () => {
     // 注意：部分测试因字符编码问题失败，需要修复
     // Mock clipboard API

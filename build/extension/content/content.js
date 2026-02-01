@@ -177,13 +177,14 @@
         this.currentText = target.value;
       };
       previewWrapper.appendChild(preview);
+      const hasContent = !!(uiData?.text && uiData.text.trim().length > 0);
       const btnWrapper = document.createElement("div");
       btnWrapper.className = `${CSS_CLASS_PREFIX}-panel-copy-wrapper`;
-      const advancedCleanBtn = this.createAdvancedCleanButton(uiData?.trialRemaining);
+      const advancedCleanBtn = this.createAdvancedCleanButton(uiData?.trialRemaining, hasContent);
       btnWrapper.appendChild(advancedCleanBtn);
-      const exportBtn = this.createExportButton(uiData?.trialRemaining);
+      const exportBtn = this.createExportButton(uiData?.trialRemaining, hasContent);
       btnWrapper.appendChild(exportBtn);
-      const copyBtn = this.createCopyButton();
+      const copyBtn = this.createCopyButton(hasContent);
       btnWrapper.appendChild(copyBtn);
       this.element.appendChild(header);
       this.element.appendChild(previewWrapper);
@@ -347,7 +348,7 @@ ${messageText}`;
     /**
      * 创建复制按钮
      */
-    createCopyButton() {
+    createCopyButton(hasContent = true) {
       const copyBtn = document.createElement("button");
       copyBtn.className = `${CSS_CLASS_PREFIX}-panel-copy-btn`;
       const copyBtnContent = document.createElement("span");
@@ -360,7 +361,13 @@ ${messageText}`;
       copyBtnContent.appendChild(copyBtnIcon);
       copyBtnContent.appendChild(copyBtnText);
       copyBtn.appendChild(copyBtnContent);
+      copyBtn.disabled = !hasContent;
+      if (!hasContent) {
+        copyBtn.style.opacity = "0.5";
+        copyBtn.style.cursor = "not-allowed";
+      }
       copyBtn.onclick = () => {
+        if (!hasContent) return;
         this.copyToClipboard();
       };
       return copyBtn;
@@ -378,23 +385,22 @@ ${messageText}`;
     /**
      * 创建高级清洗按钮
      */
-    createAdvancedCleanButton(trialRemaining) {
+    createAdvancedCleanButton(trialRemaining, hasContent = true) {
       const btn = document.createElement("button");
       btn.className = `${CSS_CLASS_PREFIX}-panel-advanced-clean-btn`;
       let buttonText = "\u{1F9F9} \u6E05\u6D17";
       if (trialRemaining !== void 0) {
         buttonText += ` (\u5269\u4F59 ${trialRemaining} \u6B21)`;
-        if (trialRemaining === 0) {
-          btn.disabled = true;
-          btn.style.opacity = "0.5";
-          btn.style.cursor = "not-allowed";
-        }
       }
       btn.textContent = buttonText;
+      const shouldDisable = !hasContent || trialRemaining !== void 0 && trialRemaining === 0;
+      btn.disabled = shouldDisable;
+      if (shouldDisable) {
+        btn.style.opacity = "0.5";
+        btn.style.cursor = "not-allowed";
+      }
       btn.onclick = () => {
-        if (trialRemaining === 0) {
-          return;
-        }
+        if (shouldDisable) return;
         this.showCleaningDialog();
       };
       return btn;
@@ -402,23 +408,22 @@ ${messageText}`;
     /**
      * 创建导出按钮
      */
-    createExportButton(trialRemaining) {
+    createExportButton(trialRemaining, hasContent = true) {
       const btn = document.createElement("button");
       btn.className = `${CSS_CLASS_PREFIX}-panel-export-btn`;
       let buttonText = "\u{1F4E4} \u5BFC\u51FA";
       if (trialRemaining !== void 0) {
         buttonText += ` (\u5269\u4F59 ${trialRemaining} \u6B21)`;
-        if (trialRemaining === 0) {
-          btn.disabled = true;
-          btn.style.opacity = "0.5";
-          btn.style.cursor = "not-allowed";
-        }
       }
       btn.textContent = buttonText;
+      const shouldDisable = !hasContent || trialRemaining !== void 0 && trialRemaining === 0;
+      btn.disabled = shouldDisable;
+      if (shouldDisable) {
+        btn.style.opacity = "0.5";
+        btn.style.cursor = "not-allowed";
+      }
       btn.onclick = () => {
-        if (trialRemaining === 0) {
-          return;
-        }
+        if (shouldDisable) return;
         this.showExportDialog();
       };
       return btn;

@@ -67,6 +67,7 @@ export class Panel {
     totalRows?: number;
     isLimited?: boolean;
     limitMessage?: string;  // 由 Background 生成的限制提示文案
+    upgradeUrl?: string;    // 升级页面 URL（由 Background 生成）
     trialRemaining?: number;
   }, panelPosition: PanelPosition = 'center'): void {
     // 直接复制模式：不显示面板，直接复制到剪贴板
@@ -92,10 +93,10 @@ export class Panel {
     const previewWrapper = document.createElement('div');
     previewWrapper.className = `${CSS_CLASS_PREFIX}-panel-preview-wrapper`;
 
-    // 行数限制提示（如果被限制且有提示文案）
+    // 超限提示条（如果被限制且有提示文案）
     if (uiData?.isLimited && uiData?.limitMessage) {
-      const limitHint = this.createLimitHint(uiData.limitMessage);
-      previewWrapper.appendChild(limitHint);
+      const banner = this.createLimitBanner(uiData.limitMessage, uiData.upgradeUrl);
+      previewWrapper.appendChild(banner);
     }
 
     const preview = document.createElement('textarea');
@@ -119,20 +120,23 @@ export class Panel {
 
     previewWrapper.appendChild(preview);
 
+    // 检查是否有有效内容
+    const hasContent = !!(uiData?.text && uiData.text.trim().length > 0);
+
     // 按钮容器
     const btnWrapper = document.createElement('div');
     btnWrapper.className = `${CSS_CLASS_PREFIX}-panel-copy-wrapper`;
 
     // 高级清洗按钮
-    const advancedCleanBtn = this.createAdvancedCleanButton(uiData?.trialRemaining);
+    const advancedCleanBtn = this.createAdvancedCleanButton(uiData?.trialRemaining, hasContent);
     btnWrapper.appendChild(advancedCleanBtn);
 
     // 导出按钮
-    const exportBtn = this.createExportButton(uiData?.trialRemaining);
+    const exportBtn = this.createExportButton(uiData?.trialRemaining, hasContent);
     btnWrapper.appendChild(exportBtn);
 
     // 复制按钮
-    const copyBtn = this.createCopyButton();
+    const copyBtn = this.createCopyButton(hasContent);
     btnWrapper.appendChild(copyBtn);
 
     // 组装面板
@@ -365,7 +369,7 @@ export class Panel {
   /**
    * 创建复制按钮
    */
-  private createCopyButton(): HTMLButtonElement {
+  private createCopyButton(hasContent: boolean = true): HTMLButtonElement {
     const copyBtn = document.createElement('button');
     copyBtn.className = `${CSS_CLASS_PREFIX}-panel-copy-btn`;
     
@@ -383,7 +387,16 @@ export class Panel {
     copyBtnContent.appendChild(copyBtnText);
     copyBtn.appendChild(copyBtnContent);
     
+    // 无内容时禁用按钮
+    copyBtn.disabled = !hasContent;
+    if (!hasContent) {
+      copyBtn.style.opacity = '0.5';
+      copyBtn.style.cursor = 'not-allowed';
+    }
+    
     copyBtn.onclick = () => {
+      // 无内容时不响应点击
+      if (!hasContent) return;
       this.copyToClipboard();
     };
 
@@ -402,9 +415,59 @@ export class Panel {
   }
 
   /**
+   * 创建超限提示条
+   * 
+   * 在结果面板顶部显示超限提示，包含提示文案和升级按钮
+   * 
+   * @param limitMessage - 由 Background 生成的限制提示文案
+   * @param upgradeUrl - 升级页面 URL（可选，缺失时使用默认 URL）
+   * @returns 超限提示条 DOM 元素
+   */
+  private createLimitBanner(limitMessage: string, upgradeUrl?: string): HTMLDivElement {
+    const banner = document.createElement('div');
+    banner.className = `${CSS_CLASS_PREFIX}-panel-limit-banner`;
+    
+    // 提示文案
+    const message = document.createElement('div');
+    message.className = `${CSS_CLASS_PREFIX}-panel-limit-message`;
+    message.textContent = limitMessage;
+    
+    // 升级按钮
+    const btn = document.createElement('button');
+    btn.className = `${CSS_CLASS_PREFIX}-panel-upgrade-btn`;
+    btn.textContent = '🚀 升级Pro';
+    btn.onclick = () => {
+      // 使用提供的 URL 或默认 URL
+      const url = upgradeUrl || 'https://example.com/upgrade';
+      
+      try {
+        // 在当前标签页打开升级页面
+        window.location.href = url;
+      } catch (error) {
+        // 页面跳转失败时的备用方案：复制链接到剪贴板
+        console.error('无法跳转到升级页面:', error);
+        
+        // 尝试复制到剪贴板
+        navigator.clipboard.writeText(url)
+          .then(() => {
+            this.showToast('❌ 无法跳转，升级链接已复制到剪贴板');
+          })
+          .catch(() => {
+            this.showToast('❌ 无法跳转到升级页面');
+          });
+      }
+    };
+    
+    banner.appendChild(message);
+    banner.appendChild(btn);
+    
+    return banner;
+  }
+
+  /**
    * 创建高级清洗按钮
    */
-  private createAdvancedCleanButton(trialRemaining?: number): HTMLButtonElement {
+  private createAdvancedCleanButton(trialRemaining?: number, hasContent: boolean = true): HTMLButtonElement {
     const btn = document.createElement('button');
     btn.className = `${CSS_CLASS_PREFIX}-panel-advanced-clean-btn`;
     
@@ -414,21 +477,22 @@ export class Panel {
     // 如果有试用次数信息，显示在按钮上
     if (trialRemaining !== undefined) {
       buttonText += ` (剩余 ${trialRemaining} 次)`;
-      
-      // 次数为0时禁用按钮
-      if (trialRemaining === 0) {
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
-        btn.style.cursor = 'not-allowed';
-      }
     }
     
     btn.textContent = buttonText;
+    
+    // 检查是否应该禁用按钮
+    const shouldDisable = !hasContent || (trialRemaining !== undefined && trialRemaining === 0);
+    btn.disabled = shouldDisable;
+    
+    if (shouldDisable) {
+      btn.style.opacity = '0.5';
+      btn.style.cursor = 'not-allowed';
+    }
+    
     btn.onclick = () => {
-      // 次数为0时不响应点击
-      if (trialRemaining === 0) {
-        return;
-      }
+      // 禁用时不响应点击
+      if (shouldDisable) return;
       this.showCleaningDialog();
     };
     return btn;
@@ -437,7 +501,7 @@ export class Panel {
   /**
    * 创建导出按钮
    */
-  private createExportButton(trialRemaining?: number): HTMLButtonElement {
+  private createExportButton(trialRemaining?: number, hasContent: boolean = true): HTMLButtonElement {
     const btn = document.createElement('button');
     btn.className = `${CSS_CLASS_PREFIX}-panel-export-btn`;
     
@@ -447,21 +511,22 @@ export class Panel {
     // 如果有试用次数信息，显示在按钮上
     if (trialRemaining !== undefined) {
       buttonText += ` (剩余 ${trialRemaining} 次)`;
-      
-      // 次数为0时禁用按钮
-      if (trialRemaining === 0) {
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
-        btn.style.cursor = 'not-allowed';
-      }
     }
     
     btn.textContent = buttonText;
+    
+    // 检查是否应该禁用按钮
+    const shouldDisable = !hasContent || (trialRemaining !== undefined && trialRemaining === 0);
+    btn.disabled = shouldDisable;
+    
+    if (shouldDisable) {
+      btn.style.opacity = '0.5';
+      btn.style.cursor = 'not-allowed';
+    }
+    
     btn.onclick = () => {
-      // 次数为0时不响应点击
-      if (trialRemaining === 0) {
-        return;
-      }
+      // 禁用时不响应点击
+      if (shouldDisable) return;
       this.showExportDialog();
     };
     return btn;

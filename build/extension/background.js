@@ -832,10 +832,6 @@ async function updateSettings(partial) {
 }
 
 // src/background/index.ts
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  handleMessage(message).then(sendResponse);
-  return true;
-});
 async function handleMessage(message) {
   try {
     if (message.type === "REQUEST_ACTION") {
@@ -854,6 +850,10 @@ async function handleMessage(message) {
     };
   }
 }
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  handleMessage(message).then(sendResponse);
+  return true;
+});
 chrome.commands.onCommand.addListener(async (command) => {
   if (command === "selection-switch") {
     const settings = await getSettings();
