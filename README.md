@@ -1,39 +1,37 @@
 # Tabular
 
-> Drag-select any area of a web page, preserve visual reading order, and copy clean text or structured table-like data in one step.
+[中文](./README.md) | [English](./README.en.md)
 
-Tabular is a Chrome extension for fast web content capture. It lets users draw a rectangle over any page, extract visible content locally, and format the result for reuse without sending data to a backend.
+> 通过拖拽框选网页区域，按视觉阅读顺序提取文本，并一键复制为干净文本或结构化数据。
+
+Tabular 是一个面向 Chrome 的网页内容提取扩展。它允许用户在任意网页上拖出选择框，在本地提取可见内容，并将结果整理为便于复用的文本格式，无需依赖后端服务。
 
 ![Tabular preview](./docs/assets/readme-hero.png)
 
-## English Summary
+## 中文摘要
 
-- Drag-select content from arbitrary web pages.
-- Preserve reading order for copied plain text.
-- Convert table-like regions into structured output.
-- Keep processing local to the browser with no external service dependency.
-- Ship as a Manifest V3 extension built with TypeScript.
+- 在任意网页上拖拽框选内容。
+- 按视觉阅读顺序整理复制结果。
+- 将类表格区域转换为结构化输出。
+- 全程本地处理，不依赖外部服务。
+- 基于 TypeScript 与 Manifest V3 构建。
 
-## Roadmap
+## 路线图
 
-- [x] Drag selection with editable result panel
-- [x] Keyboard toggle, panel placement, and one-click copy
-- [x] Local-first extraction with no network calls
-- [ ] Improve table extraction on dense enterprise dashboards
-- [ ] Harden CSV export and table alignment workflows
-- [ ] Publish public demo / store listing with onboarding assets
+- [x] 拖拽框选与可编辑结果面板
+- [x] 快捷开关、面板定位与一键复制
+- [x] 无网络请求的本地优先提取流程
+- [ ] 强化复杂企业后台页面上的表格提取能力
+- [ ] 完善 CSV 导出与列对齐体验
+- [ ] 补齐公开 demo / 商店页与配套 onboarding 资产
 
-## Install From Release
+## Release 安装
 
-1. Download `tabular-extension-v0.1.0.zip` from the GitHub release assets.
-2. Unzip the archive to a local folder.
-3. Open `chrome://extensions/` in Chrome.
-4. Enable `Developer mode`.
-5. Click `Load unpacked` and select the extracted folder.
-
-## 中文说明
-
-一个 Chrome 扩展程序，允许用户通过鼠标拖拽创建矩形选择框，智能提取选择区域内的文本，并按视觉呈现顺序重新组织为可复制的纯文本格式。支持普通文本提取和表格识别两种模式。
+1. 从 GitHub Release 下载 `tabular-extension-v0.1.0.zip`。
+2. 解压 ZIP 到本地目录。
+3. 在 Chrome 中打开 `chrome://extensions/`。
+4. 打开“开发者模式”。
+5. 点击“加载已解压的扩展程序”，选择解压后的目录。
 
 ## 功能特性
 
