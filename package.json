@@ -1,7 +1,8 @@
 {
   "name": "tabular-extension",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "浏览器框选复制插件 - Chrome扩展",
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=18.0.0"

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tabular – Copy Web Tables & Format Data",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Copy tables from web pages, convert content to structured tables, and format data instantly.",
   
   "permissions": [

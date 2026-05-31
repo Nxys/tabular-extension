@@ -1,4 +1,37 @@
-# 浏览器框选复制插件
+# Tabular
+
+> Drag-select any area of a web page, preserve visual reading order, and copy clean text or structured table-like data in one step.
+
+Tabular is a Chrome extension for fast web content capture. It lets users draw a rectangle over any page, extract visible content locally, and format the result for reuse without sending data to a backend.
+
+![Tabular preview](./docs/assets/readme-hero.png)
+
+## English Summary
+
+- Drag-select content from arbitrary web pages.
+- Preserve reading order for copied plain text.
+- Convert table-like regions into structured output.
+- Keep processing local to the browser with no external service dependency.
+- Ship as a Manifest V3 extension built with TypeScript.
+
+## Roadmap
+
+- [x] Drag selection with editable result panel
+- [x] Keyboard toggle, panel placement, and one-click copy
+- [x] Local-first extraction with no network calls
+- [ ] Improve table extraction on dense enterprise dashboards
+- [ ] Harden CSV export and table alignment workflows
+- [ ] Publish public demo / store listing with onboarding assets
+
+## Install From Release
+
+1. Download `tabular-extension-v0.1.0.zip` from the GitHub release assets.
+2. Unzip the archive to a local folder.
+3. Open `chrome://extensions/` in Chrome.
+4. Enable `Developer mode`.
+5. Click `Load unpacked` and select the extracted folder.
+
+## 中文说明
 
 一个 Chrome 扩展程序，允许用户通过鼠标拖拽创建矩形选择框，智能提取选择区域内的文本，并按视觉呈现顺序重新组织为可复制的纯文本格式。支持普通文本提取和表格识别两种模式。
 

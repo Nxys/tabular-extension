@@ -7,7 +7,7 @@
 - [x] 所有测试通过 (39/39 测试用例)
 - [x] ESLint 代码检查通过
 - [x] 项目打包脚本完成
-- [x] 扩展包生成成功 (`tabular-extension-v1.0.0.zip`)
+- [x] 扩展包生成成功 (`tabular-extension-v0.1.0.zip`)
 - [x] 样式提取到 CSS 文件（使用 CSS 变量）
 - [x] 自动主题切换实现（媒体查询）
 
@@ -158,7 +158,7 @@ npm run package
 
 ### 3. 上传到 Chrome Web Store
 1. 访问 [Chrome Web Store 开发者控制台](https://chrome.google.com/webstore/devconsole/)
-2. 上传 `tabular-extension-v1.0.0.zip`
+2. 上传 `tabular-extension-v0.1.0.zip`
 3. 填写商店信息
 4. 上传截图和图标
 5. 提交审核
