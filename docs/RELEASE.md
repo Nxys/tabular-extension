@@ -23,7 +23,7 @@ npm run package   # 创建扩展包
 1. 访问 [Chrome Web Store 开发者控制台](https://chrome.google.com/webstore/devconsole/)
 2. 登录 Google 开发者账号
 3. 点击"新增项目"
-4. 上传生成的 `tabular-extension-v1.0.0.zip` 文件
+4. 上传生成的 `tabular-extension-v0.1.0.zip` 文件
 5. 填写商店信息：
    - **应用名称**: 浏览器框选复制插件
    - **描述**: 通过鼠标拖拽创建选择框，智能提取并复制页面文本
@@ -207,7 +207,7 @@ A: 检查网站的 CSP 策略，某些网站可能限制扩展运行
 
 ## 版本历史
 
-### v1.0.0 (当前版本)
+### v0.1.0 (当前版本)
 - ✅ 基础框选功能（紫色渐变虚线边框）
 - ✅ 智能文本提取（三段式 pipeline：collect → layout → format）
 - ✅ 视觉顺序排序（核心算法，技术护城河）

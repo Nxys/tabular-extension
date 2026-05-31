@@ -5,7 +5,8 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const extensionDir = './build/extension';
-const zipFile = './build/extension.zip';
+const packageJson = require('../package.json');
+const zipFile = `./build/tabular-extension-v${packageJson.version}.zip`;
 
 console.log('📦 创建 ZIP 包...');
 

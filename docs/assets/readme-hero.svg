@@ -1,0 +1,74 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="80" x2="1140" y2="680" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8F5FF"/>
+      <stop offset="1" stop-color="#EEF4FF"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#7C4DFF"/>
+      <stop offset="1" stop-color="#4F8CFF"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="1280" height="720" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="22" stdDeviation="28" flood-color="#2B3A67" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="720" rx="36" fill="url(#bg)"/>
+  <circle cx="1120" cy="122" r="154" fill="#E6EEFF"/>
+  <circle cx="1098" cy="124" r="104" fill="#DCE7FF"/>
+  <circle cx="1070" cy="584" r="122" fill="#E9E0FF"/>
+
+  <text x="92" y="128" fill="#111827" font-family="Inter, Arial, sans-serif" font-size="48" font-weight="700">Tabular</text>
+  <text x="92" y="176" fill="#4B5563" font-family="Inter, Arial, sans-serif" font-size="24">
+    Drag-select any web content, preserve reading order, and copy structured output in one step.
+  </text>
+
+  <g filter="url(#shadow)">
+    <rect x="84" y="232" width="760" height="420" rx="24" fill="white"/>
+    <rect x="84" y="232" width="760" height="54" rx="24" fill="#F3F4F6"/>
+    <circle cx="126" cy="259" r="8" fill="#F87171"/>
+    <circle cx="154" cy="259" r="8" fill="#FBBF24"/>
+    <circle cx="182" cy="259" r="8" fill="#34D399"/>
+    <rect x="220" y="246" width="382" height="26" rx="13" fill="#E5E7EB"/>
+    <text x="242" y="264" fill="#6B7280" font-family="Inter, Arial, sans-serif" font-size="14">docs.example.com/report</text>
+
+    <rect x="122" y="332" width="322" height="16" rx="8" fill="#CBD5E1"/>
+    <rect x="122" y="362" width="236" height="12" rx="6" fill="#E2E8F0"/>
+    <rect x="122" y="386" width="412" height="12" rx="6" fill="#E2E8F0"/>
+    <rect x="122" y="410" width="286" height="12" rx="6" fill="#E2E8F0"/>
+
+    <rect x="152" y="450" width="392" height="112" rx="18" fill="#F8FAFC" stroke="#8B5CF6" stroke-width="4" stroke-dasharray="16 12"/>
+    <text x="182" y="494" fill="#6D28D9" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700">Drag selection</text>
+    <text x="182" y="528" fill="#475569" font-family="Inter, Arial, sans-serif" font-size="18">Quarterly revenue</text>
+    <text x="182" y="558" fill="#475569" font-family="Inter, Arial, sans-serif" font-size="18">North America   $1.28M</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="866" y="258" width="324" height="352" rx="28" fill="#111827"/>
+    <rect x="892" y="286" width="120" height="24" rx="12" fill="#1F2937"/>
+    <text x="908" y="303" fill="#E5E7EB" font-family="Inter, Arial, sans-serif" font-size="14">Result panel</text>
+
+    <rect x="892" y="334" width="186" height="54" rx="16" fill="url(#accent)"/>
+    <circle cx="930" cy="361" r="18" fill="rgba(255,255,255,0.18)"/>
+    <rect x="954" y="349" width="90" height="8" rx="4" fill="rgba(255,255,255,0.74)"/>
+    <rect x="954" y="365" width="56" height="8" rx="4" fill="rgba(255,255,255,0.46)"/>
+
+    <text x="892" y="430" fill="#C4B5FD" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700">Plain text</text>
+    <rect x="892" y="444" width="212" height="12" rx="6" fill="#374151"/>
+    <rect x="892" y="468" width="236" height="12" rx="6" fill="#374151"/>
+    <rect x="892" y="492" width="176" height="12" rx="6" fill="#374151"/>
+
+    <text x="892" y="542" fill="#93C5FD" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700">Structured table</text>
+    <rect x="892" y="556" width="234" height="12" rx="6" fill="#334155"/>
+    <rect x="892" y="580" width="198" height="12" rx="6" fill="#334155"/>
+  </g>
+
+  <g>
+    <rect x="92" y="624" width="170" height="42" rx="21" fill="#111827"/>
+    <text x="118" y="651" fill="white" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700">Local-first</text>
+    <rect x="280" y="624" width="204" height="42" rx="21" fill="#FFFFFF" stroke="#D1D5DB"/>
+    <text x="312" y="651" fill="#374151" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700">Manifest V3</text>
+    <rect x="500" y="624" width="182" height="42" rx="21" fill="#FFFFFF" stroke="#D1D5DB"/>
+    <text x="532" y="651" fill="#374151" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700">No backend</text>
+  </g>
+</svg>

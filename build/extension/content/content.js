@@ -146,8 +146,8 @@
       const previewWrapper = document.createElement("div");
       previewWrapper.className = `${CSS_CLASS_PREFIX}-panel-preview-wrapper`;
       if (uiData?.isLimited && uiData?.limitMessage) {
-        const limitHint = this.createLimitHint(uiData.limitMessage);
-        previewWrapper.appendChild(limitHint);
+        const banner = this.createLimitBanner(uiData.limitMessage, uiData.upgradeUrl);
+        previewWrapper.appendChild(banner);
       }
       const preview = document.createElement("textarea");
       preview.className = `${CSS_CLASS_PREFIX}-panel-textarea`;
@@ -356,6 +356,41 @@
       hint.className = `${CSS_CLASS_PREFIX}-panel-limit-hint`;
       hint.textContent = message;
       return hint;
+    }
+    /**
+     * 创建超限提示条
+     * 
+     * 在结果面板顶部显示超限提示，包含提示文案和升级按钮
+     * 
+     * @param limitMessage - 由 Background 生成的限制提示文案
+     * @param upgradeUrl - 升级页面 URL（可选，缺失时使用默认 URL）
+     * @returns 超限提示条 DOM 元素
+     */
+    createLimitBanner(limitMessage, upgradeUrl) {
+      const banner = document.createElement("div");
+      banner.className = `${CSS_CLASS_PREFIX}-panel-limit-banner`;
+      const message = document.createElement("div");
+      message.className = `${CSS_CLASS_PREFIX}-panel-limit-message`;
+      message.textContent = limitMessage;
+      const btn = document.createElement("button");
+      btn.className = `${CSS_CLASS_PREFIX}-panel-upgrade-btn`;
+      btn.textContent = "\u{1F680} \u5347\u7EA7Pro";
+      btn.onclick = () => {
+        const url = upgradeUrl || "https://example.com/upgrade";
+        try {
+          window.location.href = url;
+        } catch (error) {
+          console.error("\u65E0\u6CD5\u8DF3\u8F6C\u5230\u5347\u7EA7\u9875\u9762:", error);
+          navigator.clipboard.writeText(url).then(() => {
+            this.showToast("\u274C \u65E0\u6CD5\u8DF3\u8F6C\uFF0C\u5347\u7EA7\u94FE\u63A5\u5DF2\u590D\u5236\u5230\u526A\u8D34\u677F");
+          }).catch(() => {
+            this.showToast("\u274C \u65E0\u6CD5\u8DF3\u8F6C\u5230\u5347\u7EA7\u9875\u9762");
+          });
+        }
+      };
+      banner.appendChild(message);
+      banner.appendChild(btn);
+      return banner;
     }
     /**
      * 创建高级清洗按钮
