@@ -1,0 +1,57 @@
+name: Update Repository About
+
+on:
+  push:
+    branches:
+      - 3.0
+      - 3.1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  about:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Update repository description and website
+        env:
+          GH_TOKEN: ${{ github.token }}
+          API_URL: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          curl --fail --silent --show-error \
+            -X PATCH \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "${API_URL}/repos/${REPOSITORY}" \
+            -d '{
+              "description": "Drag-select any area of a web page to copy text in reading order and turn table-like content into structured data.",
+              "homepage": "https://github.com/Nxys/tabular-extension/releases/tag/v0.1.0"
+            }'
+
+      - name: Update repository topics
+        env:
+          GH_TOKEN: ${{ github.token }}
+          API_URL: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          curl --fail --silent --show-error \
+            -X PUT \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "${API_URL}/repos/${REPOSITORY}/topics" \
+            -d '{
+              "names": [
+                "chrome-extension",
+                "manifest-v3",
+                "typescript",
+                "clipboard",
+                "table-extraction",
+                "productivity",
+                "web-scraping"
+              ]
+            }'
